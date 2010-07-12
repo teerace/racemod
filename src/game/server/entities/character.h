@@ -150,6 +150,8 @@ private:
 	int m_Starttime;
 	int m_Refreshtime;
 	
+	int m_LastSpeedup;
+	
 	// checkpoints
 	int m_CpTick;
 	int m_CpActive;

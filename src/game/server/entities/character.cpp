@@ -86,6 +86,8 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	GameServer()->m_World.InsertEntity(this);
 	m_Alive = true;
 
+	m_LastSpeedup = -1;
+	
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
 	return true;
@@ -726,7 +728,9 @@ void CCharacter::Tick()
 			m_pPlayer->m_Score = TTime;
 	}
 	
-	if(GameServer()->Collision()->IsSpeedup((int)m_Core.m_Pos.x, (int)m_Core.m_Pos.y))
+	// handle speedup tiles
+	int CurrentSpeedup = GameServer()->Collision()->IsSpeedup((int)m_Core.m_Pos.x, (int)m_Core.m_Pos.y);
+	if(m_LastSpeedup != CurrentSpeedup && CurrentSpeedup > -1)
 	{
 		vec2 Direction;
 		int Force;
@@ -735,6 +739,9 @@ void CCharacter::Tick()
 		m_Core.m_Vel += Direction*Force;
 	}
 	
+	m_LastSpeedup = CurrentSpeedup;
+	
+	// handle teleporter
 	z = GameServer()->Collision()->IsTeleport(m_Pos.x, m_Pos.y);
 	if(g_Config.m_SvTeleport && z)
 	{

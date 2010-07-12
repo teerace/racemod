@@ -37,7 +37,7 @@ public:
 	int GetIndex(int x, int y);
 	int IsTeleport(int x, int y);
 	int IsCheckpoint(int x, int y);
-	bool IsSpeedup(int x, int y);
+	int IsSpeedup(int x, int y);
 	void GetSpeedup(int x, int y, vec2 *Dir, int *Force);
 	
 	class CTeleTile *m_pTele;

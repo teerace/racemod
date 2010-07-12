@@ -116,19 +116,18 @@ int CCollision::IsCheckpoint(int x, int y)
 	return -1;
 }
 
-bool CCollision::IsSpeedup(int x, int y)
+int CCollision::IsSpeedup(int x, int y)
 {
 	if(!m_pSpeedup)
-		return false;
+		return -1;
 	
-	dbg_msg("test", "test");
 	int nx = clamp(x/32, 0, m_pLayers->SpeedupLayer()->m_Width-1);
 	int ny = clamp(y/32, 0, m_pLayers->SpeedupLayer()->m_Height-1);
 	
 	if(m_pSpeedup[ny*m_pLayers->SpeedupLayer()->m_Width+nx].m_Force > 0)
-		return true;
+		return ny*m_pLayers->SpeedupLayer()->m_Width+nx;
 		
-	return false;
+	return -1;
 }
 
 void CCollision::GetSpeedup(int x, int y, vec2 *Dir, int *Force)
