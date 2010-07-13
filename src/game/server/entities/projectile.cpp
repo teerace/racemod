@@ -88,7 +88,8 @@ void CProjectile::Tick()
 		GameServer()->m_World.DestroyEntity(this);
 	}
 	
-	int z = GameServer()->Collision()->IsTeleport((int)CurPos.x,(int)CurPos.y);
+	
+	int z = GameServer()->Collision()->IsTeleport(GameServer()->Collision()->GetIndex(PrevPos, CurPos));
   	if(g_Config.m_SvTeleport && z && g_Config.m_SvTeleportGrenade && m_Weapon == WEAPON_GRENADE)
   	{
  		m_Pos = ((CGameControllerRACE*)GameServer()->m_pController)->m_pTeleporter[z-1];

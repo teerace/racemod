@@ -77,67 +77,101 @@ bool CCollision::IsTileSolid(int x, int y)
 }
 
 // race
-int CCollision::GetIndex(int x, int y)
+int CCollision::GetIndex(vec2 PrevPos, vec2 Pos)
 {
-	int nx = clamp(x/32, 0, m_Width-1);
-	int ny = clamp(y/32, 0, m_Height-1);
+	int Index = 0;
+	float d = distance(PrevPos, Pos);
 	
-	return m_pTiles[ny*m_Width+nx].m_Index;
+	if(!d)
+	{
+		int nx = clamp((int)Pos.x/32, 0, m_Width-1);
+		int ny = clamp((int)Pos.y/32, 0, m_Height-1);
+		
+		if((m_pTiles[ny*m_Width+nx].m_Index >= TILE_STOPL && m_pTiles[ny*m_Width+nx].m_Index <= 59) ||
+			(m_pTele && (m_pTele[ny*m_Width+nx].m_Type == TILE_TELEIN || m_pTele[ny*m_Width+nx].m_Type == TILE_TELEOUT)) ||
+			(m_pSpeedup && m_pSpeedup[ny*m_Width+nx].m_Force > 0))
+		{
+			return ny*m_Width+nx;
+		}
+	}
+	
+	float a = 0.0f;
+	vec2 Tmp = vec2(0, 0);
+	int nx = 0;
+	int ny = 0;
+	
+	for(float f = 0; f < d; f++)
+	{
+		a = f/d;
+		Tmp = mix(PrevPos, Pos, a);
+		nx = clamp((int)Tmp.x/32, 0, m_Width-1);
+		ny = clamp((int)Tmp.y/32, 0, m_Height-1);
+		if((m_pTiles[ny*m_Width+nx].m_Index >= TILE_STOPL && m_pTiles[ny*m_Width+nx].m_Index <= 59) ||
+			(m_pTele && (m_pTele[ny*m_Width+nx].m_Type == TILE_TELEIN || m_pTele[ny*m_Width+nx].m_Type == TILE_TELEOUT)) ||
+			(m_pSpeedup && m_pSpeedup[ny*m_Width+nx].m_Force > 0))
+		{
+			return ny*m_Width+nx;
+		}
+	}
+	
+	return -1;
 }
 
-int CCollision::IsTeleport(int x, int y)
+vec2 CCollision::GetPos(int Index)
 {
-	if(!m_pTele)
+	int x = Index%m_Width;
+	int y = Index/m_Width;
+	
+	return vec2(x, y);
+}
+
+int CCollision::GetCollisionRace(int Index)
+{
+	if(Index < 0)
+		return 0;
+		
+	return m_pTiles[Index].m_Index;
+}
+
+int CCollision::IsTeleport(int Index)
+{
+	if(!m_pTele || Index < 0)
 		return 0;
 	
-	int nx = clamp(x/32, 0, m_pLayers->TeleLayer()->m_Width-1);
-	int ny = clamp(y/32, 0, m_pLayers->TeleLayer()->m_Height-1);
-	
-	/*int z = m_pTiles[ny*m_Width+nx].m_Index-1;
-	if(z > 34 && z <= 34 + 50 && z&1)
-		return z;
-	return 0;*/
-	
 	int Tele = 0;
-	if(m_pTele[ny*m_pLayers->TeleLayer()->m_Width+nx].m_Type == TILE_TELEIN)
-		Tele = m_pTele[ny*m_pLayers->TeleLayer()->m_Width+nx].m_Number;
+	if(m_pTele[Index].m_Type == TILE_TELEIN)
+		Tele = m_pTele[Index].m_Number;
 		
 	return Tele;
 }
 
-int CCollision::IsCheckpoint(int x, int y)
+int CCollision::IsCheckpoint(int Index)
 {
-	int nx = clamp(x/32, 0, m_Width-1);
-	int ny = clamp(y/32, 0, m_Height-1);
-	
-	int z = m_pTiles[ny*m_Width+nx].m_Index;
+	if(Index < 0)
+		return -1;
+		
+	int z = m_pTiles[Index].m_Index;
 	if(z >= 35 && z <= 59)
 		return z-35;
 	return -1;
 }
 
-int CCollision::IsSpeedup(int x, int y)
+int CCollision::IsSpeedup(int Index)
 {
-	if(!m_pSpeedup)
+	if(!m_pSpeedup || Index < 0)
 		return -1;
 	
-	int nx = clamp(x/32, 0, m_pLayers->SpeedupLayer()->m_Width-1);
-	int ny = clamp(y/32, 0, m_pLayers->SpeedupLayer()->m_Height-1);
-	
-	if(m_pSpeedup[ny*m_pLayers->SpeedupLayer()->m_Width+nx].m_Force > 0)
-		return ny*m_pLayers->SpeedupLayer()->m_Width+nx;
+	if(m_pSpeedup[Index].m_Force > 0)
+		return Index;
 		
 	return -1;
 }
 
-void CCollision::GetSpeedup(int x, int y, vec2 *Dir, int *Force)
+void CCollision::GetSpeedup(int Index, vec2 *Dir, int *Force)
 {
-	int nx = clamp(x/32, 0, m_pLayers->SpeedupLayer()->m_Width-1);
-	int ny = clamp(y/32, 0, m_pLayers->SpeedupLayer()->m_Height-1);
-	
 	vec2 Direction = vec2(1, 0);
-	float Angle = m_pSpeedup[ny*m_pLayers->SpeedupLayer()->m_Width+nx].m_Angle * (3.14159265f/180.0f);
-	*Force = m_pSpeedup[ny*m_pLayers->SpeedupLayer()->m_Width+nx].m_Force;
+	float Angle = m_pSpeedup[Index].m_Angle * (3.14159265f/180.0f);
+	*Force = m_pSpeedup[Index].m_Force;
 	
 	vec2 TmpDir;
 	TmpDir.x = (Direction.x*cos(Angle)) - (Direction.y*sin(Angle));

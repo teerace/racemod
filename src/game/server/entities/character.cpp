@@ -73,6 +73,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
+	m_PrevPos = Pos;
 	
 	m_Core.Reset();
 	m_Core.Init(&GameServer()->m_World.m_Core, GameServer()->Collision());
@@ -558,6 +559,9 @@ void CCharacter::Tick()
 		m_pPlayer->m_ForceBalanced = false;
 	}
 
+	// save jumping state
+	int Jumped = m_Core.m_Jumped;
+	
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
 	
@@ -566,7 +570,11 @@ void CCharacter::Tick()
 	float Time = (float)(Server()->Tick()-m_Starttime)/((float)Server()->TickSpeed());
 	CPlayerData *pData = GameServer()->Score()->PlayerData(m_pPlayer->GetCID());
 	
-	int z = GameServer()->Collision()->IsCheckpoint(m_Pos.x, m_Pos.y);
+	
+	// tile index
+	int TileIndex = GameServer()->Collision()->GetIndex(m_PrevPos, m_Pos);
+	
+	int z = GameServer()->Collision()->IsCheckpoint(TileIndex);
 	if(z != -1 && m_RaceState == RACE_STARTED)
 	{
 		m_CpActive = z;
@@ -623,7 +631,7 @@ void CCharacter::Tick()
 			m_Armor++;
 	}
 	
-	if((GameServer()->Collision()->GetIndex(m_Pos.x, m_Pos.y) == TILE_BEGIN && (!m_aWeapons[WEAPON_GRENADE].m_Got || (m_RaceState != RACE_FINISHED && m_RaceState != RACE_STARTED)))
+	if((GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_BEGIN && (!m_aWeapons[WEAPON_GRENADE].m_Got || (m_RaceState != RACE_FINISHED && m_RaceState != RACE_STARTED)))
 		|| (GameServer()->m_pController->IsFastCap() && m_RaceState != RACE_STARTED && ((CGameControllerFC*)GameServer()->m_pController)->IsEnemyFlagStand(m_Pos, m_pPlayer->GetTeam())))
 	{
 		// create flag
@@ -647,7 +655,7 @@ void CCharacter::Tick()
 		m_Refreshtime = Server()->Tick();
 		m_RaceState = RACE_STARTED;
 	}
-	else if((GameServer()->Collision()->GetIndex(m_Pos.x, m_Pos.y) == TILE_END || (GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(m_Pos, m_pPlayer->GetTeam()))) && m_RaceState == RACE_STARTED)
+	else if((GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_END || (GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(m_Pos, m_pPlayer->GetTeam()))) && m_RaceState == RACE_STARTED)
 	{
 		// reset the flag
 		if(GameServer()->m_pController->IsFastCap() && m_pFlag)
@@ -727,34 +735,52 @@ void CCharacter::Tick()
 		if(m_pPlayer->m_Score < TTime)
 			m_pPlayer->m_Score = TTime;
 	}
-	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPL)
+	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPL)
 	{
 		if(m_Core.m_Vel.x > 0)
+		{
+			if((int)GameServer()->Collision()->GetPos(TileIndex).x < (int)m_Core.m_Pos.x)
+				m_Core.m_Pos.x = m_PrevPos.x;
 			m_Core.m_Vel.x = 0;
+		}
 	}
-	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPR)
+	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPR)
 	{
 		if(m_Core.m_Vel.x < 0)
+		{
+			if((int)GameServer()->Collision()->GetPos(TileIndex).x > (int)m_Core.m_Pos.x)
+				m_Core.m_Pos.x = m_PrevPos.x;
 			m_Core.m_Vel.x = 0;
+		}
 	}
-	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPB)
+	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPB)
 	{
 		if(m_Core.m_Vel.y < 0)
+		{
+			if((int)GameServer()->Collision()->GetPos(TileIndex).y > (int)m_Core.m_Pos.y)
+				m_Core.m_Pos.y = m_PrevPos.y;
 			m_Core.m_Vel.y = 0;
+		}
 	}
-	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPT)
+	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPT)
 	{
 		if(m_Core.m_Vel.y > 0)
+		{
+			if((int)GameServer()->Collision()->GetPos(TileIndex).y < (int)m_Core.m_Pos.y)
+				m_Core.m_Pos.y = m_PrevPos.y;
+			if(Jumped&3 && m_Core.m_Jumped != Jumped) // check double jump
+				m_Core.m_Jumped = Jumped;
 			m_Core.m_Vel.y = 0;
+		}
 	}
 	
 	// handle speedup tiles
-	int CurrentSpeedup = GameServer()->Collision()->IsSpeedup((int)m_Core.m_Pos.x, (int)m_Core.m_Pos.y);
+	int CurrentSpeedup = GameServer()->Collision()->IsSpeedup(TileIndex);
 	if(m_LastSpeedup != CurrentSpeedup && CurrentSpeedup > -1)
 	{
 		vec2 Direction;
 		int Force;
-		GameServer()->Collision()->GetSpeedup((int)m_Core.m_Pos.x, (int)m_Core.m_Pos.y, &Direction, &Force);
+		GameServer()->Collision()->GetSpeedup(TileIndex, &Direction, &Force);
 		
 		m_Core.m_Vel += Direction*Force;
 	}
@@ -762,7 +788,7 @@ void CCharacter::Tick()
 	m_LastSpeedup = CurrentSpeedup;
 	
 	// handle teleporter
-	z = GameServer()->Collision()->IsTeleport(m_Pos.x, m_Pos.y);
+	z = GameServer()->Collision()->IsTeleport(TileIndex);
 	if(g_Config.m_SvTeleport && z)
 	{
 		m_Core.m_HookedPlayer = -1;
@@ -800,6 +826,8 @@ void CCharacter::Tick()
 
 	// Previnput
 	m_PrevInput = m_Input;
+	
+	m_PrevPos = m_Core.m_Pos;
 	return;
 }
 

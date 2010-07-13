@@ -151,6 +151,7 @@ private:
 	int m_Refreshtime;
 	
 	int m_LastSpeedup;
+	vec2 m_PrevPos;
 	
 	// checkpoints
 	int m_CpTick;

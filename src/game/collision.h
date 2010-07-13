@@ -34,11 +34,13 @@ public:
 	bool TestBox(vec2 Pos, vec2 Size);
 	
 	// race
-	int GetIndex(int x, int y);
-	int IsTeleport(int x, int y);
-	int IsCheckpoint(int x, int y);
-	int IsSpeedup(int x, int y);
-	void GetSpeedup(int x, int y, vec2 *Dir, int *Force);
+	int GetIndex(vec2 PrevPos, vec2 Pos);
+	vec2 GetPos(int Index);
+	int GetCollisionRace(int Index);
+	int IsTeleport(int Index);
+	int IsCheckpoint(int Indec);
+	int IsSpeedup(int Index);
+	void GetSpeedup(int Index, vec2 *Dir, int *Force);
 	
 	class CTeleTile *m_pTele;
 	class CSpeedupTile *m_pSpeedup;
