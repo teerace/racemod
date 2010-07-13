@@ -102,8 +102,9 @@ public:
 	unsigned char m_Type;
 };
 
-struct CSpeedupTile
+class CSpeedupTile
 {
+public:
 	unsigned char m_Force;
 	short m_Angle;
 };
