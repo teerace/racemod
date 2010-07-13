@@ -727,6 +727,26 @@ void CCharacter::Tick()
 		if(m_pPlayer->m_Score < TTime)
 			m_pPlayer->m_Score = TTime;
 	}
+	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPL)
+	{
+		if(m_Core.m_Vel.x > 0)
+			m_Core.m_Vel.x = 0;
+	}
+	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPR)
+	{
+		if(m_Core.m_Vel.x < 0)
+			m_Core.m_Vel.x = 0;
+	}
+	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPB)
+	{
+		if(m_Core.m_Vel.y < 0)
+			m_Core.m_Vel.y = 0;
+	}
+	else if(GameServer()->Collision()->GetIndex(m_Core.m_Pos.x, m_Core.m_Pos.y) == TILE_STOPT)
+	{
+		if(m_Core.m_Vel.y > 0)
+			m_Core.m_Vel.y = 0;
+	}
 	
 	// handle speedup tiles
 	int CurrentSpeedup = GameServer()->Collision()->IsSpeedup((int)m_Core.m_Pos.x, (int)m_Core.m_Pos.y);
