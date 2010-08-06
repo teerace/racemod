@@ -1113,7 +1113,11 @@ void CGameContext::ConGetPos(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	int CID = clamp(pResult->GetInteger(0), 0, (int)MAX_CLIENTS-1);
 	if(pSelf->m_apPlayers[CID])
-		dbg_msg("Tele", "%s pos: %d @ %d", pSelf->Server()->ClientName(CID), (int)pSelf->m_apPlayers[CID]->m_ViewPos.x, (int)pSelf->m_apPlayers[CID]->m_ViewPos.y);
+	{
+		char aBuf[64];
+		str_format(aBuf, sizeof(aBuf), "%s pos: %d @ %d", pSelf->Server()->ClientName(CID), (int)pSelf->m_apPlayers[CID]->m_ViewPos.x, (int)pSelf->m_apPlayers[CID]->m_ViewPos.y);
+		pSelf->Console()->Print(aBuf);
+	}
 }
 
 void CGameContext::OnConsoleInit()
