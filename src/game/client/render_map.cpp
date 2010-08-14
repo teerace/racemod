@@ -278,7 +278,7 @@ void CRenderTools::RenderTilemap(CTile *pTiles, int w, int h, float Scale, vec4 
 	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CRenderTools::RenderTelemap(CTeleTile *pTele, int w, int h, float Scale, vec4 Color, int RenderFlags)
+void CRenderTools::RenderTelemap(CTeleTile *pTele, int w, int h, float Scale)
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
@@ -318,7 +318,7 @@ void CRenderTools::RenderTelemap(CTeleTile *pTele, int w, int h, float Scale, ve
 	Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CRenderTools::RenderSpeedupmap(CSpeedupTile *pSpeedup, int w, int h, float Scale, vec4 Color, int RenderFlags)
+void CRenderTools::RenderSpeedupmap(CSpeedupTile *pSpeedup, int w, int h, float Scale)
 {
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
