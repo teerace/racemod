@@ -294,28 +294,15 @@ void CRenderTools::RenderTelemap(CTeleTile *pTele, int w, int h, float Scale, ve
 			int mx = x;
 			int my = y;
 			
-			if(RenderFlags&TILERENDERFLAG_EXTEND)
-			{
-				if(mx<0)
-					mx = 0;
-				if(mx>=w)
-					mx = w-1;
-				if(my<0)
-					my = 0;
-				if(my>=h)
-					my = h-1;
-			}
-			else
-			{
-				if(mx<0)
-					continue; // mx = 0;
-				if(mx>=w)
-					continue; // mx = w-1;
-				if(my<0)
-					continue; // my = 0;
-				if(my>=h)
-					continue; // my = h-1;
-			}
+
+			if(mx<0)
+				continue; // mx = 0;
+			if(mx>=w)
+				continue; // mx = w-1;
+			if(my<0)
+				continue; // my = 0;
+			if(my>=h)
+				continue; // my = h-1;
 			
 			int c = mx + my*w;
 				
@@ -347,28 +334,14 @@ void CRenderTools::RenderSpeedupmap(CSpeedupTile *pSpeedup, int w, int h, float 
 			int mx = x;
 			int my = y;
 			
-			if(RenderFlags&TILERENDERFLAG_EXTEND)
-			{
-				if(mx<0)
-					mx = 0;
-				if(mx>=w)
-					mx = w-1;
-				if(my<0)
-					my = 0;
-				if(my>=h)
-					my = h-1;
-			}
-			else
-			{
-				if(mx<0)
-					continue; // mx = 0;
-				if(mx>=w)
-					continue; // mx = w-1;
-				if(my<0)
-					continue; // my = 0;
-				if(my>=h)
-					continue; // my = h-1;
-			}
+			if(mx<0)
+				continue; // mx = 0;
+			if(mx>=w)
+				continue; // mx = w-1;
+			if(my<0)
+				continue; // my = 0;
+			if(my>=h)
+				continue; // my = h-1;
 			
 			int c = mx + my*w;
 			
