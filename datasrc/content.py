@@ -226,6 +226,7 @@ image_game = Image("game", "game.png")
 image_browseicons = Image("browseicons", "browse_icons.png")
 image_emoticons = Image("emoticons", "emoticons.png")
 image_speedup_arrow = Image("speedup_arrow", "editor/speed_arrow.png")
+image_demobuttons = Image("demobuttons", "demo_buttons.png")
 
 container.images.Add(image_null)
 container.images.Add(image_game)
@@ -237,6 +238,7 @@ container.images.Add(image_browseicons)
 container.images.Add(Image("console_bg", "console.png"))
 container.images.Add(Image("console_bar", "console_bar.png"))
 container.images.Add(image_speedup_arrow)
+container.images.Add(image_demobuttons)
 
 container.pickups.Add(Pickup("health"))
 container.pickups.Add(Pickup("armor"))
@@ -249,6 +251,7 @@ set_tee = SpriteSet("tee", image_null, 8, 4)
 set_browseicons = SpriteSet("browseicons", image_browseicons, 4, 1)
 set_emoticons = SpriteSet("emoticons", image_emoticons, 4, 4)
 set_speedup_arrow = SpriteSet("speedup_arrow", image_speedup_arrow, 1, 1)
+set_demobuttons = SpriteSet("demobuttons", image_demobuttons, 5, 1)
 
 container.spritesets.Add(set_particles)
 container.spritesets.Add(set_game)
@@ -256,6 +259,7 @@ container.spritesets.Add(set_tee)
 container.spritesets.Add(set_browseicons)
 container.spritesets.Add(set_emoticons)
 container.spritesets.Add(set_speedup_arrow)
+container.spritesets.Add(set_demobuttons)
 
 container.sprites.Add(Sprite("part_slice", set_particles, 0,0,1,1))
 container.sprites.Add(Sprite("part_ball", set_particles, 1,0,1,1))
@@ -362,12 +366,18 @@ container.sprites.Add(Sprite("blank1", set_emoticons, 1, 3, 1, 1))
 container.sprites.Add(Sprite("deadtee", set_emoticons, 2, 3, 1, 1))
 container.sprites.Add(Sprite("blank2", set_emoticons, 3, 3, 1, 1))
 
-
 container.sprites.Add(Sprite("browse_lock", set_browseicons, 0,0,1,1))
 container.sprites.Add(Sprite("browse_heart", set_browseicons, 1,0,1,1))
 container.sprites.Add(Sprite("browse_unpure", set_browseicons, 3,0,1,1))
 
 container.sprites.Add(Sprite("speedup_arrow", set_speedup_arrow, 0,0,1,1))
+
+container.sprites.Add(Sprite("demobutton_play", set_demobuttons, 0,0,1,1))
+container.sprites.Add(Sprite("demobutton_pause", set_demobuttons, 1,0,1,1))
+container.sprites.Add(Sprite("demobutton_reset", set_demobuttons, 2,0,1,1))
+container.sprites.Add(Sprite("demobutton_slower", set_demobuttons, 3,0,1,1))
+container.sprites.Add(Sprite("demobutton_faster", set_demobuttons, 4,0,1,1))
+
 
 anim = Animation("base")
 anim.body.frames.Add(AnimKeyframe(0, 0, -4, 0))
