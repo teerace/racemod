@@ -227,10 +227,12 @@ void CGameContext::SendChatTarget(int To, const char *pText)
 
 void CGameContext::SendChat(int ChatterClientId, int Team, const char *pText)
 {
+	char aBuf[256];
 	if(ChatterClientId >= 0 && ChatterClientId < MAX_CLIENTS)
-		dbg_msg("chat", "%d:%d:%s: %s", ChatterClientId, Team, Server()->ClientName(ChatterClientId), pText);
+		str_format(aBuf, sizeof(aBuf), "%d:%d:%s: %s", ChatterClientId, Team, Server()->ClientName(ChatterClientId), pText);
 	else
-		dbg_msg("chat", "*** %s", pText);
+		str_format(aBuf, sizeof(aBuf), "*** %s", pText);
+	Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "chat", aBuf);
 
 	if(Team == CHAT_ALL)
 	{
@@ -365,7 +367,7 @@ void CGameContext::CheckPureTuning()
 		CTuningParams p;
 		if(mem_comp(&p, &m_Tuning, sizeof(p)) != 0)
 		{
-			dbg_msg("server", "resetting tuning due to pure server");
+			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "resetting tuning due to pure server");
 			m_Tuning = p;
 		}
 	}	
@@ -508,7 +510,7 @@ void CGameContext::OnClientEnter(int ClientId)
 {
 	//world.insert_entity(&players[client_id]);
 	m_apPlayers[ClientId]->Respawn();
-	dbg_msg("game", "join player='%d:%s'", ClientId, Server()->ClientName(ClientId));
+
 
 	m_apPlayers[ClientId]->m_Score = -9999;
 	
@@ -520,7 +522,8 @@ void CGameContext::OnClientEnter(int ClientId)
 	str_format(aBuf, sizeof(aBuf), "%s entered and joined the %s", Server()->ClientName(ClientId), m_pController->GetTeamName(m_apPlayers[ClientId]->GetTeam()));
 	SendChat(-1, CGameContext::CHAT_ALL, aBuf); 
 
-	dbg_msg("game", "team_join player='%d:%s' team=%d", ClientId, Server()->ClientName(ClientId), m_apPlayers[ClientId]->GetTeam());
+	str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' team=%d", ClientId, Server()->ClientName(ClientId), m_apPlayers[ClientId]->GetTeam());
+	Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
 	m_VoteUpdate = true;
 }
@@ -575,7 +578,9 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 	
 	if(!pRawMsg)
 	{
-		dbg_msg("server", "dropped weird message '%s' (%d), failed on '%s'", m_NetObjHandler.GetMsgName(MsgId), MsgId, m_NetObjHandler.FailedMsgOn());
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "dropped weird message '%s' (%d), failed on '%s'", m_NetObjHandler.GetMsgName(MsgId), MsgId, m_NetObjHandler.FailedMsgOn());
+		Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "server", aBuf);
 		return;
 	}
 	
@@ -939,13 +944,15 @@ void CGameContext::ConTuneParam(IConsole::IResult *pResult, void *pUserData)
 	const char *pParamName = pResult->GetString(0);
 	float NewValue = pResult->GetFloat(1);
 
+	char aBuf[256];
 	if(pSelf->Tuning()->Set(pParamName, NewValue))
 	{
-		dbg_msg("tuning", "%s changed to %.2f", pParamName, NewValue);
+		str_format(aBuf, sizeof(aBuf), "%s changed to %.2f", pParamName, NewValue);
 		pSelf->SendTuningParams(-1);
 	}
 	else
-		dbg_msg("tuning", "No such tuning parameter");
+		str_format(aBuf, sizeof(aBuf), "No such tuning parameter");
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
 }
 
 void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
@@ -954,17 +961,19 @@ void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
 	CTuningParams p;
 	*pSelf->Tuning() = p;
 	pSelf->SendTuningParams(-1);
-	dbg_msg("tuning", "Tuning reset");
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", "Tuning reset");
 }
 
 void CGameContext::ConTuneDump(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
+	char aBuf[256];
 	for(int i = 0; i < pSelf->Tuning()->Num(); i++)
 	{
 		float v;
 		pSelf->Tuning()->Get(i, &v);
-		dbg_msg("tuning", "%s %.2f", pSelf->Tuning()->m_apNames[i], v);
+		str_format(aBuf, sizeof(aBuf), "%s %.2f", pSelf->Tuning()->m_apNames[i], v);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", aBuf);
 	}
 }
 
@@ -1001,7 +1010,9 @@ void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 	int ClientId = clamp(pResult->GetInteger(0), 0, (int)MAX_CLIENTS-1);
 	int Team = clamp(pResult->GetInteger(1), -1, 1);
 	
-	dbg_msg("", "%d %d", ClientId, Team);
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "moved client %d to team %d", ClientId, Team);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 	
 	if(!pSelf->m_apPlayers[ClientId])
 		return;
@@ -1025,7 +1036,9 @@ void CGameContext::ConAddVote(IConsole::IResult *pResult, void *pUserData)
 		pSelf->m_pVoteOptionFirst = pOption;
 	
 	mem_copy(pOption->m_aCommand, pResult->GetString(0), Len+1);
-	dbg_msg("server", "added option '%s'", pOption->m_aCommand);
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "added option '%s'", pOption->m_aCommand);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 
 	CNetMsg_Sv_VoteOption OptionMsg;
 	OptionMsg.m_pCommand = pOption->m_aCommand;
@@ -1039,7 +1052,9 @@ void CGameContext::ConVote(IConsole::IResult *pResult, void *pUserData)
 		pSelf->m_VoteEnforce = CGameContext::VOTE_ENFORCE_YES;
 	else if(str_comp_nocase(pResult->GetString(0), "no") == 0)
 		pSelf->m_VoteEnforce = CGameContext::VOTE_ENFORCE_NO;
-	dbg_msg("server", "forcing vote %s", pResult->GetString(0));
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "forcing vote %s", pResult->GetString(0));
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 }
 
 void CGameContext::ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)

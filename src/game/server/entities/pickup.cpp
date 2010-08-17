@@ -123,9 +123,10 @@ void CPickup::Tick()
 
 		if(RespawnTime >= 0)
 		{
-			dbg_msg("game", "pickup player='%d:%s' item=%d/%d",
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d/%d",
 				pChr->GetPlayer()->GetCID(), Server()->ClientName(pChr->GetPlayer()->GetCID()), m_Type, m_Subtype);
-			if(g_Config.m_SvPickupRespawn > -1)
+			GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);			if(g_Config.m_SvPickupRespawn > -1)
 				m_SpawnTick[pChr->GetPlayer()->GetCID()] = Server()->Tick() + Server()->TickSpeed() * g_Config.m_SvPickupRespawn;
 			else
 				m_SpawnTick[pChr->GetPlayer()->GetCID()] = 1;
