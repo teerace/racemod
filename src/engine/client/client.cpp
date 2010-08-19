@@ -1879,7 +1879,7 @@ const char* CClient::RaceRecordStart(const char *pFilename)
 	if(State() != STATE_ONLINE)
 		dbg_msg("demorec/record", "client is not online");
 	else
-		m_DemoRecorder.Start(Storage(), aFilename, GameClient()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
+		m_DemoRecorder.Start(Storage(),  m_pConsole, aFilename, GameClient()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
 		
 	return m_aCurrentMap;
 }
