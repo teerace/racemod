@@ -1128,7 +1128,7 @@ void CGameContext::ConGetPos(IConsole::IResult *pResult, void *pUserData)
 	{
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "%s pos: %d @ %d", pSelf->Server()->ClientName(CID), (int)pSelf->m_apPlayers[CID]->m_ViewPos.x, (int)pSelf->m_apPlayers[CID]->m_ViewPos.y);
-		pSelf->Console()->Print(aBuf);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "Race", aBuf);
 	}
 }
 
