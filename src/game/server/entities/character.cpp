@@ -776,6 +776,7 @@ void CCharacter::Tick()
 	
 	// handle speedup tiles
 	int CurrentSpeedup = GameServer()->Collision()->IsSpeedup(TileIndex);
+	bool SpeedupTouch = false;
 	if(m_LastSpeedup != CurrentSpeedup && CurrentSpeedup > -1)
 	{
 		vec2 Direction;
@@ -783,6 +784,8 @@ void CCharacter::Tick()
 		GameServer()->Collision()->GetSpeedup(TileIndex, &Direction, &Force);
 		
 		m_Core.m_Vel += Direction*Force;
+		
+		SpeedupTouch = true;
 	}
 	
 	m_LastSpeedup = CurrentSpeedup;
@@ -791,6 +794,10 @@ void CCharacter::Tick()
 	z = GameServer()->Collision()->IsTeleport(TileIndex);
 	if(g_Config.m_SvTeleport && z)
 	{
+		// check double jump
+		if(Jumped&3 && m_Core.m_Jumped != Jumped)
+			m_Core.m_Jumped = Jumped;
+				
 		m_Core.m_HookedPlayer = -1;
 		m_Core.m_HookState = HOOK_RETRACTED;
 		m_Core.m_TriggeredEvents |= COREEVENT_HOOK_RETRACT;
@@ -809,12 +816,16 @@ void CCharacter::Tick()
 			m_aWeapons[i].m_Got = false;
 		}
 	}
-
+	
+	// set Position just in case it was changed
+	m_Pos = m_Core.m_Pos;
+	
 	// handle death-tiles
-	if(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
+	if(!SpeedupTouch &&
+		(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
 		GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
 		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
-		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH)
+		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH))
 	{
 		Die(m_pPlayer->GetCID(), WEAPON_WORLD);
 	}
