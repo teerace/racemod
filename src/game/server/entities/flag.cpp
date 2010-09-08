@@ -1,5 +1,4 @@
 #include <game/server/gamecontext.h>
-#include "character.h"
 #include "flag.h"
 
 CFlag::CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, CCharacter *pOwner)
@@ -7,15 +6,15 @@ CFlag::CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, CCharacter *pOwner)
 {
 	m_Team = Team;
 	m_Pos = Pos;
-	m_ProximityRadius = m_PhysSize;
-	m_pCarryingCCharacter = pOwner;
+	m_ProximityRadius = ms_PhysSize;
+	m_pCarryingCharacter = pOwner;
 	
 	GameServer()->m_World.InsertEntity(this);
 }
 
 void CFlag::Reset()
 {
-	if(!m_pCarryingCCharacter)
+	if(!m_pCarryingCharacter)
 		return;
 		
 	GameServer()->m_World.DestroyEntity(this);
@@ -23,14 +22,14 @@ void CFlag::Reset()
 
 void CFlag::Tick()
 {
-	if(m_pCarryingCCharacter)
-		m_Pos = m_pCarryingCCharacter->m_Pos;
+	if(m_pCarryingCharacter)
+		m_Pos = m_pCarryingCharacter->m_Pos;
 }
 
 void CFlag::Snap(int SnappingClient)
 {
-	if((!m_pCarryingCCharacter && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_Team && GameServer()->m_apPlayers[SnappingClient]->GetCharacter() && GameServer()->m_apPlayers[SnappingClient]->GetCharacter()->m_RaceState == CCharacter::RACE_STARTED)
-		||(m_pCarryingCCharacter && !GameServer()->m_apPlayers[SnappingClient]->m_ShowOthers && SnappingClient != m_pCarryingCCharacter->GetPlayer()->GetCID()))
+	if((!m_pCarryingCharacter && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_Team && GameServer()->m_apPlayers[SnappingClient]->GetCharacter() && GameServer()->m_apPlayers[SnappingClient]->GetCharacter()->m_RaceState == CCharacter::RACE_STARTED)
+		||(m_pCarryingCharacter && !GameServer()->m_apPlayers[SnappingClient]->m_ShowOthers && SnappingClient != m_pCarryingCharacter->GetPlayer()->GetCID()))
 		return;
 	
 	CNetObj_Flag *pFlag = (CNetObj_Flag *)Server()->SnapNewItem(NETOBJTYPE_FLAG, m_Id, sizeof(CNetObj_Flag));
@@ -39,8 +38,8 @@ void CFlag::Snap(int SnappingClient)
 	pFlag->m_Team = m_Team;
 	pFlag->m_CarriedBy = -1;
 	
-	if(!m_pCarryingCCharacter)
+	if(!m_pCarryingCharacter)
 		pFlag->m_CarriedBy = -2;
-	else if(m_pCarryingCCharacter && m_pCarryingCCharacter->GetPlayer())
-		pFlag->m_CarriedBy = m_pCarryingCCharacter->GetPlayer()->GetCID();
+	else if(m_pCarryingCharacter && m_pCarryingCharacter->GetPlayer())
+		pFlag->m_CarriedBy = m_pCarryingCharacter->GetPlayer()->GetCID();
 }
