@@ -256,6 +256,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		float FontSizeResize = FontSize;
 		float Width;
 		const float ScoreWidth = 60.0f;
+		const float PingWidth = 60.0f;
 		if(m_pClient->m_IsRace)
 		{
 			// reset time
@@ -279,23 +280,44 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			TextRender()->Text(0, x+ScoreWidth-Width, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
 		}
 		
-		float FontSizeName = FontSize;
-		while(TextRender()->TextWidth(0, FontSizeName, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-200)
-			--FontSizeName;
-		
-		if(m_pClient->m_IsRace)
+		FontSizeResize = FontSize;		
+		if(g_Config.m_ClScoreboardClientId)
 		{
-			CTextCursor Cursor;
-			TextRender()->SetCursor(&Cursor, x+128+DataOffset, y+(FontSize-FontSizeName)/2, FontSizeName, TEXTFLAG_RENDER|TEXTFLAG_STOP_AT_END);
-			Cursor.m_LineWidth = 400;
-			TextRender()->TextEx(&Cursor, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
+			str_format(aBuf, sizeof(aBuf), "%d | %s", pInfo->m_ClientId, m_pClient->m_aClients[pInfo->m_ClientId].m_aName);
+			if(m_pClient->m_IsRace)
+			{
+				while(TextRender()->TextWidth(0, FontSizeResize, aBuf, -1) > w-163.0f-Offset-PingWidth)
+					--FontSizeResize;
+				TextRender()->Text(0, x+128.0f+Offset, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
+			}
+			else
+			{
+				while(TextRender()->TextWidth(0, FontSizeResize, aBuf, -1) > w-163.0f-PingWidth)
+					--FontSizeResize;
+				TextRender()->Text(0, x+128.0f, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
+			}
 		}
 		else
-			TextRender()->Text(0, x+128+DataOffset, y+(FontSize-FontSizeName)/2, FontSizeName, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
+		{
+			if(m_pClient->m_IsRace)
+			{
+				while(TextRender()->TextWidth(0, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-163.0f-Offset-PingWidth)
+					--FontSizeResize;
+				TextRender()->Text(0, x+128.0f+Offset, y+(FontSize-FontSizeResize)/2, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
+			}
+			else
+			{
+				while(TextRender()->TextWidth(0, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-163.0f-PingWidth)
+					--FontSizeResize;
+				TextRender()->Text(0, x+128.0f, y+(FontSize-FontSizeResize)/2, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
+			}
+		}
 
-		str_format(aBuf, sizeof(aBuf), "%4d", pInfo->m_Latency);
-		float tw = TextRender()->TextWidth(0, FontSize, aBuf, -1);
-		TextRender()->Text(0, x+w-tw-35, y, FontSize, aBuf, -1);
+		FontSizeResize = FontSize;
+		str_format(aBuf, sizeof(aBuf), "%d", clamp(pInfo->m_Latency, -9999, 9999));
+		while((Width = TextRender()->TextWidth(0, FontSizeResize, aBuf, -1)) > PingWidth)
+			--FontSizeResize;
+		TextRender()->Text(0, x+w-35.0f-Width, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
 
 		// render avatar
 		if((m_pClient->m_Snap.m_paFlags[0] && m_pClient->m_Snap.m_paFlags[0]->m_CarriedBy == pInfo->m_ClientId) ||
