@@ -79,7 +79,6 @@ bool CCollision::IsTileSolid(int x, int y)
 // race
 int CCollision::GetIndex(vec2 PrevPos, vec2 Pos)
 {
-	int Index = 0;
 	float d = distance(PrevPos, Pos);
 	
 	if(!d)
