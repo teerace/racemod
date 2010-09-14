@@ -281,36 +281,18 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		}
 		
 		FontSizeResize = FontSize;		
-		if(g_Config.m_ClScoreboardClientId)
+
+		if(m_pClient->m_IsRace)
 		{
-			str_format(aBuf, sizeof(aBuf), "%d | %s", pInfo->m_ClientId, m_pClient->m_aClients[pInfo->m_ClientId].m_aName);
-			if(m_pClient->m_IsRace)
-			{
-				while(TextRender()->TextWidth(0, FontSizeResize, aBuf, -1) > w-163.0f-Offset-PingWidth)
-					--FontSizeResize;
-				TextRender()->Text(0, x+128.0f+Offset, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
-			}
-			else
-			{
-				while(TextRender()->TextWidth(0, FontSizeResize, aBuf, -1) > w-163.0f-PingWidth)
-					--FontSizeResize;
-				TextRender()->Text(0, x+128.0f, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
-			}
+			while(TextRender()->TextWidth(0, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-163.0f-Offset-PingWidth)
+				--FontSizeResize;
+			TextRender()->Text(0, x+128.0f+Offset, y+(FontSize-FontSizeResize)/2, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
 		}
 		else
 		{
-			if(m_pClient->m_IsRace)
-			{
-				while(TextRender()->TextWidth(0, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-163.0f-Offset-PingWidth)
-					--FontSizeResize;
-				TextRender()->Text(0, x+128.0f+Offset, y+(FontSize-FontSizeResize)/2, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
-			}
-			else
-			{
-				while(TextRender()->TextWidth(0, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-163.0f-PingWidth)
-					--FontSizeResize;
-				TextRender()->Text(0, x+128.0f, y+(FontSize-FontSizeResize)/2, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
-			}
+			while(TextRender()->TextWidth(0, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1) > w-163.0f-PingWidth)
+				--FontSizeResize;
+			TextRender()->Text(0, x+128.0f, y+(FontSize-FontSizeResize)/2, FontSizeResize, m_pClient->m_aClients[pInfo->m_ClientId].m_aName, -1);
 		}
 
 		FontSizeResize = FontSize;
