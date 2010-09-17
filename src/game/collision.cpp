@@ -121,7 +121,7 @@ vec2 CCollision::GetPos(int Index)
 	int x = Index%m_Width;
 	int y = Index/m_Width;
 	
-	return vec2(x, y);
+	return vec2(x*32+16, y*32+16);
 }
 
 int CCollision::GetCollisionRace(int Index)
