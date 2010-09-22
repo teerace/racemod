@@ -735,7 +735,7 @@ void CCharacter::Tick()
 		if(m_pPlayer->m_Score < TTime)
 			m_pPlayer->m_Score = TTime;
 	}
-	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPL)
+	else if(TileIndex != -1 && GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPL)
 	{
 		if(m_Core.m_Vel.x > 0)
 		{
@@ -744,7 +744,7 @@ void CCharacter::Tick()
 			m_Core.m_Vel.x = 0;
 		}
 	}
-	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPR)
+	else if(TileIndex != -1 && GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPR)
 	{
 		if(m_Core.m_Vel.x < 0)
 		{
@@ -753,7 +753,7 @@ void CCharacter::Tick()
 			m_Core.m_Vel.x = 0;
 		}
 	}
-	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPB)
+	else if(TileIndex != -1 && GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPB)
 	{
 		if(m_Core.m_Vel.y < 0)
 		{
@@ -762,7 +762,7 @@ void CCharacter::Tick()
 			m_Core.m_Vel.y = 0;
 		}
 	}
-	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPT)
+	else if(TileIndex != -1 && GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPT)
 	{
 		if(m_Core.m_Vel.y > 0)
 		{
