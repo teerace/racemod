@@ -829,7 +829,6 @@ void CGameClient::OnNewSnapshot()
 		else
 			m_ServerMode = SERVERMODE_PUREMOD;
 	}
-	
 	// send race msg
 	if(m_Snap.m_pLocalInfo)
 	{
@@ -893,10 +892,6 @@ void CGameClient::OnNewSnapshot()
 				m_aClients[i].m_Score = 0;
 		}
 	}
-	
-	// update render info
-	for(int i = 0; i < MAX_CLIENTS; i++)
-		m_aClients[i].UpdateRenderInfo();
 }
 
 void CGameClient::OnPredict()
@@ -1033,7 +1028,7 @@ void CGameClient::CClientData::UpdateRenderInfo()
 	if(g_GameClient.m_Snap.m_pGameobj && g_GameClient.m_Snap.m_pGameobj->m_Flags&GAMEFLAG_TEAMS)
 	{
 		const int TeamColors[2] = {65387, 10223467};
-		if(m_Team >= 0 || m_Team <= 1)
+		if(m_Team >= 0 && m_Team <= 1)
 		{
 			m_RenderInfo.m_Texture = g_GameClient.m_pSkins->Get(m_SkinId)->m_ColorTexture;
 			m_RenderInfo.m_ColorBody = g_GameClient.m_pSkins->GetColor(TeamColors[m_Team]);
