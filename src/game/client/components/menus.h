@@ -172,7 +172,6 @@ class CMenus : public CComponent
 	bool m_DemolistSelectedIsDir;
 	
 	void DemolistOnUpdate(bool Reset);
-	void DemolistPopulate();
 	static void DemolistFetchCallback(const char *pName, int IsDir, int DirType, void *pUser);
 	
 	// found in menus.cpp
