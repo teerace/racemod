@@ -60,13 +60,11 @@ void CRaceDemo::OnReset()
 	// remove tmp demo
 	if(m_RaceState == RACE_STARTED)
 	{
-		char aBuffer[512];
 		char aFilename[512];
-		str_format(aBuffer, sizeof(aBuffer), "demos/%s_tmp.demo", m_pMap);
-		Storage()->SavePath(aBuffer, aFilename, sizeof(aFilename));
-		remove(aFilename);
+		str_format(aFilename, sizeof(aFilename), "demos/%s_tmp.demo", m_pMap);
+		Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
 	}
-	
+
 	m_Time = 0;
 	m_RaceState = RACE_NONE;
 	m_RecordStopTime = 0;
@@ -158,7 +156,10 @@ void CRaceDemo::CheckDemo()
 				SaveDemo(aDemoName);
 				
 				// delete old demo
-				remove(m_pClient->m_pMenus->m_lDemos[i].m_aFilename);
+				char aFilename[512];
+				dbg_msg("test", "\"%s\"", m_pClient->m_pMenus->m_lDemos[i].m_aName);
+				str_format(aFilename, sizeof(aFilename), "demos/%s", m_pClient->m_pMenus->m_lDemos[i].m_aName);
+				Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
 			}
 	
 			m_Time = 0;
@@ -175,13 +176,10 @@ void CRaceDemo::CheckDemo()
 
 void CRaceDemo::SaveDemo(const char* pDemo)
 {
-	char aFilename[512];
+	char aNewFilename[512];
 	char aOldFilename[512];
-	char aBuffer[512];
-	str_format(aBuffer, sizeof(aBuffer), "demos/%s%5.2f.demo", pDemo, m_Time);
-	Storage()->SavePath(aBuffer, aFilename, sizeof(aFilename));
-	str_format(aBuffer, sizeof(aBuffer), "demos/%s_tmp.demo", m_pMap);
-	Storage()->SavePath(aBuffer, aOldFilename, sizeof(aOldFilename));
-	
-	rename(aOldFilename, aFilename);
+	str_format(aNewFilename, sizeof(aNewFilename), "demos/%s%5.2f.demo", pDemo, m_Time);
+	str_format(aOldFilename, sizeof(aOldFilename), "demos/%s_tmp.demo", m_pMap);
+
+	Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
 }
