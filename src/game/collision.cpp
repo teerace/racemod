@@ -168,14 +168,9 @@ int CCollision::IsSpeedup(int Index)
 
 void CCollision::GetSpeedup(int Index, vec2 *Dir, int *Force)
 {
-	vec2 Direction = vec2(1, 0);
 	float Angle = m_pSpeedup[Index].m_Angle * (3.14159265f/180.0f);
 	*Force = m_pSpeedup[Index].m_Force;
-	
-	vec2 TmpDir;
-	TmpDir.x = (Direction.x*cos(Angle)) - (Direction.y*sin(Angle));
-	TmpDir.y = (Direction.x*sin(Angle)) + (Direction.y*cos(Angle));
-	*Dir = TmpDir;
+	*Dir = vec2(cos(Angle), sin(Angle));
 }
 	
 // TODO: rewrite this smarter!
