@@ -54,8 +54,8 @@ public:
 	virtual void StoreCommands(bool Store) = 0;
 	
 	virtual bool LineIsValid(const char *pStr) = 0;
-	virtual void ExecuteLine(const char *Sptr) = 0;
-	virtual void ExecuteLineStroked(int Stroke, const char *pStr) = 0;
+	virtual void ExecuteLine(const char *Sptr, bool ForceSqlCmd=false) = 0;
+	virtual void ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd=false) = 0;
 	virtual void ExecuteFile(const char *pFilename) = 0;
 	
 	virtual void RegisterPrintCallback(FPrintCallback pfnPrintCallback, void *pUserData) = 0;

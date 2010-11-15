@@ -45,7 +45,7 @@ class CConsole : public IConsole
 	static void Con_Exec(IResult *pResult, void *pUserData);
 
 	void ExecuteFileRecurse(const char *pFilename);
-	void ExecuteLineStroked(int Stroke, const char *pStr);
+	void ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd=false);
 	
 	FPrintCallback m_pfnPrintCallback;
 	void *m_pPrintCallbackUserdata;
@@ -120,7 +120,7 @@ public:
 	virtual void StoreCommands(bool Store);
 	
 	virtual bool LineIsValid(const char *pStr);
-	virtual void ExecuteLine(const char *pStr);
+	virtual void ExecuteLine(const char *pStr, bool ForceSqlCmd=false);
 	virtual void ExecuteFile(const char *pFilename);
 
 	virtual void RegisterPrintCallback(FPrintCallback pfnPrintCallback, void *pUserData);

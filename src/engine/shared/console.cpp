@@ -211,7 +211,7 @@ bool CConsole::LineIsValid(const char *pStr)
 	return true;
 }
 
-void CConsole::ExecuteLineStroked(int Stroke, const char *pStr)
+void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd)
 {	
 	while(pStr && *pStr)
 	{
@@ -254,7 +254,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr)
 			
 			// dont allow SQL Commands
 #if defined(CONF_SQL)
-			if(!str_comp_num(pResult->m_pCommand, "sv_sql", 6))
+			if(!ForceSqlCmd && !str_comp_num(pResult->m_pCommand, "sv_sql", 6))
 			{
 				if(Stroke) // dont show it twice
 					return;
@@ -330,10 +330,10 @@ CConsole::CCommand *CConsole::FindCommand(const char *pName, int FlagMask)
 	return 0x0;
 }
 
-void CConsole::ExecuteLine(const char *pStr)
+void CConsole::ExecuteLine(const char *pStr, bool ForceSqlCmd)
 {
-	CConsole::ExecuteLineStroked(1, pStr); // press it
-	CConsole::ExecuteLineStroked(0, pStr); // then release it
+	CConsole::ExecuteLineStroked(1, pStr, ForceSqlCmd); // press it
+	CConsole::ExecuteLineStroked(0, pStr, ForceSqlCmd); // then release it
 }
 
 
@@ -370,7 +370,7 @@ void CConsole::ExecuteFile(const char *pFilename)
 		lr.Init(File);
 
 		while((pLine = lr.Get()))
-			ExecuteLine(pLine);
+			ExecuteLine(pLine, true);
 
 		io_close(File);
 	}
