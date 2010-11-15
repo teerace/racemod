@@ -1,4 +1,6 @@
 /* CSqlScore class by Sushi */
+#if defined(CONF_SQL)
+
 #include <string.h>
 
 #include <engine/shared/config.h>
@@ -516,4 +518,5 @@ void CSqlScore::ClearString(char *pString)
 	}
 }
 
+#endif
 

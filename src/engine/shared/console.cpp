@@ -253,6 +253,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr)
 			int IsStrokeCommand = 0;
 			
 			// dont allow SQL Commands
+#if defined(CONF_SQL)
 			if(!str_comp_num(pResult->m_pCommand, "sv_sql", 6))
 			{
 				if(Stroke) // dont show it twice
@@ -263,7 +264,8 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr)
 				Print(OUTPUT_LEVEL_STANDARD, "Console", aBuf);
 				return;
 			}
-			
+#endif
+
 			if(pResult->m_pCommand[0] == '+')
 			{
 				// insert the stroke direction token

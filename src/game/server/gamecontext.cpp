@@ -19,7 +19,9 @@
 #include "gamemodes/race.h"
 #include "gamemodes/fastcap.h"
 #include "score.h"
+#if defined(CONF_SQL)
 #include "score/sql_score.h"
+#endif
 #include "score/file_score.h"
 
 enum
@@ -1219,9 +1221,11 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		delete m_pScore;
 		
 	// create score object
+#if defined(CONF_SQL)
 	if(g_Config.m_SvUseSQL)
 		m_pScore = new CSqlScore(this);
 	else
+#endif
 		m_pScore = new CFileScore(this);
 		
 	// setup core world

@@ -1,8 +1,8 @@
 #include <new>
 #include <stdio.h>
 #include <engine/shared/config.h>
-#include "score/sql_score.h"
 #include "gamemodes/race.h"
+#include "score.h"
 #include "player.h"
 
 

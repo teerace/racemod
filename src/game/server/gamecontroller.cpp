@@ -6,7 +6,6 @@
 
 #include "entities/pickup.h"
 #include "gamecontroller.h"
-#include "score/sql_score.h"
 #include "gamecontext.h"
 
 
