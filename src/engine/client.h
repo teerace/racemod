@@ -132,6 +132,7 @@ public:
 	virtual const char* GetCurrentMap() = 0;
 	virtual const char* RaceRecordStart(const char *pFilename) = 0;
 	virtual void RaceRecordStop() = 0;
+	virtual bool DemoIsRecording() = 0;
 };
 
 class IGameClient : public IInterface

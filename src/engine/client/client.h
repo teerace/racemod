@@ -285,6 +285,7 @@ public:
 	virtual const char* GetCurrentMap();
 	virtual const char* RaceRecordStart(const char *pFilename);
 	virtual void RaceRecordStop();
+	virtual bool DemoIsRecording();
 	
 	void RegisterCommands();
 

@@ -604,7 +604,11 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 		m_All.m_paComponents[i]->OnStateChange(NewState, OldState);
 }
 
-void CGameClient::OnShutdown() {}
+void CGameClient::OnShutdown()
+{
+	m_pRaceDemo->OnShutdown();
+}
+
 void CGameClient::OnEnterGame() {}
 
 void CGameClient::OnRconLine(const char *pLine)

@@ -1892,7 +1892,12 @@ void CClient::RaceRecordStop()
 	if(m_DemoRecorder.IsRecording())
 		m_DemoRecorder.Stop();
 }	
-	
+
+bool CClient::DemoIsRecording()
+{
+	return m_DemoRecorder.IsRecording();
+}
+
 const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 {
 	int Crc;
