@@ -157,8 +157,7 @@ void CRaceDemo::CheckDemo()
 				
 				// delete old demo
 				char aFilename[512];
-				dbg_msg("test", "\"%s\"", m_pClient->m_pMenus->m_lDemos[i].m_aName);
-				str_format(aFilename, sizeof(aFilename), "demos/%s", m_pClient->m_pMenus->m_lDemos[i].m_aName);
+				str_format(aFilename, sizeof(aFilename), "demos/%s.demo", m_pClient->m_pMenus->m_lDemos[i].m_aName);
 				Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
 			}
 	
