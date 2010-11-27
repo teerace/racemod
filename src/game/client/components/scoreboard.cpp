@@ -140,12 +140,8 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 	}
 		
 	float Offset = 0;
-	float DataOffset = 0;
 	if(m_pClient->m_IsRace)
-	{
-		Offset = 80.0f;
-		DataOffset = 130;
-	}
+		Offset = 110.0f;
 	
 	float tw = TextRender()->TextWidth(0, 48, pTitle, -1);
 
@@ -257,7 +253,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 
 		float FontSizeResize = FontSize;
 		float Width;
-		const float ScoreWidth = 60.0f;
+		const float ScoreWidth = 60.0f+Offset;
 		const float PingWidth = 60.0f;
 		if(m_pClient->m_IsRace)
 		{
@@ -315,14 +311,14 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			else RenderTools()->SelectSprite(SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
 			
 			float size = 64.0f;
-			IGraphics::CQuadItem QuadItem(x+55+DataOffset, y-15, size/2, size);
+			IGraphics::CQuadItem QuadItem(x+55+Offset, y-15, size/2, size);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 		}
 		
 		CTeeRenderInfo TeeInfo = m_pClient->m_aClients[pInfo->m_ClientId].m_RenderInfo;
 		TeeInfo.m_Size *= TeeSizeMod;
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeInfo, EMOTE_NORMAL, vec2(1,0), vec2(x+90+DataOffset, y+28+TeeOffset));
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeInfo, EMOTE_NORMAL, vec2(1,0), vec2(x+90+Offset, y+28+TeeOffset));
 
 		
 		y += LineHeight;
