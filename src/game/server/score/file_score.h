@@ -21,7 +21,7 @@ class CFileScore : public IScore
 		float m_aCpTime[NUM_TELEPORT];
 		
 		CPlayerScore() {};
-		CPlayerScore(const char *pName, float Score, const char *pIP, float aCpTime[NUM_TELEPORT]);
+		CPlayerScore(const char *pName, float Score, const char *pIP, float *apCpTime);
 		
 		bool operator<(const CPlayerScore& other) { return (this->m_Score < other.m_Score); }
 	};
@@ -33,7 +33,7 @@ class CFileScore : public IScore
 	
 	CPlayerScore *SearchScore(int ID, bool ScoreIP, int *pPosition);
 	CPlayerScore *SearchName(const char *pName, int *pPosition, bool MatchCase);
-	void UpdatePlayer(int ID, float Score, float aCpTime[NUM_TELEPORT]);
+	void UpdatePlayer(int ID, float Score, float *apCpTime);
 	
 	void Init();
 	void Save();

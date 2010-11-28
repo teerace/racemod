@@ -1,5 +1,6 @@
 /* copyright (c) 2008 rajh and gregwar. Score stuff */
 
+#include <base/tl/sorted_array.h>
 #include <engine/shared/config.h>
 #include <sstream>
 #include <fstream>
@@ -9,13 +10,13 @@
 
 static LOCK gs_ScoreLock = 0;
 
-CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Score, const char *pIP, float aCpTime[NUM_TELEPORT])
+CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Score, const char *pIP, float *apCpTime)
 {
 	str_copy(m_aName, pName, sizeof(m_aName));
 	m_Score = Score;
 	str_copy(m_aIP, pIP, sizeof(m_aIP));
 	for(int i = 0; i < NUM_TELEPORT; i++)
-		m_aCpTime[i] = aCpTime[i];
+		m_aCpTime[i] = apCpTime[i];
 }
 
 CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_pServer(pGameServer->Server())
@@ -174,7 +175,7 @@ CFileScore::CPlayerScore *CFileScore::SearchName(const char *pName, int *pPositi
 	return pPlayer;
 }
 
-void CFileScore::UpdatePlayer(int ID, float Score, float aCpTime[NUM_TELEPORT])
+void CFileScore::UpdatePlayer(int ID, float Score, float *apCpTime)
 {
 	const char *pName = Server()->ClientName(ID);
 	char aIP[16];
@@ -186,7 +187,7 @@ void CFileScore::UpdatePlayer(int ID, float Score, float aCpTime[NUM_TELEPORT])
 	if(pPlayer)
 	{
 		for(int c = 0; c < NUM_TELEPORT; c++)
-				pPlayer->m_aCpTime[c] = aCpTime[c];
+				pPlayer->m_aCpTime[c] = apCpTime[c];
 		
 		pPlayer->m_Score = Score;
 		str_copy(pPlayer->m_aName, pName, sizeof(pPlayer->m_aName));
@@ -194,7 +195,7 @@ void CFileScore::UpdatePlayer(int ID, float Score, float aCpTime[NUM_TELEPORT])
 		sort(m_Top.all());
 	}
 	else
-		m_Top.add(*new CPlayerScore(pName, Score, aIP, aCpTime));
+		m_Top.add(*new CPlayerScore(pName, Score, aIP, apCpTime));
 	
 	lock_release(gs_ScoreLock);
 	Save();
