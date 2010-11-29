@@ -633,7 +633,7 @@ void CCharacter::Tick()
 			m_Armor++;
 	}
 	
-	if((GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_BEGIN && (!m_aWeapons[WEAPON_GRENADE].m_Got || (m_RaceState != RACE_FINISHED && m_RaceState != RACE_STARTED)))
+	if((GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_BEGIN && ((!m_aWeapons[WEAPON_GRENADE].m_Got && !m_Armor) || (m_RaceState != RACE_FINISHED && m_RaceState != RACE_STARTED)))
 		|| (GameServer()->m_pController->IsFastCap() && m_RaceState != RACE_STARTED && ((CGameControllerFC*)GameServer()->m_pController)->IsEnemyFlagStand(m_Pos, m_pPlayer->GetTeam())))
 	{
 		// create flag
