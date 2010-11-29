@@ -644,14 +644,17 @@ void CCharacter::Tick()
 			// sound
 			GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, m_pPlayer->GetCID());
 		}
-			
-		// reset pickups
-		if(!m_aWeapons[WEAPON_GRENADE].m_Got)
-			m_pPlayer->m_ResetPickups = true;
-			
-		// reset shield
-		if(!GameServer()->m_pController->IsFastCap())
-			m_Armor = 0;
+		
+		if(m_RaceState != RACE_NONE)
+		{
+			// reset pickups
+			if(!m_aWeapons[WEAPON_GRENADE].m_Got)
+				m_pPlayer->m_ResetPickups = true;
+				
+			// reset shield
+			if(!GameServer()->m_pController->IsFastCap())
+				m_Armor = 0;
+		}
 			
 		m_Starttime = Server()->Tick();
 		m_Refreshtime = Server()->Tick();
