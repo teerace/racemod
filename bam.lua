@@ -185,10 +185,10 @@ function build(settings)
 	if family == "unix" then
    		if platform == "macosx" then
 			client_settings.link.frameworks:Add("OpenGL")
-            client_settings.link.frameworks:Add("AGL")
-            client_settings.link.frameworks:Add("Carbon")
-            client_settings.link.frameworks:Add("Cocoa")
-            launcher_settings.link.frameworks:Add("Cocoa")
+			client_settings.link.frameworks:Add("AGL")
+			client_settings.link.frameworks:Add("Carbon")
+			client_settings.link.frameworks:Add("Cocoa")
+			launcher_settings.link.frameworks:Add("Cocoa")
 		else
 			client_settings.link.libs:Add("X11")
 			client_settings.link.libs:Add("GL")

@@ -131,8 +131,8 @@ function build(settings)
 	else
 		settings.cc.flags:Add("-Wall")
 		if platform == "macosx" then
-			settings.cc.flags:Add("-mmacosx-version-min=10.4", "-isysroot /Developer/SDKs/MacOSX10.4u.sdk")
-			settings.link.flags:Add("-mmacosx-version-min=10.4", "-isysroot /Developer/SDKs/MacOSX10.4u.sdk")
+			settings.cc.flags:Add("-mmacosx-version-min=10.5", "-isysroot /Developer/SDKs/MacOSX10.5.sdk", "-arch i386")
+			settings.link.flags:Add("-mmacosx-version-min=10.5", "-isysroot /Developer/SDKs/MacOSX10.5.sdk", "-arch i386")
 		elseif config.stackprotector.value == 1 then
 			settings.cc.flags:Add("-fstack-protector", "-fstack-protector-all")
 			settings.link.flags:Add("-fstack-protector", "-fstack-protector-all")
@@ -143,20 +143,13 @@ function build(settings)
 	settings.cc.includes:Add("src")
 
 	if family == "unix" then
+		settings.cc.includes:Add("other/mysql/include")
+		settings.cc.includes:Add("other/mysql/include/cppconn")
    		if platform == "macosx" then
 			settings.link.frameworks:Add("Carbon")
 			settings.link.frameworks:Add("AppKit")
 		else
 			settings.link.libs:Add("pthread")
-			settings.cc.includes:Add("other/mysql/include")
-			settings.cc.includes:Add("other/mysql/include/cppconn")
-			if arch == "amd64" then
-				settings.link.libpath:Add("other/mysql/lib64")
-			else
-				settings.link.libpath:Add("other/mysql/lib32")
-			end
-			settings.link.libs:Add("mysqlcppconn-static")
-			settings.link.libs:Add("mysqlclient")
 		end
 	elseif family == "windows" then
 		settings.link.libs:Add("gdi32")
@@ -164,9 +157,6 @@ function build(settings)
 		settings.link.libs:Add("ws2_32")
 		settings.link.libs:Add("ole32")
 		settings.link.libs:Add("shell32")
-		settings.cc.includes:Add("other/mysql/include")
-		settings.link.libpath:Add("other/mysql/vc2005libs")
-		settings.link.libs:Add("mysqlcppconn")
 	end
 	
 	-- compile zlib if needed
@@ -192,22 +182,34 @@ function build(settings)
 	launcher_settings = engine_settings:Copy()
 
 	if family == "unix" then
+		server_settings.link.libs:Add("mysqlcppconn-static")
+		server_settings.link.libs:Add("mysqlclient")
+
    		if platform == "macosx" then
 			client_settings.link.frameworks:Add("OpenGL")
-            client_settings.link.frameworks:Add("AGL")
-            client_settings.link.frameworks:Add("Carbon")
-            client_settings.link.frameworks:Add("Cocoa")
-            launcher_settings.link.frameworks:Add("Cocoa")
+			client_settings.link.frameworks:Add("AGL")
+			client_settings.link.frameworks:Add("Carbon")
+			client_settings.link.frameworks:Add("Cocoa")
+			launcher_settings.link.frameworks:Add("Cocoa")
+			server_settings.link.libpath:Add("other/mysql/mac/lib32")
 		else
 			client_settings.link.libs:Add("X11")
 			client_settings.link.libs:Add("GL")
 			client_settings.link.libs:Add("GLU")
+			if arch == "amd64" then
+				server_settings.link.libpath:Add("other/mysql/linux/lib64")
+			else
+				server_settings.link.libpath:Add("other/mysql/linux/lib32")
+			end
 		end
 		
 	elseif family == "windows" then
 		client_settings.link.libs:Add("opengl32")
 		client_settings.link.libs:Add("glu32")
 		client_settings.link.libs:Add("winmm")
+		server_settings.cc.includes:Add("other/mysql/include")
+		server_settings.link.libpath:Add("other/mysql/vc2005libs")
+		server_settings.link.libs:Add("mysqlcppconn")
 	end
 
 	-- apply sdl settings
