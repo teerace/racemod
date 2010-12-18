@@ -21,7 +21,7 @@ CSqlScore::CSqlScore(CGameContext *pGameServer)
   m_Port(g_Config.m_SvSqlPort)
 {
 	str_copy(m_aMap, g_Config.m_SvMap, sizeof(m_aMap));
-	ClearString(m_aMap);
+	ClearString(m_aMap, sizeof(m_aMap));
 	
 	if(gs_SqlLock == 0)
 		gs_SqlLock = lock_create();
@@ -132,7 +132,7 @@ void CSqlScore::LoadScoreThread(void *pUser)
 		try
 		{
 			// check strings
-			pData->m_pSqlData->ClearString(pData->m_aName);
+			pData->m_pSqlData->ClearString(pData->m_aName, sizeof(pData->m_aName));
 			
 			char aBuf[512];
 			// check if there is an entry with the same ip
@@ -242,7 +242,7 @@ void CSqlScore::SaveScoreThread(void *pUser)
 		try
 		{
 			// check strings
-			pData->m_pSqlData->ClearString(pData->m_aName);
+			pData->m_pSqlData->ClearString(pData->m_aName, sizeof(pData->m_aName));
 			
 			char aBuf[768];
 			
@@ -329,7 +329,7 @@ void CSqlScore::ShowRankThread(void *pUser)
 		try
 		{
 			// check strings
-			pData->m_pSqlData->ClearString(pData->m_aName);
+			pData->m_pSqlData->ClearString(pData->m_aName, sizeof(pData->m_aName));
 			
 			// check sort methode
 			char aBuf[512];
@@ -475,7 +475,7 @@ void CSqlScore::ShowTop5(int ClientID, int Debut)
 }
 
 // anti SQL injection
-void CSqlScore::ClearString(char *pString)
+void CSqlScore::ClearString(char *pString, int Size)
 {	
 	// replace ' ' ' with ' \' ' and remove '\'
 	for(int i = 0; i < str_length(pString); i++)
@@ -498,7 +498,7 @@ void CSqlScore::ClearString(char *pString)
 			
 			if(SlashCount % 2 == 0)
 			{
-				for(int j = str_length(pString)-1; j > i; j--)
+				for(int j = Size-2; j > i; j--)
 				{
 					pString[j] = pString[j-1];
 				}

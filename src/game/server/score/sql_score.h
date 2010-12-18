@@ -42,7 +42,7 @@ class CSqlScore : public IScore
 	void Disconnect();
 	
 	// anti SQL injection
-	void ClearString(char *pString);
+	void ClearString(char *pString, int Size);
 	
 public:
 	
