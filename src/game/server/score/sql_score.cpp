@@ -482,29 +482,19 @@ void CSqlScore::ClearString(char *pString, int Size)
 	{
 		// replace '-' with '_'
 		if(pString[i] == '-')
-			pString[i] = '_';
-		
-		if(pString[i] == '\'')
 		{
-			// count \ before the '
-			int SlashCount = 0;
-			for(int j = i-1; j >= 0; j--)
-			{
-				if(pString[i] != '\\')
-					break;
-				
-				SlashCount++;
-			}
-			
-			if(SlashCount % 2 == 0)
-			{
-				for(int j = Size-2; j > i; j--)
-				{
-					pString[j] = pString[j-1];
-				}
-				pString[i] = '\\';
-				i++;
-			}
+			pString[i] = '_';
+			continue;
+		}
+		
+		// escape ', \ and ;
+		if(pString[i] == '\'' || pString[i] == '\\' || pString[i] == ';')
+		{
+			for(int j = Size-2; j > i; j--)
+				pString[j] = pString[j-1];
+			pString[i] = '\\'
+			i++; // so we dont double escape
+			continue;
 		}
 	}
 
@@ -512,11 +502,10 @@ void CSqlScore::ClearString(char *pString, int Size)
 	for(int i = str_length(pString)-1; i >= 0; i--)
 	{
 		if(pString[i] == ' ' || pString[i] == '\\')
-			pString[i] = '\0';
+			pString[i] = 0;
 		else
 			break;
 	}
 }
 
 #endif
-
