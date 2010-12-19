@@ -476,7 +476,15 @@ void CSqlScore::ShowTop5(int ClientID, int Debut)
 
 // anti SQL injection
 void CSqlScore::ClearString(char *pString, int Size)
-{	
+{
+	// check if the string is long enough to escape something
+	if(Size <= 2)
+	{
+		if(pString[0] == '\'' || pString[0] == '\\' || pString[0] == ';')
+			pString[0] = '_';
+		return;
+	}
+	
 	// replace ' ' ' with ' \' ' and remove '\'
 	for(int i = 0; i < str_length(pString); i++)
 	{
@@ -492,7 +500,7 @@ void CSqlScore::ClearString(char *pString, int Size)
 		{
 			for(int j = Size-2; j > i; j--)
 				pString[j] = pString[j-1];
-			pString[i] = '\\'
+			pString[i] = '\\';
 			i++; // so we dont double escape
 			continue;
 		}
