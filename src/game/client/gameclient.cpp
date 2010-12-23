@@ -45,6 +45,7 @@
 #include "components/sounds.h"
 #include "components/voting.h"
 #include "components/race_demo.h"
+#include "components/ghost.h"
 
 CGameClient g_GameClient;
 
@@ -70,6 +71,7 @@ static CEmoticon gs_Emoticon;
 static CDamageInd gsDamageInd;
 static CVoting gs_Voting;
 static CRaceDemo gs_RaceDemo;
+static CGhost gs_Ghost;
 
 static CPlayers gs_Players;
 static CNamePlates gs_NamePlates;
@@ -138,6 +140,7 @@ void CGameClient::OnConsoleInit()
 	m_pVoting = &::gs_Voting;
 	m_pRaceDemo = &::gs_RaceDemo;
 	m_pScoreboard = &::gs_Scoreboard;
+	m_pGhost = &::gs_Ghost;
 	
 	// make a list of all the systems, make sure to add them in the corrent render order
 	m_All.Add(m_pSkins);
@@ -156,6 +159,7 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(&m_pParticles->m_RenderTrail);
 	m_All.Add(&gs_Items);
 	m_All.Add(&gs_Players);
+	m_All.Add(m_pGhost);
 	m_All.Add(&gs_MapLayersForeGround);
 	m_All.Add(&m_pParticles->m_RenderExplosions);
 	m_All.Add(&gs_NamePlates);

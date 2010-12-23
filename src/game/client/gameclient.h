@@ -221,6 +221,8 @@ public:
 	class CVoting *m_pVoting;
 	class CRaceDemo *m_pRaceDemo;
 	class CScoreboard *m_pScoreboard;
+	//TODO: This is ugly
+	class CGhost *m_pGhost;
 };
 
 extern const char *Localize(const char *Str);
