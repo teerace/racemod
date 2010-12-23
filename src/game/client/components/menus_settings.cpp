@@ -687,6 +687,10 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 	LeftView.HSplitTop(20.0f, &Button, &LeftView);
 	if(DoButton_CheckBox(&g_Config.m_ClShowCheckpointDiff, Localize("Show checkpoint difference"), g_Config.m_ClShowCheckpointDiff, &Button))
 		g_Config.m_ClShowCheckpointDiff ^= 1;
+	
+	LeftView.HSplitTop(20.0f, &Button, &LeftView);
+	if(DoButton_CheckBox(&g_Config.m_ClGhost, Localize("Show ghost"), g_Config.m_ClGhost, &Button))
+		g_Config.m_ClGhost ^= 1;
 		
 	LeftView.HSplitTop(20.0f, &Button, &LeftView);
 	if(DoButton_CheckBox(&g_Config.m_ClShowRecords, Localize("Show records"), g_Config.m_ClShowRecords, &Button))
