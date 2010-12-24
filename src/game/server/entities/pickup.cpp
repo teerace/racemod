@@ -107,7 +107,7 @@ void CPickup::Tick()
 						apChrs[j]->GiveNinja();
 						RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
 
-						// loop through all players, setting their emotes
+						/* loop through all players, setting their emotes
 						CEntity *apEnts[64];
 						int Num = GameServer()->m_World.FindEntities(vec2(0, 0), 1000000, apEnts, 64, NETOBJTYPE_CHARACTER);
 						
@@ -116,7 +116,7 @@ void CPickup::Tick()
 							CCharacter *pC = static_cast<CCharacter *>(apEnts[i]);
 							if (pC != apChrs[j])
 								pC->SetEmote(EMOTE_SURPRISE, Server()->Tick() + Server()->TickSpeed());
-						}
+						}*/
 
 						apChrs[j]->SetEmote(EMOTE_ANGRY, Server()->Tick() + 1200 * Server()->TickSpeed() / 1000);
 						break;
