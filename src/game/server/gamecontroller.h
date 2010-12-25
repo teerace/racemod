@@ -148,8 +148,12 @@ public:
 
 	virtual void PostReset();
 	
+	bool IsSeparator(char c) { return c == ';' || c == ' ' || c == ',' || c == '\t'; }
+	
 	// fast cap
 	virtual bool IsFastCap() { return false; }
+	
+	void SetRoundCount(int Num) { m_RoundCount = Num; }
 };
 
 #endif

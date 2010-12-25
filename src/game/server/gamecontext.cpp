@@ -998,6 +998,66 @@ void CGameContext::ConChangeMap(IConsole::IResult *pResult, void *pUserData)
 	pSelf->m_pController->ChangeMap(pResult->NumArguments() ? pResult->GetString(0) : "");
 }
 
+void CGameContext::ConNextMap(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	
+	if(!str_length(g_Config.m_SvMaprotation))
+		return;
+		
+	// get next map from rotation
+	const char *pMapRotation = g_Config.m_SvMaprotation;
+	const char *pCurrentMap = g_Config.m_SvMap;
+	
+	int CurrentMapLen = str_length(pCurrentMap);
+	const char *pNextMap = pMapRotation;
+	while(*pNextMap)
+	{
+		int WordLen = 0;
+		while(pNextMap[WordLen] && !pSelf->m_pController->IsSeparator(pNextMap[WordLen]))
+			WordLen++;
+		
+		if(WordLen == CurrentMapLen && str_comp_num(pNextMap, pCurrentMap, CurrentMapLen) == 0)
+		{
+			// map found
+			pNextMap += CurrentMapLen;
+			while(*pNextMap && pSelf->m_pController->IsSeparator(*pNextMap))
+				pNextMap++;
+				
+			break;
+		}
+		
+		pNextMap++;
+	}
+	
+	// restart rotation
+	if(pNextMap[0] == 0)
+		pNextMap = pMapRotation;
+
+	// cut out the next map	
+	char aBuf[512];
+	for(int i = 0; i < 512; i++)
+	{
+		aBuf[i] = pNextMap[i];
+		if(pSelf->m_pController->IsSeparator(pNextMap[i]) || pNextMap[i] == 0)
+		{
+			aBuf[i] = 0;
+			break;
+		}
+	}
+	
+	// skip spaces
+	int i = 0;
+	while(pSelf->m_pController->IsSeparator(aBuf[i]))
+		i++;
+	
+	// reset round count
+	pSelf->m_pController->SetRoundCount(0);
+	
+	// change map
+	pSelf->m_pController->ChangeMap(aBuf);
+}
+
 void CGameContext::ConRestart(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -1181,6 +1241,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("tune_dump", "", CFGFLAG_SERVER, ConTuneDump, this, "");
 
 	Console()->Register("change_map", "?r", CFGFLAG_SERVER|CFGFLAG_STORE, ConChangeMap, this, "");
+	Console()->Register("next_map", "", CFGFLAG_SERVER|CFGFLAG_STORE, ConNextMap, this, "");
 	Console()->Register("restart", "?i", CFGFLAG_SERVER|CFGFLAG_STORE, ConRestart, this, "");
 	Console()->Register("broadcast", "r", CFGFLAG_SERVER, ConBroadcast, this, "");
 	Console()->Register("say", "r", CFGFLAG_SERVER, ConSay, this, "");
