@@ -59,7 +59,7 @@ void CPickup::Tick()
 	int Num = GameServer()->m_World.FindEntities(m_Pos, 20.0f, (CEntity**)apChrs, MAX_CLIENTS, NETOBJTYPE_CHARACTER);
 	for(int j = 0; j < Num; j++)
 	{
-		if(apChrs[j] && apChrs[j]->IsAlive() && m_SpawnTick[apChrs[j]->GetPlayer()->GetCID()] == -1)
+		if(apChrs[j]->IsAlive() && m_SpawnTick[apChrs[j]->GetPlayer()->GetCID()] == -1)
 		{
 			// player picked us up, is someone was hooking us, let them go
 			int RespawnTime = -1;
