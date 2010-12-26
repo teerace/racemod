@@ -396,7 +396,7 @@ void CGameClient::OnReset()
 		m_aClients[i].m_SkinInfo.m_Texture = g_GameClient.m_pSkins->Get(0)->m_ColorTexture;
 		m_aClients[i].m_SkinInfo.m_ColorBody = vec4(1,1,1,1);
 		m_aClients[i].m_SkinInfo.m_ColorFeet = vec4(1,1,1,1);
-		m_aClients[i].m_Score = 0;
+		m_aClients[i].m_Score = 0.0f;
 		m_aClients[i].UpdateRenderInfo();
 	}
 	
@@ -917,7 +917,7 @@ void CGameClient::OnNewSnapshot()
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
 			if(!Online[i])
-				m_aClients[i].m_Score = 0;
+				m_aClients[i].m_Score = 0.0f;
 		}
 	}
 }
