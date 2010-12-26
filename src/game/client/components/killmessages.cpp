@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <engine/graphics.h>
 #include <engine/textrender.h>
+#include <engine/shared/config.h>
 #include <game/generated/protocol.h>
 #include <game/generated/client_data.h>
 
@@ -54,6 +55,8 @@ void CKillMessages::OnRender()
 	Graphics()->MapScreen(0, 0, Width*1.5f, Height*1.5f);
 	float StartX = Width*1.5f-10.0f;
 	float y = 20.0f;
+	if(g_Config.m_ClShowfps)
+		y = 62.0f;
 
 	for(int i = 1; i <= MAX_KILLMSGS; i++)
 	{
