@@ -941,8 +941,6 @@ void CCharacter::TickDefered()
 
 float CCharacter::CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos)
 {
-	float Distance = distance(PrevPos, Pos);
-	
 	for(int i = 0; i <= 20; i++)
 	{
 		float a = i/20.0f;
