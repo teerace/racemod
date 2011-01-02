@@ -158,6 +158,8 @@ private:
 	// checkpoints
 	int m_CpTick;
 	int m_CpActive;
+	
+	float CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos);
 };
 
 #endif

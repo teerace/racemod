@@ -675,49 +675,52 @@ void CCharacter::Tick()
 			GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE, m_pPlayer->GetCID());
 		}
 		
+        // calculate finish time
+        float FinishTime = CalculateFinishTime(Time, m_PrevPos, m_Pos);
+        
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %5.2f second(s)", Server()->ClientName(m_pPlayer->GetCID()), (int)Time/60, Time-((int)Time/60*60));
+		str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %6.3f second(s)", Server()->ClientName(m_pPlayer->GetCID()), (int)FinishTime/60, FinishTime-((int)FinishTime/60*60));
 		if(!g_Config.m_SvShowTimes)
 			GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 		else
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 		
-		if(Time - pData->m_BestTime < 0)
+		if(FinishTime - pData->m_BestTime < 0)
 		{
 			// new record \o/
-			str_format(aBuf, sizeof(aBuf), "New record: %5.2f second(s) better", Time - pData->m_BestTime);
+			str_format(aBuf, sizeof(aBuf), "New record: %6.3f second(s) better", FinishTime - pData->m_BestTime);
 			if(!g_Config.m_SvShowTimes)
 				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
 			else
 				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 		}
 		
-		if(!pData->m_BestTime || Time < pData->m_BestTime)
+		if(!pData->m_BestTime || FinishTime < pData->m_BestTime)
 		{
 			// update the score
-			pData->Set(Time, m_CpCurrent);
+			pData->Set(FinishTime, m_CpCurrent);
 			
 			if(str_comp_num(Server()->ClientName(m_pPlayer->GetCID()), "nameless tee", 12) != 0)
-				GameServer()->Score()->SaveScore(m_pPlayer->GetCID(), Time, this);
+				GameServer()->Score()->SaveScore(m_pPlayer->GetCID(), FinishTime, this);
 		}
 		
 		// update server best time
-		if(!GameServer()->m_pController->m_CurrentRecord || Time < GameServer()->m_pController->m_CurrentRecord)
+		if(!GameServer()->m_pController->m_CurrentRecord || FinishTime < GameServer()->m_pController->m_CurrentRecord)
 		{
 			// check for nameless
 			if(str_comp_num(Server()->ClientName(m_pPlayer->GetCID()), "nameless tee", 12) != 0)
-				GameServer()->m_pController->m_CurrentRecord = Time;
+				GameServer()->m_pController->m_CurrentRecord = FinishTime;
 		}
 		
 		m_RaceState = RACE_FINISHED;
 
 		// set player score
-		if(!GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime || GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime > Time)
+		if(!GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime || GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime > FinishTime)
 		{
-			GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime = Time;
+			GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime = FinishTime;
 			
 			// send it to all players
-			for(int i = 0; i < MAX_CLIENTS; i++)
+			/*for(int i = 0; i < MAX_CLIENTS; i++)
 			{
 				if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->m_IsUsingRaceClient)
 				{
@@ -725,7 +728,7 @@ void CCharacter::Tick()
 					{
 						CNetMsg_Sv_PlayerTime Msg;
 						char aBuf[16];
-						str_format(aBuf, sizeof(aBuf), "%.0f", Time*100.0f); // damn ugly but the only way i know to do it
+						str_format(aBuf, sizeof(aBuf), "%.0f", FinishTime*100.0f); // damn ugly but the only way i know to do it
 						int TimeToSend;
 						sscanf(aBuf, "%d", &TimeToSend);
 						Msg.m_Time = TimeToSend;
@@ -733,10 +736,10 @@ void CCharacter::Tick()
 						Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
 					}
 				}
-			}
+			}*/
 		}
 		
-		int TTime = 0-(int)Time;
+		int TTime = 0-(int)FinishTime;
 		if(m_pPlayer->m_Score < TTime)
 			m_pPlayer->m_Score = TTime;
 	}
@@ -934,6 +937,22 @@ void CCharacter::TickDefered()
 			m_ReckoningCore = m_Core;
 		}
 	}
+}
+
+float CCharacter::CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos)
+{
+	float Distance = distance(PrevPos, Pos);
+	
+	for(int i = 0; i <= 20; i++)
+	{
+		float a = i/20.0f;
+		vec2 TmpPos = mix(PrevPos, Pos, a);
+		if(GameServer()->Collision()->GetCollisionRace(GameServer()->Collision()->GetIndex(TmpPos)) == TILE_END || 
+			(GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(TmpPos, m_pPlayer->GetTeam())))
+			return Time + (float)i/1000.f;
+	}
+	
+	return Time;
 }
 
 bool CCharacter::IncreaseHealth(int Amount)

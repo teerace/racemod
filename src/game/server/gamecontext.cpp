@@ -927,7 +927,7 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 			if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurrentTime > 0)
 			{
 				char aBuf[16];
-				str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurrentTime*100.0f); // damn ugly but the only way i know to do it
+				str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurrentTime*1000.0f); // damn ugly but the only way i know to do it
 				int TimeToSend;
 				sscanf(aBuf, "%d", &TimeToSend);
 				CNetMsg_Sv_PlayerTime Msg;
