@@ -615,7 +615,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 			}
 			
 			int Minutes = 0;
-			float Seconds = 0;
+			float Seconds = 0.0f;
 			
 			// store the name
 			char Playername[MAX_NAME_LENGTH];

@@ -93,7 +93,7 @@ void CPlayer::Tick()
 		if(m_LastSentTime > GameServer()->m_pController->m_CurrentRecord || (!m_LastSentTime && GameServer()->m_pController->m_CurrentRecord))
 		{
 			char aBuf[16];
-			str_format(aBuf, sizeof(aBuf), "%.0f", GameServer()->m_pController->m_CurrentRecord*100.0f); // damn ugly but the only way i know to do it
+			str_format(aBuf, sizeof(aBuf), "%.0f", GameServer()->m_pController->m_CurrentRecord*1000.0f); // damn ugly but the only way i know to do it
 			int TimeToSend;
 			sscanf(aBuf, "%d", &TimeToSend);
 			CNetMsg_Sv_Record Msg;
