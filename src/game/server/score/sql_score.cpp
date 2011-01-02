@@ -365,9 +365,9 @@ void CSqlScore::ShowRankThread(void *pUser)
 			{
 				float Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
 				if(!g_Config.m_SvShowTimes)
-					str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %6.3f second(s)", (int)(Time/60), Time-((int)Time/60*60));
+					str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %.3f second(s)", (int)(Time/60), Time-((int)Time/60*60));
 				else
-					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %6.3f second(s)", RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), (int)(Time/60), Time-((int)Time/60*60));
+					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), (int)(Time/60), Time-((int)Time/60*60));
 				
 				if(pData->m_Search)
 					strcat(aBuf, pData->m_aRequestingPlayer);
