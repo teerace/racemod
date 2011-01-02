@@ -500,9 +500,8 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 		{
 			m_CheckpointTick = 0;
 			m_RaceTime = 0;
+			m_RaceState = RACE_NONE;
 		}
-		
-		m_RaceState = RACE_NONE;
 	}
 	else if(MsgType == NETMSGTYPE_SV_RECORD)
 	{
