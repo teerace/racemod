@@ -147,7 +147,7 @@ bool IGameController::OnEntity(int Index, vec2 Pos)
 		SubType = WEAPON_NINJA;
 	}
 	
-	if(Type != -1)
+	if(Type != -1 && !g_Config.m_SvNoItems)
 	{
 		CPickup *pPickup = new CPickup(&GameServer()->m_World, Type, SubType);
 		pPickup->m_Pos = Pos;
