@@ -462,6 +462,7 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 	};
 	
 	if(m_pEditor->m_Map.m_pGameLayer == this || m_pEditor->m_Map.m_pTeleLayer == this || m_pEditor->m_Map.m_pSpeedupLayer == this) // remove the image and color properties if this is the game-, tele- or speedup layer
+	{
 		aProps[3].m_pName = 0;
 		aProps[4].m_pName = 0;
 	}
