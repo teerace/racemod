@@ -477,22 +477,6 @@ void CMenus::RenderDemoList(CUIRect MainView)
 		s_Inited = 1;
 	}
 
-	// delete demo
-	if(m_DemolistDelEntry)
-	{
-		if(m_DemolistSelectedIndex >= 0 && !m_DemolistSelectedIsDir)
-		{
-			char aBuf[512];
-			str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, m_lDemos[m_DemolistSelectedIndex].m_aFilename);
-			if(Storage()->RemoveFile(aBuf, m_lDemos[m_DemolistSelectedIndex].m_StorageType))
-			{
-				DemolistPopulate();
-				DemolistOnUpdate(false);
-			}
-		}
-		m_DemolistDelEntry = false;
-	}
-
 	char aFooterLabel[128] = {0};
 	if(m_DemolistSelectedIndex >= 0)
 	{
@@ -511,10 +495,10 @@ void CMenus::RenderDemoList(CUIRect MainView)
 				Item->m_InfosLoaded = true;
 			}
 			if(!Item->m_Valid)
-			str_copy(aFooterLabel, Localize("Invalid Demo"), sizeof(aFooterLabel));
-		else
+				str_copy(aFooterLabel, Localize("Invalid Demo"), sizeof(aFooterLabel));
+			else
 				str_format(aFooterLabel, sizeof(aFooterLabel), "%s: %s", Localize("Map"), Item->m_aMap);
-	}
+		}
 	}
 	
 	// render background
@@ -541,7 +525,7 @@ void CMenus::RenderDemoList(CUIRect MainView)
 			Item.m_Rect.VSplitLeft(5.0f, 0, &Item.m_Rect);
 			DoButton_Icon(IMAGE_FILEICONS, r.front().m_IsDir?SPRITE_FILE_FOLDER:SPRITE_FILE_DEMO1, &FileIcon);
 			UI()->DoLabel(&Item.m_Rect, r.front().m_aName, Item.m_Rect.h*ms_FontmodHeight, -1);
-	}
+		}
 	}
 	bool Activated = false;
 	m_DemolistSelectedIndex = UiDoListboxEnd(&s_ScrollValue, &Activated);
