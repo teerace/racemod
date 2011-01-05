@@ -146,7 +146,7 @@ void CSqlScore::LoadScoreThread(void *pUser)
 					// get the best time
 					pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_BestTime = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
 					char aColumn[8];
-					for(int i = 0; i < NUM_TELEPORT; i++)
+					for(int i = 0; i < NUM_CHECKPOINTS; i++)
 					{
 						str_format(aColumn, sizeof(aColumn), "cp%d", i+1);
 						pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_aBestCpTime[i] = (float)pData->m_pSqlData->m_pResults->getDouble(aColumn);
@@ -188,7 +188,7 @@ void CSqlScore::LoadScoreThread(void *pUser)
 				char aColumn[8];
 				if(g_Config.m_SvCheckpointSave)
 				{
-					for(int i = 0; i < NUM_TELEPORT; i++)
+					for(int i = 0; i < NUM_CHECKPOINTS; i++)
 					{
 						str_format(aColumn, sizeof(aColumn), "cp%d", i+1);
 						pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_aBestCpTime[i] = (float)pData->m_pSqlData->m_pResults->getDouble(aColumn);
@@ -307,7 +307,7 @@ void CSqlScore::SaveScore(int ClientID, float Time, CCharacter *pChar)
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientID), sizeof(Tmp->m_aName));
 	Server()->GetClientIP(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	Tmp->m_Time = Time;
-	for(int i = 0; i < NUM_TELEPORT; i++)
+	for(int i = 0; i < NUM_CHECKPOINTS; i++)
 		Tmp->m_aCpCurrent[i] = pChar->m_CpCurrent[i];
 	Tmp->m_pSqlData = this;
 	

@@ -62,7 +62,7 @@ struct CSqlScoreData
 	char m_aName[16];
 	char m_aIP[16];
 	float m_Time;
-	float m_aCpCurrent[NUM_TELEPORT];
+	float m_aCpCurrent[NUM_CHECKPOINTS];
 	int m_Num;
 	bool m_Search;
 	char m_aRequestingPlayer[MAX_NAME_LENGTH];

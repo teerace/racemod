@@ -18,7 +18,7 @@ class CFileScore : public IScore
 		char m_aName[MAX_NAME_LENGTH];
 		float m_Score;
 		char m_aIP[16];
-		float m_aCpTime[NUM_TELEPORT];
+		float m_aCpTime[NUM_CHECKPOINTS];
 		
 		CPlayerScore() {};
 		CPlayerScore(const char *pName, float Score, const char *pIP, float *apCpTime);

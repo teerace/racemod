@@ -15,7 +15,7 @@ CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Score, const cha
 	str_copy(m_aName, pName, sizeof(m_aName));
 	m_Score = Score;
 	str_copy(m_aIP, pIP, sizeof(m_aIP));
-	for(int i = 0; i < NUM_TELEPORT; i++)
+	for(int i = 0; i < NUM_CHECKPOINTS; i++)
 		m_aCpTime[i] = apCpTime[i];
 }
 
@@ -61,7 +61,7 @@ void CFileScore::SaveScoreThread(void *pUser)
 			f << r.front().m_aName << std::endl << r.front().m_Score << std::endl  << r.front().m_aIP << std::endl;
 			if(g_Config.m_SvCheckpointSave)
 			{
-				for(int c = 0; c < NUM_TELEPORT; c++)
+				for(int c = 0; c < NUM_CHECKPOINTS; c++)
 					f << r.front().m_aCpTime[c] << " ";
 				f << std::endl;
 			}
@@ -101,13 +101,13 @@ void CFileScore::Init()
 		{
 			std::getline(f, TmpScore);
 			std::getline(f, TmpIP);
-			float aTmpCpTime[NUM_TELEPORT] = {0};
+			float aTmpCpTime[NUM_CHECKPOINTS] = {0};
 			if(g_Config.m_SvCheckpointSave)
 			{
 				std::getline(f, TmpCpLine);
 				char *pTime = strtok((char*)TmpCpLine.c_str(), " ");
 				int i = 0;
-				while(pTime != NULL && i < NUM_TELEPORT)
+				while(pTime != NULL && i < NUM_CHECKPOINTS)
 				{
 					aTmpCpTime[i] = atof(pTime);
 					pTime = strtok(NULL, " ");
@@ -186,7 +186,7 @@ void CFileScore::UpdatePlayer(int ID, float Score, float *apCpTime)
 	
 	if(pPlayer)
 	{
-		for(int c = 0; c < NUM_TELEPORT; c++)
+		for(int c = 0; c < NUM_CHECKPOINTS; c++)
 				pPlayer->m_aCpTime[c] = apCpTime[c];
 		
 		pPlayer->m_Score = Score;
