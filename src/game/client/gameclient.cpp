@@ -670,6 +670,12 @@ void CGameClient::OnGameOver()
 		Client()->AutoScreenshot_Start();
 }
 
+void CGameClient::OnStartGame()
+{
+	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		Client()->DemoRecorder_HandleAutoStart();
+}
+
 void CGameClient::OnRconLine(const char *pLine)
 {
 	m_pGameConsole->PrintLine(CGameConsole::CONSOLETYPE_REMOTE, pLine);
@@ -865,6 +871,8 @@ void CGameClient::OnNewSnapshot()
 				m_Snap.m_pGameobj = (CNetObj_Game *)pData;
 				if(s_GameOver == 0 && m_Snap.m_pGameobj->m_GameOver != 0)
 					OnGameOver();
+				else if(s_GameOver != 0 && m_Snap.m_pGameobj->m_GameOver == 0)
+					OnStartGame();
 				s_GameOver = m_Snap.m_pGameobj->m_GameOver;
 			}
 			else if(Item.m_Type == NETOBJTYPE_FLAG)
