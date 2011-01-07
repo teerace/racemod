@@ -217,7 +217,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 {	
 	while(pStr && *pStr)
 	{
-		CResult *pResult = new(&m_ExecutionQueue.m_pLast->m_Result) CResult;
+		CResult Result;
 		const char *pEnd = pStr;
 		const char *pNextPart = 0;
 		int InString = 0;
@@ -245,10 +245,10 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 			pEnd++;
 		}
 		
-		if(ParseStart(pResult, pStr, (pEnd-pStr) + 1) != 0)
+		if(ParseStart(&Result, pStr, (pEnd-pStr) + 1) != 0)
 			return;
 
-		CCommand *pCommand = FindCommand(pResult->m_pCommand, m_FlagMask);
+		CCommand *pCommand = FindCommand(Result.m_pCommand, m_FlagMask);
 
 		if(pCommand)
 		{
@@ -256,7 +256,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 			
 			// dont allow SQL Commands
 #if defined(CONF_SQL)
-			if(!ForceSqlCmd && !str_comp_num(pResult->m_pCommand, "sv_sql", 6))
+			if(!ForceSqlCmd && !str_comp_num(Result.m_pCommand, "sv_sql", 6))
 			{
 				if(Stroke) // dont show it twice
 					return;
@@ -268,16 +268,16 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 			}
 #endif
 
-			if(pResult->m_pCommand[0] == '+')
+			if(Result.m_pCommand[0] == '+')
 			{
 				// insert the stroke direction token
-				pResult->AddArgument(m_paStrokeStr[Stroke]);
+				Result.AddArgument(m_paStrokeStr[Stroke]);
 				IsStrokeCommand = 1;
 			}
 			
 			if(Stroke || IsStrokeCommand)
 			{
-				if(ParseArgs(pResult, pCommand->m_pParams))
+				if(ParseArgs(&Result, pCommand->m_pParams))
 				{
 					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf), "Invalid arguments... Usage: %s %s", pCommand->m_pName, pCommand->m_pParams);
@@ -285,18 +285,19 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 				}
 				else if(m_StoreCommands && pCommand->m_Flags&CFGFLAG_STORE)
 				{
+					m_ExecutionQueue.AddEntry();
 					m_ExecutionQueue.m_pLast->m_pfnCommandCallback = pCommand->m_pfnCallback;
 					m_ExecutionQueue.m_pLast->m_pCommandUserData = pCommand->m_pUserData;
-					m_ExecutionQueue.AddEntry();
+					m_ExecutionQueue.m_pLast->m_Result = Result;
 				}
 				else
-					pCommand->m_pfnCallback(pResult, pCommand->m_pUserData);
+					pCommand->m_pfnCallback(&Result, pCommand->m_pUserData);
 			}
 		}
 		else if(Stroke)
 		{
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "No such command: %s.", pResult->m_pCommand);
+			str_format(aBuf, sizeof(aBuf), "No such command: %s.", Result.m_pCommand);
 			Print(OUTPUT_LEVEL_STANDARD, "Console", aBuf);
 		}
 		
@@ -584,7 +585,7 @@ void CConsole::StoreCommands(bool Store)
 {
 	if(!Store)
 	{
-		for(CExecutionQueue::CQueueEntry *pEntry = m_ExecutionQueue.m_pFirst; pEntry != m_ExecutionQueue.m_pLast; pEntry = pEntry->m_pNext)
+		for(CExecutionQueue::CQueueEntry *pEntry = m_ExecutionQueue.m_pFirst; pEntry; pEntry = pEntry->m_pNext)
 			pEntry->m_pfnCommandCallback(&pEntry->m_Result, pEntry->m_pCommandUserData);
 		m_ExecutionQueue.Reset();
 	}
