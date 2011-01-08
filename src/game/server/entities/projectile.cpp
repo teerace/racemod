@@ -76,7 +76,7 @@ void CProjectile::Tick()
 		
 	m_LifeSpan--;
 	
-	if(Collide || m_LifeSpan < 0)
+	if(Collide || m_LifeSpan < 0 || GameLayerClipped(CurPos))
 	{
 		if(m_LifeSpan >= 0 || m_Weapon == WEAPON_GRENADE)
 			GameServer()->CreateSound(CurPos, m_SoundImpact, CmaskRace(GameServer(), m_Owner));
