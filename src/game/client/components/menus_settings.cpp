@@ -701,8 +701,21 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 		g_Config.m_ClShowCheckpointDiff ^= 1;
 	
 	LeftView.HSplitTop(20.0f, &Button, &LeftView);
-	if(DoButton_CheckBox(&g_Config.m_ClGhost, Localize("Show ghost (beta)"), g_Config.m_ClGhost, &Button))
-		g_Config.m_ClGhost ^= 1;
+	if(DoButton_CheckBox(&g_Config.m_ClRaceGhost, Localize("Enable Ghost"), g_Config.m_ClRaceGhost, &Button))
+		g_Config.m_ClRaceGhost ^= 1;
+		
+	if(g_Config.m_ClRaceGhost)
+	{
+		LeftView.HSplitTop(20.0f, &Button, &LeftView);
+		Button.VSplitLeft(15.0f, 0, &Button);
+		if(DoButton_CheckBox(&g_Config.m_ClRaceShowGhost, Localize("Show Ghost"), g_Config.m_ClRaceShowGhost, &Button))
+			g_Config.m_ClRaceShowGhost ^= 1;
+		
+		LeftView.HSplitTop(20.0f, &Button, &LeftView);
+		Button.VSplitLeft(15.0f, 0, &Button);
+		if(DoButton_CheckBox(&g_Config.m_ClRaceSaveGhost, Localize("Save Ghost"), g_Config.m_ClRaceSaveGhost, &Button))
+			g_Config.m_ClRaceSaveGhost ^= 1;
+	}
 		
 	LeftView.HSplitTop(20.0f, &Button, &LeftView);
 	if(DoButton_CheckBox(&g_Config.m_ClShowRecords, Localize("Show records"), g_Config.m_ClShowRecords, &Button))
