@@ -266,6 +266,7 @@ public:
 	};
 	
 	sorted_array<CGhostItem> m_lGhosts;
+	
 	void GhostlistPopulate();
 };
 #endif
