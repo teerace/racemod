@@ -1114,6 +1114,10 @@ void CMenus::SetActive(bool Active)
 			m_pClient->OnRelease();
 		}
 	}
+	else if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		m_pClient->OnRelease();
+	}
 }
 
 void CMenus::OnReset()
