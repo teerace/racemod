@@ -32,6 +32,11 @@ void CControls::OnReset()
 	m_InputDirectionRight = 0;
 }
 
+void CControls::OnRelease()
+{
+	OnReset();
+}
+
 void CControls::OnPlayerDeath()
 {
 	if(!m_pClient->m_IsRace)
