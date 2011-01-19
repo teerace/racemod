@@ -4,7 +4,7 @@
 #include "flag.h"
 
 CFlag::CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, CCharacter *pOwner)
-: CEntity(pGameWorld, NETOBJTYPE_FLAG)
+: CEntity(pGameWorld, CGameWorld::ENTTYPE_FLAG)
 {
 	m_Team = Team;
 	m_Pos = Pos;

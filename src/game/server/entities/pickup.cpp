@@ -6,7 +6,7 @@
 #include "pickup.h"
 
 CPickup::CPickup(CGameWorld *pGameWorld, int Type, int SubType)
-: CEntity(pGameWorld, NETOBJTYPE_PICKUP)
+: CEntity(pGameWorld, CGameWorld::ENTTYPE_PICKUP)
 {
 	m_Type = Type;
 	m_Subtype = SubType;
@@ -99,27 +99,21 @@ void CPickup::Tick()
 								GameServer()->SendWeaponPickup(apChrs[j]->GetPlayer()->GetCID(), m_Subtype);
 						}
 					}
-					break;
-					
-				case POWERUP_NINJA:
+				}
+				break;
+				
+			case POWERUP_NINJA:
+				{
+					// activate ninja on target player
+					pChr->GiveNinja();
+					RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
+
+					// loop through all players, setting their emotes
+					CCharacter *pC = static_cast<CCharacter *>(GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_CHARACTER));
+					for(; pC; pC = (CCharacter *)pC->TypeNext())
 					{
-						// activate ninja on target player
-						apChrs[j]->GiveNinja();
-						RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
-
-						/* loop through all players, setting their emotes
-						CEntity *apEnts[64];
-						int Num = GameServer()->m_World.FindEntities(vec2(0, 0), 1000000, apEnts, 64, NETOBJTYPE_CHARACTER);
-						
-						for (int i = 0; i < Num; ++i)
-						{
-							CCharacter *pC = static_cast<CCharacter *>(apEnts[i]);
-							if (pC != apChrs[j])
-								pC->SetEmote(EMOTE_SURPRISE, Server()->Tick() + Server()->TickSpeed());
-						}*/
-
-						apChrs[j]->SetEmote(EMOTE_ANGRY, Server()->Tick() + 1200 * Server()->TickSpeed() / 1000);
-						break;
+						if (pC != pChr)
+							pC->SetEmote(EMOTE_SURPRISE, Server()->Tick() + Server()->TickSpeed());
 					}
 					
 				default:
