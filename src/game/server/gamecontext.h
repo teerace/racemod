@@ -78,6 +78,7 @@ public:
 
 	// race
 	class IScore *Score() { return m_pScore; }
+	class CGameControllerRACE *RaceController() { return (CGameControllerRACE*)m_pController; }
 	
 	CGameContext();
 	~CGameContext();
@@ -149,6 +150,8 @@ public:
 	void SendWeaponPickup(int ClientId, int Weapon);
 	void SendBroadcast(const char *pText, int ClientId);
 	
+	void SendRecord(int ClientId);
+
 	
 	//
 	void CheckPureTuning();

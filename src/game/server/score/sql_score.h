@@ -50,7 +50,7 @@ public:
 	~CSqlScore();
 	
 	virtual void LoadScore(int ClientID);
-	virtual void SaveScore(int ClientID, float Time, CCharacter *pChar);
+	virtual void SaveScore(int ClientID);
 	virtual void ShowRank(int ClientID, const char* pName, bool Search=false);
 	virtual void ShowTop5(int ClientID, int Debut=1);
 };

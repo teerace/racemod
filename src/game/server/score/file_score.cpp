@@ -10,13 +10,12 @@
 
 static LOCK gs_ScoreLock = 0;
 
-CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Score, const char *pIP, float *apCpTime)
+CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Time, const char *pIP, float *pCpTime)
 {
+	m_Time = Time;
+	mem_copy(m_aCpTime, pCpTime, sizeof(m_aCpTime));
 	str_copy(m_aName, pName, sizeof(m_aName));
-	m_Score = Score;
 	str_copy(m_aIP, pIP, sizeof(m_aIP));
-	for(int i = 0; i < NUM_CHECKPOINTS; i++)
-		m_aCpTime[i] = apCpTime[i];
 }
 
 CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_pServer(pGameServer->Server())
@@ -58,7 +57,7 @@ void CFileScore::SaveScoreThread(void *pUser)
 		int t = 0;
 		for(sorted_array<CPlayerScore>::range r = pSelf->m_Top.all(); !r.empty(); r.pop_front())
 		{
-			f << r.front().m_aName << std::endl << r.front().m_Score << std::endl  << r.front().m_aIP << std::endl;
+			f << r.front().m_aName << std::endl << r.front().m_Time << std::endl  << r.front().m_aIP << std::endl;
 			if(g_Config.m_SvCheckpointSave)
 			{
 				for(int c = 0; c < NUM_CHECKPOINTS; c++)
@@ -122,7 +121,7 @@ void CFileScore::Init()
 	
 	// save the current best score
 	if(m_Top.size())
-		((CGameControllerRACE*)GameServer()->m_pController)->m_CurrentRecord = m_Top[0].m_Score;
+		GetRecord()->Set(m_Top[0].m_Time, m_Top[0].m_aCpTime);
 }
 
 CFileScore::CPlayerScore *CFileScore::SearchScore(int ID, bool ScoreIP, int *pPosition)
@@ -175,32 +174,6 @@ CFileScore::CPlayerScore *CFileScore::SearchName(const char *pName, int *pPositi
 	return pPlayer;
 }
 
-void CFileScore::UpdatePlayer(int ID, float Score, float *apCpTime)
-{
-	const char *pName = Server()->ClientName(ID);
-	char aIP[16];
-	Server()->GetClientIP(ID, aIP, sizeof(aIP));
-	
-	lock_wait(gs_ScoreLock);
-	CPlayerScore *pPlayer = SearchScore(ID, 1, 0);
-	
-	if(pPlayer)
-	{
-		for(int c = 0; c < NUM_CHECKPOINTS; c++)
-				pPlayer->m_aCpTime[c] = apCpTime[c];
-		
-		pPlayer->m_Score = Score;
-		str_copy(pPlayer->m_aName, pName, sizeof(pPlayer->m_aName));
-		
-		sort(m_Top.all());
-	}
-	else
-		m_Top.add(*new CPlayerScore(pName, Score, aIP, apCpTime));
-	
-	lock_release(gs_ScoreLock);
-	Save();
-}
-
 void CFileScore::LoadScore(int ClientID)
 {
 	char aIP[16];
@@ -216,12 +189,31 @@ void CFileScore::LoadScore(int ClientID)
 	
 	// set score
 	if(pPlayer)
-		PlayerData(ClientID)->Set(pPlayer->m_Score, pPlayer->m_aCpTime);
+		PlayerData(ClientID)->Set(pPlayer->m_Time, pPlayer->m_aCpTime);
 }
 
-void CFileScore::SaveScore(int ClientID, float Time, CCharacter *pChar)
+void CFileScore::SaveScore(int ClientID)
 {
-	UpdatePlayer(ClientID, Time, pChar->m_CpCurrent);
+	const char *pName = Server()->ClientName(ClientID);
+	char aIP[16];
+	Server()->GetClientIP(ClientID, aIP, sizeof(aIP));
+
+	lock_wait(gs_ScoreLock);
+	CPlayerScore *pPlayer = SearchScore(ClientID, 1, 0);
+
+	if(pPlayer)
+	{
+		pPlayer->m_Time = PlayerData(ClientID)->m_Time;
+		mem_copy(pPlayer->m_aCpTime, PlayerData(ClientID)->m_aCpTime, sizeof(pPlayer->m_aCpTime));
+		str_copy(pPlayer->m_aName, pName, sizeof(pPlayer->m_aName));
+
+		sort(m_Top.all());
+	}
+	else
+		m_Top.add(*new CPlayerScore(pName, PlayerData(ClientID)->m_Time, aIP, PlayerData(ClientID)->m_aCpTime));
+
+	lock_release(gs_ScoreLock);
+	Save();
 }
 
 void CFileScore::ShowTop5(int ClientID, int Debut)
@@ -234,7 +226,7 @@ void CFileScore::ShowTop5(int ClientID, int Debut)
 			break;
 		CPlayerScore *r = &m_Top[i+Debut-1];
 		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-			i+Debut, r->m_aName, (int) r->m_Score/60, r->m_Score-((int)r->m_Score/60*60));
+			i+Debut, r->m_aName, (int)r->m_Time/60, fmod(r->m_Time,60));
 		GameServer()->SendChatTarget(ClientID, aBuf);
 	}
 	GameServer()->SendChatTarget(ClientID, "------------------------------");
@@ -253,13 +245,13 @@ void CFileScore::ShowRank(int ClientID, const char* pName, bool Search)
 	
 	if(pScore && Pos > -1)
 	{
-		float Time = pScore->m_Score;
+		float Time = pScore->m_Time;
 		char aClientName[128];
 		str_format(aClientName, sizeof(aClientName), " (%s)", Server()->ClientName(ClientID));
 		if(!g_Config.m_SvShowTimes)
-			str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %.3f second(s)", (int)Time/60, Time-((int)Time/60*60));
+			str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %.3f second(s)", (int)Time/60, fmod(Time,60));
 		else
-			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", Pos, pScore->m_aName, (int)Time/60, Time-((int)Time/60*60));
+			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", Pos, pScore->m_aName, (int)Time/60, fmod(Time,60));
 		if(Search)
 			strcat(aBuf, aClientName);
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);

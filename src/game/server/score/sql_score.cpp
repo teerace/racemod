@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <engine/shared/config.h>
-#include "../entities/character.h"
 #include "../gamemodes/race.h"
 #include "sql_score.h"
 
@@ -98,7 +97,13 @@ void CSqlScore::Init()
 			
 			if(m_pResults->next())
 			{
-				((CGameControllerRACE*)GameServer()->m_pController)->m_CurrentRecord = (float)m_pResults->getDouble("Time");
+				GetRecord()->m_Time = (float)m_pResults->getDouble("Time");
+				char aColumn[8];
+				for(int i = 0; i < NUM_CHECKPOINTS; i++)
+				{
+					str_format(aColumn, sizeof(aColumn), "cp%d", i+1);
+					GetRecord()->m_aCpTime[i] = (float)m_pResults->getDouble(aColumn);
+				}
 				
 				dbg_msg("SQL", "Getting best time on server done");
 			
@@ -144,12 +149,12 @@ void CSqlScore::LoadScoreThread(void *pUser)
 				if(pData->m_pSqlData->m_pResults->next())
 				{
 					// get the best time
-					pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_BestTime = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
+					pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
 					char aColumn[8];
 					for(int i = 0; i < NUM_CHECKPOINTS; i++)
 					{
 						str_format(aColumn, sizeof(aColumn), "cp%d", i+1);
-						pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_aBestCpTime[i] = (float)pData->m_pSqlData->m_pResults->getDouble(aColumn);
+						pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_aCpTime[i] = (float)pData->m_pSqlData->m_pResults->getDouble(aColumn);
 					}
 					
 					dbg_msg("SQL", "Getting best time done");
@@ -184,14 +189,14 @@ void CSqlScore::LoadScoreThread(void *pUser)
 				}
 				
 				// get the best time
-				pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_BestTime = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
+				pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
 				char aColumn[8];
 				if(g_Config.m_SvCheckpointSave)
 				{
 					for(int i = 0; i < NUM_CHECKPOINTS; i++)
 					{
 						str_format(aColumn, sizeof(aColumn), "cp%d", i+1);
-						pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_aBestCpTime[i] = (float)pData->m_pSqlData->m_pResults->getDouble(aColumn);
+						pData->m_pSqlData->PlayerData(pData->m_ClientID)->m_aCpTime[i] = (float)pData->m_pSqlData->m_pResults->getDouble(aColumn);
 					}
 				}
 			}
@@ -300,15 +305,14 @@ void CSqlScore::SaveScoreThread(void *pUser)
 	lock_release(gs_SqlLock);
 }
 
-void CSqlScore::SaveScore(int ClientID, float Time, CCharacter *pChar)
+void CSqlScore::SaveScore(int ClientID)
 {
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;
+	Tmp->m_Time = PlayerData(ClientID)->m_Time;
+	mem_copy(Tmp->m_aCpCurrent, PlayerData(ClientID)->m_aCpTime, sizeof(Tmp->m_aCpCurrent));
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientID), sizeof(Tmp->m_aName));
 	Server()->GetClientIP(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
-	Tmp->m_Time = Time;
-	for(int i = 0; i < NUM_CHECKPOINTS; i++)
-		Tmp->m_aCpCurrent[i] = pChar->m_CpCurrent[i];
 	Tmp->m_pSqlData = this;
 	
 	void *SaveThread = thread_create(SaveScoreThread, Tmp);
@@ -365,9 +369,9 @@ void CSqlScore::ShowRankThread(void *pUser)
 			{
 				float Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
 				if(!g_Config.m_SvShowTimes)
-					str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %.3f second(s)", (int)(Time/60), Time-((int)Time/60*60));
+					str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %.3f second(s)", (int)(Time/60), fmod(Time,60));
 				else
-					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), (int)(Time/60), Time-((int)Time/60*60));
+					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), (int)(Time/60), fmod(Time,60));
 				
 				if(pData->m_Search)
 					strcat(aBuf, pData->m_aRequestingPlayer);
@@ -435,7 +439,7 @@ void CSqlScore::ShowTop5Thread(void *pUser)
 			while(pData->m_pSqlData->m_pResults->next())
 			{
 				Time = (float)pData->m_pSqlData->m_pResults->getDouble("Time");
-				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", Rank, pData->m_pSqlData->m_pResults->getString("Name").c_str(), (int)(Time/60),  Time-((int)Time/60*60));
+				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", Rank, pData->m_pSqlData->m_pResults->getString("Name").c_str(), (int)(Time/60),  fmod(Time,60));
 				pData->m_pSqlData->GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				Rank++;
 			}

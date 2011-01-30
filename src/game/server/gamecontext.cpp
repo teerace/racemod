@@ -289,6 +289,30 @@ void CGameContext::SendBroadcast(const char *pText, int ClientId)
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientId);
 }
 
+void CGameContext::SendRecord(int ClientId)
+{
+	char aBuf[16];
+	str_format(aBuf, sizeof(aBuf), "%.0f", Score()->GetRecord()->m_Time*1000.0f); // damn ugly but the only way i know to do it
+	int TimeToSend;
+	sscanf(aBuf, "%d", &TimeToSend);
+	CNetMsg_Sv_Record Msg;
+	Msg.m_Time = TimeToSend;
+
+	if(ClientId == -1)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(m_apPlayers[i] && m_apPlayers[i]->m_IsUsingRaceClient)
+				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+		}
+	}
+	else
+	{
+		if(m_apPlayers[ClientId] && m_apPlayers[ClientId]->m_IsUsingRaceClient)
+			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientId);
+	}
+}
+
 // 
 void CGameContext::StartVote(const char *pDesc, const char *pCommand)
 {
@@ -564,9 +588,6 @@ void CGameContext::OnClientConnected(int ClientId)
 
 void CGameContext::OnClientDrop(int ClientId)
 {
-	// reset score data
-	Score()->PlayerData(ClientId)->Reset();
-			
 	AbortVoteKickOnDisconnect(ClientId);
 	m_apPlayers[ClientId]->OnDisconnect();
 	delete m_apPlayers[ClientId];
@@ -920,14 +941,16 @@ void CGameContext::OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId)
 		
 		if(!g_Config.m_SvShowTimes)
 			return;
-			
+
+		SendRecord(ClientId);
+
 		// send time of all players
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurrentTime > 0)
+			if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
 			{
 				char aBuf[16];
-				str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurrentTime*1000.0f); // damn ugly but the only way i know to do it
+				str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurTime*1000.0f); // damn ugly but the only way i know to do it
 				int TimeToSend;
 				sscanf(aBuf, "%d", &TimeToSend);
 				CNetMsg_Sv_PlayerTime Msg;
@@ -1162,7 +1185,7 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 		if(pChr)
 		{
 			pChr->GetCore()->m_Pos = pSelf->m_apPlayers[CID2]->m_ViewPos;
-			pChr->m_RaceState = CCharacter::RACE_FINISHED;
+			pSelf->RaceController()->m_aRace[CID1].m_RaceState = CGameControllerRACE::RACE_FINISHED;
 		}
 		else
 			pSelf->m_apPlayers[CID1]->m_ViewPos = pSelf->m_apPlayers[CID2]->m_ViewPos;
@@ -1180,7 +1203,7 @@ void CGameContext::ConTeleportTo(IConsole::IResult *pResult, void *pUserData)
 		if(pChr)
 		{
 			pChr->GetCore()->m_Pos = TelePos;
-			pChr->m_RaceState = CCharacter::RACE_FINISHED;
+			pSelf->RaceController()->m_aRace[CID].m_RaceState = CGameControllerRACE::RACE_FINISHED;
 		}
 		else
 			pSelf->m_apPlayers[CID]->m_ViewPos = TelePos;
@@ -1260,7 +1283,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	if(str_find_nocase(g_Config.m_SvGametype, "cap"))
 		m_pController = new CGameControllerFC(this);
 	else
+	{
 		m_pController = new CGameControllerRACE(this);
+		RaceController()->InitTeleporter();
+	}
 
 	Server()->SetBrowseInfo(m_pController->m_pGameType, -1);
 

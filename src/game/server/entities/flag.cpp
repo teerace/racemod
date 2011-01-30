@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <game/server/gamecontext.h>
 #include "flag.h"
+#include "../gamemodes/race.h"
 
 CFlag::CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, CCharacter *pOwner)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_FLAG)
@@ -30,7 +31,8 @@ void CFlag::Tick()
 
 void CFlag::Snap(int SnappingClient)
 {
-	if((!m_pCarryingCharacter && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_Team && GameServer()->m_apPlayers[SnappingClient]->GetCharacter() && GameServer()->m_apPlayers[SnappingClient]->GetCharacter()->m_RaceState == CCharacter::RACE_STARTED)
+	if((!m_pCarryingCharacter && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_Team && GameServer()->m_apPlayers[SnappingClient]->GetCharacter()
+		&& GameServer()->RaceController()->m_aRace[SnappingClient].m_RaceState == CGameControllerRACE::RACE_STARTED)
 		||(m_pCarryingCharacter && !GameServer()->m_apPlayers[SnappingClient]->m_ShowOthers && SnappingClient != m_pCarryingCharacter->GetPlayer()->GetCID()))
 		return;
 	

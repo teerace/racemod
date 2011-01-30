@@ -1,11 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
-#include <stdio.h>
-#include <string.h>
 #include <engine/shared/config.h>
 #include <game/server/gamecontext.h>
-#include <game/server/score.h>
 #include <game/mapitems.h>
 
 #include "../gamemodes/race.h"
@@ -67,11 +64,6 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
-	
-	m_RaceState = RACE_NONE;
-	m_CpActive = -1;
-
-	m_pFlag = 0;
 	
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
@@ -568,63 +560,9 @@ void CCharacter::Tick()
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
 	
-	//race
-	char aBuftime[128];
-	float Time = (float)(Server()->Tick()-m_Starttime)/((float)Server()->TickSpeed());
-	CPlayerData *pData = GameServer()->Score()->PlayerData(m_pPlayer->GetCID());
-	
-	
-	// tile index
-	int TileIndex = GameServer()->Collision()->GetIndex(m_PrevPos, m_Pos);
-	
-	int z = GameServer()->Collision()->IsCheckpoint(TileIndex);
-	if(z != -1 && m_RaceState == RACE_STARTED)
-	{
-		m_CpActive = z;
-		m_CpCurrent[z] = Time;
-		m_CpTick = Server()->Tick() + Server()->TickSpeed()*2;
-	}
-	if(m_RaceState == RACE_STARTED && Server()->Tick()-m_Refreshtime >= Server()->TickSpeed())
-	{
-		int IntTime = (int)Time;
-		
-		if(m_pPlayer->m_IsUsingRaceClient)
-		{
-			CNetMsg_Sv_RaceTime Msg;
-			Msg.m_Time = IntTime;
-			Msg.m_Check = 0;
-			
-			if(m_CpActive != -1 && m_CpTick > Server()->Tick())
-			{
-				if(pData->m_BestTime && pData->m_aBestCpTime[m_CpActive] != 0)
-				{
-					float Diff = (m_CpCurrent[m_CpActive] - pData->m_aBestCpTime[m_CpActive])*100;
-					Msg.m_Check = (int)Diff;
-				}
-			}
-			
-			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, m_pPlayer->GetCID());
-		}
-		else
-		{
-			str_format(aBuftime, sizeof(aBuftime), "Current Time: %d min %d sec", IntTime/60, IntTime%60);
-			
-			if(m_CpActive != -1 && m_CpTick > Server()->Tick())
-			{
-				if(pData->m_BestTime && pData->m_aBestCpTime[m_CpActive] != 0)
-				{
-					char aTmp[128];
-					float Diff = m_CpCurrent[m_CpActive] - pData->m_aBestCpTime[m_CpActive];
-					str_format(aTmp, sizeof(aTmp), "\nCheckpoint | Diff : %+5.2f", Diff);
-					strcat(aBuftime, aTmp);
-				}
-			}
-			
-			GameServer()->SendBroadcast(aBuftime, m_pPlayer->GetCID());
-		}
-		
-		m_Refreshtime = Server()->Tick();
-	}
+	// race
+	CGameControllerRACE *pRace = GameServer()->RaceController();
+	CGameControllerFC *pFC = (CGameControllerFC*)GameServer()->m_pController;
 	
 	if(g_Config.m_SvRegen > 0 && (Server()->Tick()%g_Config.m_SvRegen) == 0)
 	{
@@ -634,116 +572,28 @@ void CCharacter::Tick()
 			m_Armor++;
 	}
 	
-	if((GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_BEGIN && ((!m_aWeapons[WEAPON_GRENADE].m_Got && !m_Armor) || (m_RaceState != RACE_FINISHED && m_RaceState != RACE_STARTED)))
-		|| (GameServer()->m_pController->IsFastCap() && m_RaceState != RACE_STARTED && ((CGameControllerFC*)GameServer()->m_pController)->IsEnemyFlagStand(m_Pos, m_pPlayer->GetTeam())))
+	// tile index
+	int TileIndex = GameServer()->Collision()->GetIndex(m_PrevPos, m_Pos);
+	
+	int z = GameServer()->Collision()->IsCheckpoint(TileIndex);
+	if(z != -1)
 	{
-		// create flag
-		if(GameServer()->m_pController->IsFastCap())
-		{
-			m_pFlag = new CFlag(GameWorld(), (m_pPlayer->GetTeam()+1)&1, m_Pos, this);
-			
-			// sound
-			GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, m_pPlayer->GetCID());
-		}
-		
-		if(m_RaceState != RACE_NONE)
-		{
-			// reset pickups
-			if(!m_aWeapons[WEAPON_GRENADE].m_Got)
-				m_pPlayer->m_ResetPickups = true;
-				
-			// reset shield
-			if(!GameServer()->m_pController->IsFastCap())
-				m_Armor = 0;
-		}
-			
-		m_Starttime = Server()->Tick();
-		m_Refreshtime = Server()->Tick();
-		m_RaceState = RACE_STARTED;
+		pRace->OnCheckpoint(m_pPlayer->GetCID(), z);
 	}
-	else if((GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_END || (GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(m_Pos, m_pPlayer->GetTeam()))) && m_RaceState == RACE_STARTED)
+	
+	if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_BEGIN
+		|| (GameServer()->m_pController->IsFastCap() && pFC->IsEnemyFlagStand(m_Pos, m_pPlayer->GetTeam())))
 	{
-		// reset the flag
-		if(GameServer()->m_pController->IsFastCap() && m_pFlag)
-		{
-			m_pFlag->Reset();
-			m_pFlag = 0;
-			
-			// reset pickups
-			m_pPlayer->m_ResetPickups = true;
-			
-			// sound \o/
-			GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE, m_pPlayer->GetCID());
-		}
-		
-        // calculate finish time
-        float FinishTime = CalculateFinishTime(Time, m_PrevPos, m_Pos);
-        
-		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %6.3f second(s)", Server()->ClientName(m_pPlayer->GetCID()), (int)FinishTime/60, FinishTime-((int)FinishTime/60*60));
-		if(!g_Config.m_SvShowTimes)
-			GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
-		else
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-		
-		if(FinishTime - pData->m_BestTime < 0)
-		{
-			// new record \o/
-			str_format(aBuf, sizeof(aBuf), "New record: %6.3f second(s) better", FinishTime - pData->m_BestTime);
-			if(!g_Config.m_SvShowTimes)
-				GameServer()->SendChatTarget(m_pPlayer->GetCID(), aBuf);
-			else
-				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-		}
-		
-		if(!pData->m_BestTime || FinishTime < pData->m_BestTime)
-		{
-			// update the score
-			pData->Set(FinishTime, m_CpCurrent);
-			
-			if(str_comp_num(Server()->ClientName(m_pPlayer->GetCID()), "nameless tee", 12) != 0)
-				GameServer()->Score()->SaveScore(m_pPlayer->GetCID(), FinishTime, this);
-		}
-		
-		// update server best time
-		if(!GameServer()->m_pController->m_CurrentRecord || FinishTime < GameServer()->m_pController->m_CurrentRecord)
-		{
-			// check for nameless
-			if(str_comp_num(Server()->ClientName(m_pPlayer->GetCID()), "nameless tee", 12) != 0)
-				GameServer()->m_pController->m_CurrentRecord = FinishTime;
-		}
-		
-		m_RaceState = RACE_FINISHED;
+		pRace->OnRaceStart(m_pPlayer->GetCID());
+	}
+	
+	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_END
+		|| (GameServer()->m_pController->IsFastCap() && pFC->IsOwnFlagStand(m_Pos, m_pPlayer->GetTeam())))
+	{
+		float FinishTime = CalculateFinishTime(pRace->GetTime(m_pPlayer->GetCID()), m_PrevPos, m_Pos);
+		pRace->OnRaceEnd(m_pPlayer->GetCID(), FinishTime);
+	}
 
-		// set player score
-		if(!GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime || GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime > FinishTime)
-		{
-			GameServer()->Score()->PlayerData(m_pPlayer->GetCID())->m_CurrentTime = FinishTime;
-			
-			// send it to all players
-			/*for(int i = 0; i < MAX_CLIENTS; i++)
-			{
-				if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->m_IsUsingRaceClient)
-				{
-					if(g_Config.m_SvShowTimes || i == m_pPlayer->GetCID())
-					{
-						CNetMsg_Sv_PlayerTime Msg;
-						char aBuf[16];
-						str_format(aBuf, sizeof(aBuf), "%.0f", FinishTime*100.0f); // damn ugly but the only way i know to do it
-						int TimeToSend;
-						sscanf(aBuf, "%d", &TimeToSend);
-						Msg.m_Time = TimeToSend;
-						Msg.m_Cid = m_pPlayer->GetCID();
-						Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
-					}
-				}
-			}*/
-		}
-		
-		int TTime = 0-(int)FinishTime;
-		if(m_pPlayer->m_Score < TTime)
-			m_pPlayer->m_Score = TTime;
-	}
 	else if(TileIndex != -1 && GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_STOPL)
 	{
 		if(m_Core.m_Vel.x > 0)
@@ -811,7 +661,7 @@ void CCharacter::Tick()
 		m_Core.m_HookState = HOOK_RETRACTED;
 		m_Core.m_TriggeredEvents |= COREEVENT_HOOK_RETRACT;
 		m_Core.m_HookState = HOOK_RETRACTED;
-		m_Core.m_Pos = ((CGameControllerRACE*)GameServer()->m_pController)->m_pTeleporter[z-1];
+		m_Core.m_Pos = pRace->m_pTeleporter[z-1];
 		m_Core.m_HookPos = m_Core.m_Pos;
 		//Resetting velocity to prevent exploit
 		if(g_Config.m_SvTeleportVelReset)
@@ -822,7 +672,7 @@ void CCharacter::Tick()
 			m_LastWeapon = WEAPON_HAMMER;
 			m_aWeapons[0].m_Got = true;
 			for(int i = 1; i < NUM_WEAPONS; i++)
-			m_aWeapons[i].m_Got = false;
+				m_aWeapons[i].m_Got = false;
 		}
 	}
 	
@@ -998,10 +848,6 @@ void CCharacter::Die(int Killer, int Weapon)
 	
 	// reset pickups
 	m_pPlayer->m_ResetPickups = true;
-	
-	// reset flag
-	if(m_pFlag)
-		m_pFlag->Reset();
 }
 
 bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)

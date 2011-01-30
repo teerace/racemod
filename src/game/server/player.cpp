@@ -3,8 +3,7 @@
 #include <new>
 #include <stdio.h>
 #include <engine/shared/config.h>
-#include "gamemodes/race.h"
-#include "score.h"
+
 #include "player.h"
 
 
@@ -30,9 +29,6 @@ CPlayer::CPlayer(CGameContext *pGameServer, int CID, int Team)
 		
 	m_ResetPickups = true;
 	m_IsUsingRaceClient = false;
-	m_LastSentTime = 0;
-	
-	GameServer()->Score()->PlayerData(CID)->Reset();
 }
 
 CPlayer::~CPlayer()
@@ -89,23 +85,6 @@ void CPlayer::Tick()
 	}
 	else if(m_Spawning && m_RespawnTick <= Server()->Tick())
 		TryRespawn();
-		
-	// send best time
-	if(m_IsUsingRaceClient && g_Config.m_SvShowTimes)
-	{
-		if(m_LastSentTime > GameServer()->m_pController->m_CurrentRecord || (!m_LastSentTime && GameServer()->m_pController->m_CurrentRecord))
-		{
-			char aBuf[16];
-			str_format(aBuf, sizeof(aBuf), "%.0f", GameServer()->m_pController->m_CurrentRecord*1000.0f); // damn ugly but the only way i know to do it
-			int TimeToSend;
-			sscanf(aBuf, "%d", &TimeToSend);
-			CNetMsg_Sv_Record Msg;
-			Msg.m_Time = TimeToSend;
-			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, m_ClientID);
-			
-			m_LastSentTime = GameServer()->m_pController->m_CurrentRecord;
-		}
-	}
 	
 	// reset PickupReset
 	if(m_ResetPickups && GetCharacter())
@@ -140,10 +119,9 @@ void CPlayer::Snap(int SnappingClient)
 	pPlayerInfo->m_ClientId = m_ClientID;
 	
 	// send 0 if times of otheres are not shown
-	if(!g_Config.m_SvShowTimes && SnappingClient != m_ClientID)
-		pPlayerInfo->m_Score = 0;
-	else
-		pPlayerInfo->m_Score = m_Score;
+	int ShowTimes = (!g_Config.m_SvShowTimes && SnappingClient != m_ClientID);
+	pPlayerInfo->m_Score = ShowTimes ? 0 : m_Score;
+
 	pPlayerInfo->m_Team = m_Team;
 
 	if(m_ClientID == SnappingClient)

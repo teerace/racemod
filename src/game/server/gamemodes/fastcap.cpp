@@ -7,10 +7,12 @@
 #include "fastcap.h"
 
 CGameControllerFC::CGameControllerFC(class CGameContext *pGameServer)
-: IGameController(pGameServer)
+: CGameControllerRACE(pGameServer)
 {
 	m_apFlags[0] = 0;
 	m_apFlags[1] = 0;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		m_apPlFlags[i] = 0;
 	m_pGameType = "FastCap";
 	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
 }
@@ -57,6 +59,18 @@ bool CGameControllerFC::IsEnemyFlagStand(vec2 Pos, int Team)
 	return false;
 }
 
+int CGameControllerFC::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
+{
+	int ID = pVictim->GetPlayer()->GetCID();
+	if(m_apPlFlags[ID])
+	{
+		m_apPlFlags[ID]->Reset();
+		m_apPlFlags[ID] = 0;
+	}
+
+	return CGameControllerRACE::OnCharacterDeath(pVictim, pKiller, Weapon);
+}
+
 void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
 {
 	IGameController::OnCharacterSpawn(pChr);
@@ -66,11 +80,6 @@ void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
 	
 	// give nades
 	pChr->GiveWeapon(WEAPON_GRENADE, 10);
-}
-
-int CGameControllerFC::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
-{
-	return 0;
 }
 
 bool CGameControllerFC::CanSpawn(class CPlayer *pPlayer, vec2 *pOutPos)
@@ -111,9 +120,39 @@ bool CGameControllerFC::CanBeMovedOnBalance(int Cid)
 	return true;
 }
 
-void CGameControllerFC::Tick()
+bool CGameControllerFC::OnRaceStart(int ID, bool Check)
 {
-	IGameController::Tick();
+	CRaceData *p = &m_aRace[ID];
+	if(p->m_RaceState == RACE_STARTED)
+		return false;
 	
-	DoRaceTimeCheck();
+	CGameControllerRACE::OnRaceStart(ID, false);
+	
+	m_apPlFlags[ID] = new CFlag(&GameServer()->m_World, GameServer()->m_apPlayers[ID]->GetTeam()^1, GameServer()->GetPlayerChar(ID)->m_Pos, GameServer()->GetPlayerChar(ID));
+	GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, ID);
+	
+	if(p->m_RaceState != RACE_NONE)
+		GameServer()->GetPlayerChar(ID)->IncreaseArmor(-10);
+
+	return true;
+}
+
+bool CGameControllerFC::OnRaceEnd(int ID, float FinishTime)
+{
+	if(!CGameControllerRACE::OnRaceEnd(ID, FinishTime))
+		return false;
+
+	if(m_apPlFlags[ID])
+	{
+		m_apPlFlags[ID]->Reset();
+		m_apPlFlags[ID] = 0;
+
+		// reset pickups
+		GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
+
+		// sound \o/
+		GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE, ID);
+	}
+
+	return true;
 }

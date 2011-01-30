@@ -82,10 +82,6 @@ public:
 	
 	bool IsForceBalanced();
 
-	
-	// race
-	float m_CurrentRecord;
-	
 	/*
 	
 	*/	

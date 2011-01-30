@@ -71,14 +71,8 @@ public:
 	
 	CCharacterCore *GetCore() { return &m_Core; }
 	
-	// race var
-	int m_RaceState;
-	
-	// checkpoints
-	float m_CpCurrent[25];
-	
-	// fastcap
-	class CFlag *m_pFlag;
+	bool HasWeapon(int Weapon) { return m_aWeapons[Weapon].m_Got; }
+	int Armor() { return m_Armor; }
 	
 private:
 	// player controlling this character
@@ -148,16 +142,8 @@ private:
 	CCharacterCore m_SendCore; // core that we should send
 	CCharacterCore m_ReckoningCore; // the dead reckoning core
 
-	// race var
-	int m_Starttime;
-	int m_Refreshtime;
-	
 	int m_LastSpeedup;
 	vec2 m_PrevPos;
-	
-	// checkpoints
-	int m_CpTick;
-	int m_CpActive;
 	
 	float CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos);
 };

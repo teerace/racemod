@@ -1,14 +1,19 @@
 /* copyright (c) 2007 rajh, race mod stuff */
+#include <engine/shared/config.h>
 #include <game/server/entities/character.h>
 #include <game/server/player.h>
 #include <game/server/gamecontext.h>
+#include <game/server/score.h>
+#include <stdio.h>
+#include <string.h>
 #include "race.h"
 
 CGameControllerRACE::CGameControllerRACE(class CGameContext *pGameServer) : IGameController(pGameServer)
 {
 	m_pGameType = "Race";
 	
-	InitTeleporter();
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		m_aRace[i].Reset();
 }
 
 CGameControllerRACE::~CGameControllerRACE()
@@ -48,12 +53,130 @@ void CGameControllerRACE::InitTeleporter()
 	
 int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
+	m_aRace[pVictim->GetPlayer()->GetCID()].Reset();
 	return 0;
 }
 
 void CGameControllerRACE::Tick()
 {
 	IGameController::Tick();
-	
 	DoRaceTimeCheck();
+
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		CRaceData *p = &m_aRace[i];
+
+		if(p->m_RaceState == RACE_STARTED && Server()->Tick()-p->m_RefreshTime >= Server()->TickSpeed())
+		{
+			int IntTime = (int)GetTime(i);
+
+			char aBuftime[128];
+			char aTmp[128];
+
+			CNetMsg_Sv_RaceTime Msg;
+			Msg.m_Time = IntTime;
+			Msg.m_Check = 0;
+
+			str_format(aBuftime, sizeof(aBuftime), "Current Time: %d min %d sec", IntTime/60, IntTime%60);
+
+			if(p->m_CpTick != -1 && p->m_CpTick > Server()->Tick())
+			{
+				Msg.m_Check = (int)(p->m_CpDiff*100);
+				str_format(aTmp, sizeof(aTmp), "\nCheckpoint | Diff : %+5.2f", p->m_CpDiff);
+				strcat(aBuftime, aTmp);
+			}
+
+			if(GameServer()->m_apPlayers[i]->m_IsUsingRaceClient)
+				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+			else
+				GameServer()->SendBroadcast(aBuftime, i);
+
+			p->m_RefreshTime = Server()->Tick();
+		}
+	}
+}
+
+bool CGameControllerRACE::OnCheckpoint(int ID, int z)
+{
+	CRaceData *p = &m_aRace[ID];
+	CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
+	if(p->m_RaceState != RACE_STARTED)
+		return false;
+
+	p->m_aCpCurrent[z] = GetTime(ID);
+
+	if(pBest->m_Time && pBest->m_aCpTime[z] != 0)
+	{
+		p->m_CpDiff = p->m_aCpCurrent[z] - pBest->m_aCpTime[z];
+		p->m_CpTick = Server()->Tick() + Server()->TickSpeed()*2;
+	}
+
+	return true;
+}
+
+bool CGameControllerRACE::OnRaceStart(int ID, bool Check)
+{
+	CRaceData *p = &m_aRace[ID];
+	CCharacter *pChr = GameServer()->GetPlayerChar(ID);
+	if(Check && (pChr->HasWeapon(WEAPON_GRENADE) || pChr->Armor()) && (p->m_RaceState == RACE_FINISHED || p->m_RaceState == RACE_STARTED))
+		return false;
+	
+	p->m_RaceState = RACE_STARTED;
+	p->m_StartTime = Server()->Tick();
+	p->m_RefreshTime = Server()->Tick();
+
+	if(p->m_RaceState != RACE_NONE)
+	{
+		// reset pickups
+		if(!pChr->HasWeapon(WEAPON_GRENADE))
+			GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
+	}
+
+	return true;
+}
+
+bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
+{
+	CRaceData *p = &m_aRace[ID];
+	CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
+	if(p->m_RaceState != RACE_STARTED)
+		return false;
+
+	p->m_RaceState = RACE_FINISHED;
+
+	GameServer()->m_apPlayers[ID]->m_Score = max(-(int)FinishTime, GameServer()->m_apPlayers[ID]->m_Score);
+
+	float Improved = FinishTime - pBest->m_Time;
+	bool NewRecord = pBest->Check(FinishTime, p->m_aCpCurrent);
+
+	// save the score
+	if(str_comp_num(Server()->ClientName(ID), "nameless tee", 12) != 0 && NewRecord)
+	{
+		GameServer()->Score()->SaveScore(ID);
+		if(GameServer()->Score()->CheckRecord(ID) && g_Config.m_SvShowTimes)
+			GameServer()->SendRecord(-1);
+	}
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %6.3f second(s)", Server()->ClientName(ID), (int)FinishTime/60, fmod(FinishTime,60));
+	if(!g_Config.m_SvShowTimes)
+		GameServer()->SendChatTarget(ID, aBuf);
+	else
+		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+
+	if(Improved < 0)
+	{
+		str_format(aBuf, sizeof(aBuf), "New record: %6.3f second(s) better", Improved);
+		if(!g_Config.m_SvShowTimes)
+			GameServer()->SendChatTarget(ID, aBuf);
+		else
+			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	}
+
+	return true;
+}
+
+float CGameControllerRACE::GetTime(int ID)
+{
+	return (float)(Server()->Tick()-m_aRace[ID].m_StartTime)/((float)Server()->TickSpeed());
 }

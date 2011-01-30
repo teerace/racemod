@@ -73,15 +73,10 @@ public:
 		int m_TargetY;
 	} m_LatestActivity;
 	
+	bool m_ResetPickups;
 	bool m_ShowOthers;
 	
-	float m_BestTime;
-	float m_aBestCpTime[25];
-	
-	bool m_ResetPickups;
-	
 	bool m_IsUsingRaceClient;
-	float m_LastSentTime;
 	
 private:
 	CCharacter *Character;

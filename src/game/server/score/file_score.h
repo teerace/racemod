@@ -16,14 +16,14 @@ class CFileScore : public IScore
 	{
 	public:
 		char m_aName[MAX_NAME_LENGTH];
-		float m_Score;
+		float m_Time;
 		char m_aIP[16];
 		float m_aCpTime[NUM_CHECKPOINTS];
 		
 		CPlayerScore() {};
-		CPlayerScore(const char *pName, float Score, const char *pIP, float *apCpTime);
+		CPlayerScore(const char *pName, float Time, const char *pIP, float *apCpTime);
 		
-		bool operator<(const CPlayerScore& other) { return (this->m_Score < other.m_Score); }
+		bool operator<(const CPlayerScore& other) { return (this->m_Time < other.m_Time); }
 	};
 	
 	sorted_array<CPlayerScore> m_Top;
@@ -33,7 +33,6 @@ class CFileScore : public IScore
 	
 	CPlayerScore *SearchScore(int ID, bool ScoreIP, int *pPosition);
 	CPlayerScore *SearchName(const char *pName, int *pPosition, bool MatchCase);
-	void UpdatePlayer(int ID, float Score, float *apCpTime);
 	
 	void Init();
 	void Save();
@@ -45,7 +44,7 @@ public:
 	~CFileScore();
 	
 	virtual void LoadScore(int ClientID);
-	virtual void SaveScore(int ClientID, float Time, CCharacter *pChar);
+	virtual void SaveScore(int ClientID);
 	
 	virtual void ShowTop5(int ClientID, int Debut=1);
 	virtual void ShowRank(int ClientID, const char* pName, bool Search=false);
