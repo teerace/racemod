@@ -56,7 +56,7 @@ void CPickup::Tick()
 	
 	// Check if a player intersected us
 	CCharacter *apChrs[MAX_CLIENTS];
-	int Num = GameServer()->m_World.FindEntities(m_Pos, 20.0f, (CEntity**)apChrs, MAX_CLIENTS, NETOBJTYPE_CHARACTER);
+	int Num = GameServer()->m_World.FindEntities(m_Pos, 20.0f, (CEntity**)apChrs, MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
 	for(int j = 0; j < Num; j++)
 	{
 		if(apChrs[j]->IsAlive() && m_SpawnTick[apChrs[j]->GetPlayer()->GetCID()] == -1)
@@ -126,9 +126,10 @@ void CPickup::Tick()
 			if(RespawnTime >= 0)
 			{
 				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d/%d",
-					apChrs[j]->GetPlayer()->GetCID(), Server()->ClientName(apChrs[j]->GetPlayer()->GetCID()), m_Type, m_Subtype);
-				GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);			if(g_Config.m_SvPickupRespawn > -1)
+				str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d/%d", apChrs[j]->GetPlayer()->GetCID(), Server()->ClientName(apChrs[j]->GetPlayer()->GetCID()), m_Type, m_Subtype);
+				GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+				
+				if(g_Config.m_SvPickupRespawn > -1)
 					m_SpawnTick[apChrs[j]->GetPlayer()->GetCID()] = Server()->Tick() + Server()->TickSpeed() * g_Config.m_SvPickupRespawn;
 				else
 					m_SpawnTick[apChrs[j]->GetPlayer()->GetCID()] = 1;
