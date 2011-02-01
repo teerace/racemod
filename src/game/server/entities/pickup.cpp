@@ -99,23 +99,26 @@ void CPickup::Tick()
 								GameServer()->SendWeaponPickup(apChrs[j]->GetPlayer()->GetCID(), m_Subtype);
 						}
 					}
-				}
-				break;
+					break;
 				
-			case POWERUP_NINJA:
-				{
-					// activate ninja on target player
-					pChr->GiveNinja();
-					RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
-
-					// loop through all players, setting their emotes
-					CCharacter *pC = static_cast<CCharacter *>(GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_CHARACTER));
-					for(; pC; pC = (CCharacter *)pC->TypeNext())
+				case POWERUP_NINJA:
 					{
-						if (pC != pChr)
+						// activate ninja on target player
+						apChrs[j]->GiveNinja();
+						RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
+
+						// loop through all players, setting their emotes
+						/*CCharacter *pC = static_cast<CCharacter *>(GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_CHARACTER));
+						for(; pC; pC = (CCharacter *)pC->TypeNext())
+						{
+							if (pC != pChr)
 							pC->SetEmote(EMOTE_SURPRISE, Server()->Tick() + Server()->TickSpeed());
+						}*/
+
+						apChrs[j]->SetEmote(EMOTE_ANGRY, Server()->Tick() + 1200 * Server()->TickSpeed() / 1000);
+						break;
 					}
-					
+						
 				default:
 					break;
 			};

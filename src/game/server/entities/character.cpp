@@ -308,7 +308,7 @@ void CCharacter::FireWeapon()
 			m_NumObjectsHit = 0;
 			GameServer()->CreateSound(m_Pos, SOUND_HAMMER_FIRE, CmaskRace(GameServer(), m_pPlayer->GetCID()));
 			
-			CCharacter *apEnts[MAX_CLIENTS];
+			/*CCharacter *apEnts[MAX_CLIENTS];
 			int Hits = 0;
 			int Num = GameServer()->m_World.FindEntities(ProjStartPos, m_ProximityRadius*0.5f, (CEntity**)apEnts, 
 														MAX_CLIENTS, CGameWorld::ENTTYPE_CHARACTER);
