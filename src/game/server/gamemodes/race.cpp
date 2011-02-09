@@ -114,7 +114,7 @@ bool CGameControllerRACE::OnCheckpoint(int ID, int z)
 	return true;
 }
 
-bool CGameControllerRACE::OnRaceStart(int ID, bool Check)
+bool CGameControllerRACE::OnRaceStart(int ID, float StartAddTime, bool Check)
 {
 	CRaceData *p = &m_aRace[ID];
 	CCharacter *pChr = GameServer()->GetPlayerChar(ID);
@@ -124,6 +124,7 @@ bool CGameControllerRACE::OnRaceStart(int ID, bool Check)
 	p->m_RaceState = RACE_STARTED;
 	p->m_StartTime = Server()->Tick();
 	p->m_RefreshTime = Server()->Tick();
+	p->m_StartAddTime = StartAddTime;
 
 	if(p->m_RaceState != RACE_NONE)
 	{
@@ -144,6 +145,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 
 	p->m_RaceState = RACE_FINISHED;
 
+	// add the time from the start
+	FinishTime += p->m_StartAddTime;
+	
 	GameServer()->m_apPlayers[ID]->m_Score = max(-(int)FinishTime, GameServer()->m_apPlayers[ID]->m_Score);
 
 	float Improved = FinishTime - pBest->m_Time;

@@ -22,7 +22,7 @@ public:
 	
 	virtual bool IsFastCap() { return true; }
 
-	virtual bool OnRaceStart(int ID, bool Check);
+	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check);
 	virtual bool OnRaceEnd(int ID, float FinishTime);
 };
 

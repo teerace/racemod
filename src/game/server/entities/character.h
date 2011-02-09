@@ -146,6 +146,7 @@ private:
 	vec2 m_PrevPos;
 	
 	float CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos);
+	float CalculateStartAddTime(vec2 PrevPos, vec2 Pos);
 };
 
 #endif

@@ -120,13 +120,13 @@ bool CGameControllerFC::CanBeMovedOnBalance(int Cid)
 	return true;
 }
 
-bool CGameControllerFC::OnRaceStart(int ID, bool Check)
+bool CGameControllerFC::OnRaceStart(int ID, float StartAddTime, bool Check)
 {
 	CRaceData *p = &m_aRace[ID];
 	if(p->m_RaceState == RACE_STARTED)
 		return false;
 	
-	CGameControllerRACE::OnRaceStart(ID, false);
+	CGameControllerRACE::OnRaceStart(ID, StartAddTime, false);
 	
 	m_apPlFlags[ID] = new CFlag(&GameServer()->m_World, GameServer()->m_apPlayers[ID]->GetTeam()^1, GameServer()->GetPlayerChar(ID)->m_Pos, GameServer()->GetPlayerChar(ID));
 	GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, ID);

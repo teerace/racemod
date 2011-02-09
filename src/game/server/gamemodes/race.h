@@ -24,6 +24,8 @@ public:
 		float m_aCpCurrent[25];
 		int m_CpTick;
 		float m_CpDiff;
+		
+		float m_StartAddTime;
 
 		void Reset()
 		{
@@ -33,6 +35,7 @@ public:
 			mem_zero(m_aCpCurrent, sizeof(m_aCpCurrent));
 			m_CpTick = -1;
 			m_CpDiff = 0;
+			m_StartAddTime = 0.0f;
 		}
 	} m_aRace[MAX_CLIENTS];
 	
@@ -47,7 +50,7 @@ public:
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 
 	virtual bool OnCheckpoint(int ID, int z);
-	virtual bool OnRaceStart(int ID, bool Check=1);
+	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check=true);
 	virtual bool OnRaceEnd(int ID, float FinishTime);
 
 	float GetTime(int ID);
