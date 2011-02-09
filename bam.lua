@@ -179,6 +179,8 @@ function build(settings)
 	-- build the small libraries
 	wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
+	json = Compile(settings, Collect("src/engine/external/json/*.cpp"))
+	encrypt = Compile(settings, Collect("src/engine/external/encrypt/*.c", "src/engine/external/encrypt/*.cpp"))
 	
 	-- build game components
 	engine_settings = settings:Copy()
@@ -262,7 +264,7 @@ function build(settings)
 		client_link_other, client_osxlaunch)
 
 	server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-		game_shared, game_server, zlib)
+		game_shared, game_server, zlib, json, encrypt)
 
 	serverlaunch = {}
 	if platform == "macosx" then
