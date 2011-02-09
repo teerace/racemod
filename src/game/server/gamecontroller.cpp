@@ -6,6 +6,7 @@
 #include <game/generated/protocol.h>
 
 #include "entities/pickup.h"
+#include "webapp.h"
 #include "gamecontroller.h"
 #include "gamecontext.h"
 

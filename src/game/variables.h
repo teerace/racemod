@@ -124,6 +124,12 @@ MACRO_CONFIG_STR(SvSqlDatabase, sv_sql_database, 16, "teeworlds", CFGFLAG_SERVER
 MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL Database table prefix")
 #endif
 
+/* Webapp */
+MACRO_CONFIG_INT(SvUseWebapp, sv_use_webapp, 0, 0, 1, CFGFLAG_SERVER, "Enables sending times to a teerace website")
+MACRO_CONFIG_STR(SvWebappIp, sv_webapp_ip, 32, "127.0.0.1:7000", CFGFLAG_SERVER, "Webapp IP")
+MACRO_CONFIG_STR(SvPubKey, sv_pub_key, 33, "", CFGFLAG_SERVER, "Public key to register the server on the website")
+MACRO_CONFIG_STR(SvPrivKey, sv_priv_key, 33, "", CFGFLAG_SERVER, "Private key on the website")
+
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly
 	MACRO_CONFIG_INT(DbgDummies, dbg_dummies, 0, 0, 15, CFGFLAG_SERVER, "")

@@ -60,6 +60,7 @@ class CGameContext : public IGameServer
 	
 	// race
 	class IScore *m_pScore;
+	class CWebapp *m_pWebapp;
 	
 	static void ConKillPl(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleport(IConsole::IResult *pResult, void *pUserData);
@@ -78,6 +79,7 @@ public:
 
 	// race
 	class IScore *Score() { return m_pScore; }
+	class CWebapp *Webapp() { return m_pWebapp; }
 	class CGameControllerRACE *RaceController() { return (CGameControllerRACE*)m_pController; }
 	
 	CGameContext();

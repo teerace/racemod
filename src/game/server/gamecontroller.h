@@ -146,6 +146,9 @@ public:
 	
 	// fast cap
 	virtual bool IsFastCap() { return false; }
+	
+	// webapp stuff
+	bool m_WebappIsOnline;
 };
 
 #endif

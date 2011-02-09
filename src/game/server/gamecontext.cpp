@@ -26,6 +26,7 @@
 #include "score/sql_score.h"
 #endif
 #include "score/file_score.h"
+#include "webapp.h"
 
 enum
 {
@@ -50,6 +51,7 @@ void CGameContext::Construct(int Resetting)
 		m_pVoteOptionHeap = new CHeap();
 	
 	m_pScore = 0;
+	m_pWebapp = 0;
 }
 
 CGameContext::CGameContext(int Resetting)
@@ -1293,6 +1295,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	// delete old score object
 	if(m_pScore)
 		delete m_pScore;
+	
+	// delete old webapp object
+	if(m_pWebapp)
+		delete m_pWebapp;
 		
 	// create score object
 #if defined(CONF_SQL)
@@ -1301,6 +1307,18 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	else
 #endif
 		m_pScore = new CFileScore(this);
+	
+	// create webapp object
+	if(g_Config.m_SvUseWebapp)
+	{
+		m_pWebapp = new CWebapp(this);
+		m_pController->m_WebappIsOnline = m_pWebapp->PingServer();
+		if(m_pController->m_WebappIsOnline)
+		{
+			m_pWebapp->LoadMapList();
+		}
+		m_pWebapp->UserAuth();
+	}
 		
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)
