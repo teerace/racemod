@@ -1313,6 +1313,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	{
 		m_pWebapp = new CWebapp(this);
 		m_pController->m_WebappIsOnline = m_pWebapp->PingServer();
+		dbg_msg("webapp", "webapp is%s online", m_pController->m_WebappIsOnline?"":" not");
 		if(m_pController->m_WebappIsOnline)
 		{
 			m_pWebapp->LoadMapList();

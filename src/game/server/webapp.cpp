@@ -1,6 +1,7 @@
 /* CWebapp class by Sushi */
 #include <iostream>
 #include <base/tl/array.h>
+// TODO: replace crypto++ with another lib?
 #include <engine/external/encrypt/cryptlib.h>
 #include <engine/external/encrypt/osrng.h>
 #include <engine/external/encrypt/files.h>
@@ -16,7 +17,7 @@
 
 using namespace CryptoPP;
 
-static LOCK gs_WebappLock = 0;
+//static LOCK gs_WebappLock = 0;
 
 CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer)
@@ -65,6 +66,8 @@ std::string CWebapp::SendAndReceive(const char* pInString)
 			Data.append(aBuf);
 	} while(Received > 0);
 	
+	std::cout << "---recv start---\n" << Data << "\n---recv end---\n" << std::endl;
+	
 	return Data;
 }
 
@@ -75,18 +78,15 @@ bool CWebapp::PingServer()
 		return false;
 	
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "GET /api/1/hello/\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", g_Config.m_SvPubKey);
+	str_format(aBuf, sizeof(aBuf), "GET /api/1/hello/\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", g_Config.m_SvApiKey);
 	std::string Received = SendAndReceive(aBuf);
+	Disconnect();
 	
 	//std::cout << "Recv: '" << Received << "'" << std::endl;
 	
 	if(!Received.compare("\"PONG\""))
-	{
-		Disconnect();
 		return true;
-	}
 	
-	Disconnect();
 	return false;
 }
 
@@ -99,8 +99,9 @@ void CWebapp::LoadMapList()
 		return;
 		
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "GET /api/1/maps/list/\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", g_Config.m_SvPubKey);
+	str_format(aBuf, sizeof(aBuf), "GET /api/1/maps/list/\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", g_Config.m_SvApiKey);
 	std::string Received = SendAndReceive(aBuf);
+	Disconnect();
 	
 	// cutting out the maps fomr the Received data
 	Json::Value Maplist;
@@ -115,8 +116,6 @@ void CWebapp::LoadMapList()
 		m_lMapList.add(Map["name"].asString());
 		dbg_msg("LoadedMap", "%s", m_lMapList[i].c_str());
 	}
-	
-	Disconnect();
 }
 
 class PEMFilter : public Unflushable<Filter>
@@ -189,10 +188,10 @@ void CWebapp::UserAuth()
 	std::string json = Writer.write(Userdata);
 	
 	char aBuf[1024];
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth/ HTTP/1.1\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s", g_Config.m_SvPubKey, json.length(), json.c_str());
+	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth/ HTTP/1.1\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s", g_Config.m_SvApiKey, json.length(), json.c_str());
 	std::string Received = SendAndReceive(aBuf);
 	
 	Disconnect();
 	
-	std::cout << "Recv: '" << Received << "'" << std::endl;
+	//std::cout << "Recv: '" << Received << "'" << std::endl;
 }
