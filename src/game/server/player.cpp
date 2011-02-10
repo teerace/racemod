@@ -222,12 +222,12 @@ void CPlayer::SetTeam(int Team)
 
 void CPlayer::TryRespawn()
 {
-	vec2 SpawnPos = vec2(100.0f, -60.0f);
+	vec2 SpawnPos;
 	
-	if(!GameServer()->m_pController->CanSpawn(this, &SpawnPos))
+	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
 		return;
 
-	// check if the position is occupado
+	}
 	m_Spawning = false;
 	Character = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	Character->Spawn(this, SpawnPos);
