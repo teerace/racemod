@@ -676,6 +676,26 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				else
 					pPlayer->m_ShowOthers = !pPlayer->m_ShowOthers;
 			}
+			else if(!str_comp_num(pMsg->m_pMessage, "/login", 6))
+			{
+				// simple login, rework this later on
+				char aUsername[64];
+				char aPassword[64];
+				bool Webapp = m_pWebapp && m_pController->m_WebappIsOnline;
+				if(Webapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", aUsername, aPassword) == 2)
+				{
+					int UserID = m_pWebapp->UserAuth(aUsername, aPassword);
+					if(UserID <= 0)
+						SendChatTarget(ClientId, "wrong username and/or password");
+					else
+					{
+						char aBuf[128];
+						str_format(aBuf, sizeof(aBuf), "logged in: %d", UserID);
+						SendChatTarget(ClientId, aBuf);
+						p->m_UserID = UserID;
+					}
+				}
+			}
 			else if(!str_comp(pMsg->m_pMessage, "/cmdlist"))
 			{
 				SendChatTarget(ClientID, "---Command List---");
@@ -1318,7 +1338,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		{
 			m_pWebapp->LoadMapList();
 		}
-		m_pWebapp->UserAuth();
 	}
 		
 	// setup core world

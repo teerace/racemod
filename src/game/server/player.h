@@ -78,6 +78,8 @@ public:
 	
 	bool m_IsUsingRaceClient;
 	
+	int m_UserID;
+	
 private:
 	CCharacter *Character;
 	CGameContext *m_pGameServer;

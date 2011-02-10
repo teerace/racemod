@@ -9,12 +9,15 @@
 class CWebapp
 {
 	CGameContext *m_pGameServer;
+	IServer *m_pServer;
+	
 	NETADDR m_Addr;
 	NETSOCKET m_Socket;
 	
 	array<std::string> m_lMapList;
 	
 	CGameContext *GameServer() { return m_pGameServer; }
+	IServer *Server() { return m_pServer; }
 	
 	bool Connect();
 	void Disconnect();
@@ -26,7 +29,8 @@ public:
 	
 	bool PingServer();
 	void LoadMapList();
-	void UserAuth();
+	bool PostRun(int ClientID, float Time, float *pCpTime);
+	int UserAuth(const char *pUsername, const char *pPassword);
 };
 
 // this is to buffer all the data

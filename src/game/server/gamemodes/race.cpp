@@ -4,6 +4,7 @@
 #include <game/server/player.h>
 #include <game/server/gamecontext.h>
 #include <game/server/score.h>
+#include <game/server/webapp.h>
 #include <stdio.h>
 #include <string.h>
 #include "race.h"
@@ -175,6 +176,12 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 			GameServer()->SendChatTarget(ID, aBuf);
 		else
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	}
+	
+	// post to webapp
+	if(GameServer()->Webapp() && m_WebappIsOnline && GameServer()->m_apPlayers[ID]->m_UserID > 0)
+	{
+		GameServer()->Webapp()->PostRun(ID, FinishTime, p->m_aCpCurrent);
 	}
 
 	return true;
