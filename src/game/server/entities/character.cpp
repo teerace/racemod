@@ -793,7 +793,7 @@ float CCharacter::CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos)
 		vec2 TmpPos = mix(PrevPos, Pos, a);
 		if(GameServer()->Collision()->GetCollisionRace(GameServer()->Collision()->GetIndex(TmpPos)) == TILE_END || 
 			(GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(TmpPos, m_pPlayer->GetTeam())))
-			return Time + (float)i/1000.f;
+			return (Time-1.0f/Server()->TickSpeed()) + (float)i/1000.f;
 	}
 	
 	return Time;
@@ -811,7 +811,7 @@ float CCharacter::CalculateStartAddTime(vec2 PrevPos, vec2 Pos)
 			return (float)i/1000.f;
 	}
 	
-	return 0.0f;
+	return 1.0f/Server()->TickSpeed();
 }
 
 bool CCharacter::IncreaseHealth(int Amount)
