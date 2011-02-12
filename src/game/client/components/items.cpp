@@ -15,7 +15,7 @@
 
 #include "items.h"
 
-void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemId)
+void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemID)
 {
 
 	// get positions
@@ -70,12 +70,12 @@ void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemId)
 			if(!pInfo->m_Paused)
 				Time += (Client()->LocalTime()-LastLocalTime)*pInfo->m_Speed;
 			
-			Graphics()->QuadsSetRotation(Time*pi*2*2 + ItemId);
+			Graphics()->QuadsSetRotation(Time*pi*2*2 + ItemID);
 			
 			LastLocalTime = Client()->LocalTime();
 		}
 		else
-			Graphics()->QuadsSetRotation(Client()->LocalTime()*pi*2*2 + ItemId);
+			Graphics()->QuadsSetRotation(Client()->LocalTime()*pi*2*2 + ItemID);
 	}
 	else
 	{

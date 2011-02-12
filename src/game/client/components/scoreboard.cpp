@@ -223,7 +223,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			TextRender()->Text(0, x+ScoreWidth-Width, y+(FontSize-FontSizeResize)/2, FontSizeResize, aBuf, -1);
 		}
 		
-		FontSizeResize = FontSize;		
+		FontSizeResize = FontSize;
 
 		if(m_pClient->m_IsRace)
 		{

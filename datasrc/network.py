@@ -224,7 +224,7 @@ Messages = [
 	]),
 
 	NetMessage("Sv_SoundGlobal", [
-		NetIntRange("m_Soundid", 0, 'NUM_SOUNDS-1'),
+		NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1'),
 	]),
 	
 	NetMessage("Sv_TuneParams", []),

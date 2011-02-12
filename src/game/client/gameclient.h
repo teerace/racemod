@@ -120,7 +120,7 @@ public:
 		const CNetObj_PlayerInfo *m_paPlayerInfos[MAX_CLIENTS];
 		const CNetObj_PlayerInfo *m_paInfoByScore[MAX_CLIENTS];
 		
-		int m_LocalCid;
+		int m_LocalClientID;
 		int m_NumPlayers;
 		int m_aTeamSize[2];
 		bool m_Spectate;
@@ -152,7 +152,7 @@ public:
 		
 		char m_aName[64];
 		char m_aSkinName[64];
-		int m_SkinId;
+		int m_SkinID;
 		int m_SkinColor;
 		int m_Team;
 		int m_Emoticon;
