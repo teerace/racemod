@@ -17,7 +17,7 @@ public:
 	CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, class CCharacter *pOwner);
 
 	virtual void Reset();
-	virtual void Tick();
+	virtual void TickDeferedLate();
 	virtual void Snap(int SnappingClient);
 };
 #endif

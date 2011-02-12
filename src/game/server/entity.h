@@ -106,6 +106,12 @@ public:
 	virtual void TickDefered() {}
 	
 	/*
+		Function: tick_defered_late
+			Called after all entities tick_defered() function has been called.
+	*/
+	virtual void TickDeferedLate() {}
+
+	/*
 		Function: snap
 			Called when a new snapshot is being generated for a specific
 			client.

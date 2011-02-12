@@ -23,7 +23,7 @@ void CFlag::Reset()
 	GameServer()->m_World.DestroyEntity(this);
 }
 
-void CFlag::Tick()
+void CFlag::TickDeferedLate()
 {
 	if(m_pCarryingCharacter)
 		m_Pos = m_pCarryingCharacter->m_Pos;
