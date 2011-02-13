@@ -61,10 +61,10 @@ void CCollision::Init(class CLayers *pLayers)
 	}
 }
 
-int CCollision::GetTile(int X, int Y)
+int CCollision::GetTile(int x, int y)
 {
-	int Nx = clamp(X/32, 0, m_Width-1);
-	int Ny = clamp(Y/32, 0, m_Height-1);
+	int Nx = clamp(x/32, 0, m_Width-1);
+	int Ny = clamp(y/32, 0, m_Height-1);
 	
 	if(m_pTiles[Ny*m_Width+Nx].m_Index == COLFLAG_SOLID || m_pTiles[Ny*m_Width+Nx].m_Index == (COLFLAG_SOLID|COLFLAG_NOHOOK) || m_pTiles[Ny*m_Width+Nx].m_Index == COLFLAG_DEATH)
 		return m_pTiles[Ny*m_Width+Nx].m_Index;
@@ -72,9 +72,9 @@ int CCollision::GetTile(int X, int Y)
 		return 0;
 }
 
-bool CCollision::IsTileSolid(int X, int Y)
+bool CCollision::IsTileSolid(int x, int y)
 {
-	return GetTile(X, Y)&COLFLAG_SOLID;
+	return GetTile(x, y)&COLFLAG_SOLID;
 }
 
 // race
@@ -185,14 +185,14 @@ void CCollision::GetSpeedup(int Index, vec2 *Dir, int *Force)
 // TODO: rewrite this smarter!
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision)
 {
-	float D = distance(Pos0, Pos1);
-	int End(D+1);
+	float Distance = distance(Pos0, Pos1);
+	int End(Distance+1);
 	vec2 Last = Pos0;
 	
 	for(int i = 0; i < End; i++)
 	{
-		float A = i/D;
-		vec2 Pos = mix(Pos0, Pos1, A);
+		float PointOnLine = i/Distance;
+		vec2 Pos = mix(Pos0, Pos1, PointOnLine);
 		if(CheckPoint(Pos.x, Pos.y))
 		{
 			if(pOutCollision)
