@@ -27,7 +27,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View)
 
 	struct CColumn
 	{
-		int m_Id;
+		int m_ID;
 		int m_Sort;
 		CLocConstString m_Caption;
 		int m_Direction;
@@ -270,7 +270,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View)
 			Button.h = Row.h;
 			Button.w = s_aCols[c].m_Rect.w;
 
-			int Id = s_aCols[c].m_Id;
+			int Id = s_aCols[c].m_ID;
 
 			if(Id == COL_FLAG_LOCK)
 			{

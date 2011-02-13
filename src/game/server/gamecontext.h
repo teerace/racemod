@@ -94,14 +94,14 @@ public:
 	CGameWorld m_World;
 	
 	// helper functions
-	class CCharacter *GetPlayerChar(int ClientId);
+	class CCharacter *GetPlayerChar(int ClientID);
 	
 	// voting
 	void StartVote(const char *pDesc, const char *pCommand);
 	void EndVote();
-	void SendVoteSet(int ClientId);
-	void SendVoteStatus(int ClientId, int Total, int Yes, int No);
-	void AbortVoteKickOnDisconnect(int ClientId);
+	void SendVoteSet(int ClientID);
+	void SendVoteStatus(int ClientID, int Total, int Yes, int No);
+	void AbortVoteKickOnDisconnect(int ClientID);
 	
 	int m_VoteCreator;
 	int64 m_VoteCloseTime;
@@ -131,7 +131,7 @@ public:
 	void CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage);
 	void CreateSmoke(vec2 Pos);
 	void CreateHammerHit(vec2 Pos);
-	void CreatePlayerSpawn(vec2 Pos, int ClientId);
+	void CreatePlayerSpawn(vec2 Pos, int ClientID);
 	void CreateDeath(vec2 Pos, int Who);
 	void CreateSound(vec2 Pos, int Sound, int Mask=-1);
 	void CreateSoundGlobal(int Sound, int Target=-1);	
@@ -147,17 +147,17 @@ public:
 
 	// network
 	void SendChatTarget(int To, const char *pText);
-	void SendChat(int ClientId, int Team, const char *pText);
-	void SendEmoticon(int ClientId, int Emoticon);
-	void SendWeaponPickup(int ClientId, int Weapon);
-	void SendBroadcast(const char *pText, int ClientId);
+	void SendChat(int ClientID, int Team, const char *pText);
+	void SendEmoticon(int ClientID, int Emoticon);
+	void SendWeaponPickup(int ClientID, int Weapon);
+	void SendBroadcast(const char *pText, int ClientID);
 	
-	void SendRecord(int ClientId);
+	void SendRecord(int ClientID);
 
 	
 	//
 	void CheckPureTuning();
-	void SendTuningParams(int ClientId);
+	void SendTuningParams(int ClientID);
 	
 	// engine events
 	virtual void OnInit();
@@ -166,24 +166,24 @@ public:
 	
 	virtual void OnTick();
 	virtual void OnPreSnap();
-	virtual void OnSnap(int ClientId);
+	virtual void OnSnap(int ClientID);
 	virtual void OnPostSnap();
 	
-	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientId);
+	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker, int ClientID);
 
-	virtual void OnClientConnected(int ClientId);
-	virtual void OnClientEnter(int ClientId);
-	virtual void OnClientDrop(int ClientId);
-	virtual void OnClientDirectInput(int ClientId, void *pInput);
-	virtual void OnClientPredictedInput(int ClientId, void *pInput);
+	virtual void OnClientConnected(int ClientID);
+	virtual void OnClientEnter(int ClientID);
+	virtual void OnClientDrop(int ClientID);
+	virtual void OnClientDirectInput(int ClientID, void *pInput);
+	virtual void OnClientPredictedInput(int ClientID, void *pInput);
 
 	virtual const char *Version();
 	virtual const char *NetVersion();
 };
 
 inline int CmaskAll() { return -1; }
-inline int CmaskOne(int ClientId) { return 1<<ClientId; }
-inline int CmaskAllExceptOne(int ClientId) { return 0x7fffffff^CmaskOne(ClientId); }
+inline int CmaskOne(int ClientID) { return 1<<ClientID; }
+inline int CmaskAllExceptOne(int ClientID) { return 0x7fffffff^CmaskOne(ClientID); }
 int CmaskRace(CGameContext *pGameServer, int Owner);
-inline bool CmaskIsSet(int Mask, int ClientId) { return (Mask&CmaskOne(ClientId)) != 0; }
+inline bool CmaskIsSet(int Mask, int ClientID) { return (Mask&CmaskOne(ClientID)) != 0; }
 #endif

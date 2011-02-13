@@ -161,7 +161,7 @@ void CHud::RenderScoreHud()
 				if(m_pClient->m_Snap.m_paInfoByScore[i]->m_Team != TEAM_SPECTATORS)
 				{
 					apPlayerInfo[t] = m_pClient->m_Snap.m_paInfoByScore[i];
-					if(apPlayerInfo[t]->m_ClientId == m_pClient->m_Snap.m_LocalCid)
+					if(apPlayerInfo[t]->m_ClientID == m_pClient->m_Snap.m_LocalCid)
 						Local = t;
 					++t;
 				}
@@ -173,7 +173,7 @@ void CHud::RenderScoreHud()
 				{
 					if(m_pClient->m_Snap.m_paInfoByScore[i]->m_Team != TEAM_SPECTATORS)
 						++aPos[1];
-					if(m_pClient->m_Snap.m_paInfoByScore[i]->m_ClientId == m_pClient->m_Snap.m_LocalCid)
+					if(m_pClient->m_Snap.m_paInfoByScore[i]->m_ClientID == m_pClient->m_Snap.m_LocalCid)
 					{
 						apPlayerInfo[1] = m_pClient->m_Snap.m_paInfoByScore[i];
 						Local = 1;
@@ -212,7 +212,7 @@ void CHud::RenderScoreHud()
 				// draw tee
 				if(apPlayerInfo[t])
  				{
-					CTeeRenderInfo Info = m_pClient->m_aClients[apPlayerInfo[t]->m_ClientId].m_RenderInfo;
+					CTeeRenderInfo Info = m_pClient->m_aClients[apPlayerInfo[t]->m_ClientID].m_RenderInfo;
  					Info.m_Size = 18.0f;
  					RenderTools()->RenderTee(CAnimState::GetIdle(), &Info, EMOTE_NORMAL, vec2(1,0),
  						vec2(Whole-ScoreWidthMax-Info.m_Size/2-Split, 246.0f+Info.m_Size/2+t*20));
@@ -595,7 +595,7 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 	else if(MsgType == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
-		if(pMsg->m_Cid == -1 && str_find(pMsg->m_pMessage, " finished in: "))
+		if(pMsg->m_ClientID == -1 && str_find(pMsg->m_pMessage, " finished in: "))
 		{
 			const char* pMessage = pMsg->m_pMessage;
 			

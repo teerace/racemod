@@ -575,8 +575,8 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		CNetMsg_Sv_Emoticon *pMsg = (CNetMsg_Sv_Emoticon *)pRawMsg;
 
 		// apply
-		m_aClients[pMsg->m_Cid].m_Emoticon = pMsg->m_Emoticon;
-		m_aClients[pMsg->m_Cid].m_EmoticonStart = Client()->GameTick();
+		m_aClients[pMsg->m_ClientID].m_Emoticon = pMsg->m_Emoticon;
+		m_aClients[pMsg->m_ClientID].m_EmoticonStart = Client()->GameTick();
 	}
 	else if(MsgId == NETMSGTYPE_SV_SOUNDGLOBAL)
 	{
@@ -595,12 +595,12 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 	else if(MsgId == NETMSGTYPE_SV_PLAYERTIME)
 	{
 		CNetMsg_Sv_PlayerTime *pMsg = (CNetMsg_Sv_PlayerTime *)pRawMsg;
-		m_aClients[pMsg->m_Cid].m_Score = (float)pMsg->m_Time/1000.0f;
+		m_aClients[pMsg->m_ClientID].m_Score = (float)pMsg->m_Time/1000.0f;
 	}
 	else if(MsgId == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
-		if(pMsg->m_Cid == -1 && str_find(pMsg->m_pMessage, " finished in: "))
+		if(pMsg->m_ClientID == -1 && str_find(pMsg->m_pMessage, " finished in: "))
 		{
 			const char* pMessage = pMsg->m_pMessage;
 			
@@ -714,12 +714,12 @@ void CGameClient::ProcessEvents()
 		else if(Item.m_Type == NETEVENTTYPE_DEATH)
 		{
 			NETEVENT_DEATH *ev = (NETEVENT_DEATH *)pData;
-			g_GameClient.m_pEffects->PlayerDeath(vec2(ev->m_X, ev->m_Y), ev->m_ClientId);
+			g_GameClient.m_pEffects->PlayerDeath(vec2(ev->m_X, ev->m_Y), ev->m_ClientID);
 		}
 		else if(Item.m_Type == NETEVENTTYPE_SOUNDWORLD)
 		{
 			NETEVENT_SOUNDWORLD *ev = (NETEVENT_SOUNDWORLD *)pData;
-			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, ev->m_SoundId, 1.0f, vec2(ev->m_X, ev->m_Y));
+			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
 		}
 	}
 }
@@ -747,7 +747,7 @@ void CGameClient::OnNewSnapshot()
 				if(g_Config.m_Debug)
 				{
 					char aBuf[256];
-					str_format(aBuf, sizeof(aBuf), "invalidated index=%d type=%d (%s) size=%d id=%d", Index, Item.m_Type, m_NetObjHandler.GetObjName(Item.m_Type), Item.m_DataSize, Item.m_Id);
+					str_format(aBuf, sizeof(aBuf), "invalidated index=%d type=%d (%s) size=%d id=%d", Index, Item.m_Type, m_NetObjHandler.GetObjName(Item.m_Type), Item.m_DataSize, Item.m_ID);
 					Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 				}
 				Client()->SnapInvalidateItem(IClient::SNAP_CURRENT, Index);
@@ -787,7 +787,7 @@ void CGameClient::OnNewSnapshot()
 			if(Item.m_Type == NETOBJTYPE_CLIENTINFO)
 			{
 				const CNetObj_ClientInfo *pInfo = (const CNetObj_ClientInfo *)pData;
-				int Cid = Item.m_Id;
+				int Cid = Item.m_ID;
 				IntsToStr(&pInfo->m_Name0, 6, m_aClients[Cid].m_aName);
 				IntsToStr(&pInfo->m_Skin0, 6, m_aClients[Cid].m_aSkinName);
 				
@@ -831,12 +831,12 @@ void CGameClient::OnNewSnapshot()
 			{
 				const CNetObj_PlayerInfo *pInfo = (const CNetObj_PlayerInfo *)pData;
 				
-				m_aClients[pInfo->m_ClientId].m_Team = pInfo->m_Team;
-				m_Snap.m_paPlayerInfos[pInfo->m_ClientId] = pInfo;
+				m_aClients[pInfo->m_ClientID].m_Team = pInfo->m_Team;
+				m_Snap.m_paPlayerInfos[pInfo->m_ClientID] = pInfo;
 				
 				if(pInfo->m_Local)
 				{
-					m_Snap.m_LocalCid = Item.m_Id;
+					m_Snap.m_LocalCid = Item.m_ID;
 					m_Snap.m_pLocalInfo = pInfo;
 					
 					if(pInfo->m_Team == TEAM_SPECTATORS)
@@ -850,17 +850,17 @@ void CGameClient::OnNewSnapshot()
 			}
 			else if(Item.m_Type == NETOBJTYPE_CHARACTER)
 			{
-				const void *pOld = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, Item.m_Id);
+				const void *pOld = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_CHARACTER, Item.m_ID);
 				if(pOld)
 				{
-					m_Snap.m_aCharacters[Item.m_Id].m_Active = true;
-					m_Snap.m_aCharacters[Item.m_Id].m_Prev = *((const CNetObj_Character *)pOld);
-					m_Snap.m_aCharacters[Item.m_Id].m_Cur = *((const CNetObj_Character *)pData);
+					m_Snap.m_aCharacters[Item.m_ID].m_Active = true;
+					m_Snap.m_aCharacters[Item.m_ID].m_Prev = *((const CNetObj_Character *)pOld);
+					m_Snap.m_aCharacters[Item.m_ID].m_Cur = *((const CNetObj_Character *)pData);
 
-					if(m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick)
-						Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Prev, Client()->PrevGameTick());
-					if(m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick)
-						Evolve(&m_Snap.m_aCharacters[Item.m_Id].m_Cur, Client()->GameTick());
+					if(m_Snap.m_aCharacters[Item.m_ID].m_Prev.m_Tick)
+						Evolve(&m_Snap.m_aCharacters[Item.m_ID].m_Prev, Client()->PrevGameTick());
+					if(m_Snap.m_aCharacters[Item.m_ID].m_Cur.m_Tick)
+						Evolve(&m_Snap.m_aCharacters[Item.m_ID].m_Cur, Client()->GameTick());
 				}
 			}
 			else if(Item.m_Type == NETOBJTYPE_GAME)
@@ -874,7 +874,7 @@ void CGameClient::OnNewSnapshot()
 				s_GameOver = m_Snap.m_pGameobj->m_GameOver;
 			}
 			else if(Item.m_Type == NETOBJTYPE_FLAG)
-				m_Snap.m_paFlags[Item.m_Id%2] = (const CNetObj_Flag *)pData;
+				m_Snap.m_paFlags[Item.m_ID%2] = (const CNetObj_Flag *)pData;
 		}
 	}
 	
@@ -905,7 +905,7 @@ void CGameClient::OnNewSnapshot()
 		{
 			if(m_IsRace)
 			{
-				if(m_Snap.m_paInfoByScore[i+1] && (!m_Snap.m_paInfoByScore[i] || m_aClients[m_Snap.m_paInfoByScore[i]->m_ClientId].m_Score == 0 || (m_aClients[m_Snap.m_paInfoByScore[i]->m_ClientId].m_Score > m_aClients[m_Snap.m_paInfoByScore[i+1]->m_ClientId].m_Score && m_aClients[m_Snap.m_paInfoByScore[i+1]->m_ClientId].m_Score != 0)))
+				if(m_Snap.m_paInfoByScore[i+1] && (!m_Snap.m_paInfoByScore[i] || m_aClients[m_Snap.m_paInfoByScore[i]->m_ClientID].m_Score == 0 || (m_aClients[m_Snap.m_paInfoByScore[i]->m_ClientID].m_Score > m_aClients[m_Snap.m_paInfoByScore[i+1]->m_ClientID].m_Score && m_aClients[m_Snap.m_paInfoByScore[i+1]->m_ClientID].m_Score != 0)))
 				{
 					const CNetObj_PlayerInfo *pTmp = m_Snap.m_paInfoByScore[i];
 					m_Snap.m_paInfoByScore[i] = m_Snap.m_paInfoByScore[i+1];
@@ -1187,7 +1187,7 @@ void CGameClient::SendInfo(bool Start)
 	}
 }
 
-void CGameClient::SendKill(int ClientId)
+void CGameClient::SendKill(int ClientID)
 {
 	CNetMsg_Cl_Kill Msg;
 	Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);	

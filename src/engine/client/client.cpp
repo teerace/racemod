@@ -778,7 +778,7 @@ void *CClient::SnapGetItem(int SnapId, int Index, CSnapItem *pItem)
 	i = m_aSnapshots[SnapId]->m_pAltSnap->GetItem(Index);
 	pItem->m_DataSize = m_aSnapshots[SnapId]->m_pAltSnap->GetItemSize(Index);
 	pItem->m_Type = i->Type();
-	pItem->m_Id = i->ID();
+	pItem->m_ID = i->ID();
 	return (void *)i->Data();
 }
 

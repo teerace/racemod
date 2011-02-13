@@ -540,7 +540,7 @@ void CGhost::OnMessage(int MsgType, void *pRawMsg)
 	else if(MsgType == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
-		if(pMsg->m_Cid == -1 && m_RaceState == RACE_STARTED)
+		if(pMsg->m_ClientID == -1 && m_RaceState == RACE_STARTED)
 		{
 			const char* pMessage = pMsg->m_pMessage;
 			

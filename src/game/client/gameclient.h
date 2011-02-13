@@ -203,7 +203,7 @@ public:
 	// TODO: move these
 	void SendSwitchTeam(int Team);
 	void SendInfo(bool Start);
-	void SendKill(int ClientId);
+	void SendKill(int ClientID);
 	
 	// pointers to all systems
 	class CGameConsole *m_pGameConsole;

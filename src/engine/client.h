@@ -32,7 +32,7 @@ public:
 	{
 	public:
 		int m_Type;
-		int m_Id;
+		int m_ID;
 		int m_DataSize;
 	};
 

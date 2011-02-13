@@ -36,7 +36,7 @@ void CFlag::Snap(int SnappingClient)
 		||(m_pCarryingCharacter && !GameServer()->m_apPlayers[SnappingClient]->m_ShowOthers && SnappingClient != m_pCarryingCharacter->GetPlayer()->GetCID()))
 		return;
 	
-	CNetObj_Flag *pFlag = (CNetObj_Flag *)Server()->SnapNewItem(NETOBJTYPE_FLAG, m_Id, sizeof(CNetObj_Flag));
+	CNetObj_Flag *pFlag = (CNetObj_Flag *)Server()->SnapNewItem(NETOBJTYPE_FLAG, m_ID, sizeof(CNetObj_Flag));
 	if(!pFlag)
 		return;
 

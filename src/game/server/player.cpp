@@ -116,7 +116,7 @@ void CPlayer::Snap(int SnappingClient)
 	pPlayerInfo->m_Latency = m_Latency.m_Min;
 	pPlayerInfo->m_LatencyFlux = m_Latency.m_Max-m_Latency.m_Min;
 	pPlayerInfo->m_Local = 0;
-	pPlayerInfo->m_ClientId = m_ClientID;
+	pPlayerInfo->m_ClientID = m_ClientID;
 	
 	// send 0 if times of otheres are not shown
 	int ShowTimes = (!g_Config.m_SvShowTimes && SnappingClient != m_ClientID);
@@ -227,7 +227,6 @@ void CPlayer::TryRespawn()
 	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
 		return;
 
-	}
 	m_Spawning = false;
 	Character = new(m_ClientID) CCharacter(&GameServer()->m_World);
 	Character->Spawn(this, SpawnPos);
