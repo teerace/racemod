@@ -105,15 +105,15 @@ int CCollision::GetIndex(vec2 PrevPos, vec2 Pos)
 	
 	float a = 0.0f;
 	vec2 Tmp = vec2(0, 0);
-	int nx = 0;
-	int ny = 0;
+	int Nx = 0;
+	int Ny = 0;
 	
-	for(float f = 0; f < d; f++)
+	for(float f = 0; f < Distance; f++)
 	{
 		a = f/Distance;
 		Tmp = mix(PrevPos, Pos, a);
-		nx = clamp((int)Tmp.x/32, 0, m_Width-1);
-		ny = clamp((int)Tmp.y/32, 0, m_Height-1);
+		Nx = clamp((int)Tmp.x/32, 0, m_Width-1);
+		Ny = clamp((int)Tmp.y/32, 0, m_Height-1);
 		if((m_pTiles[Ny*m_Width+Nx].m_Index >= TILE_STOPL && m_pTiles[Ny*m_Width+Nx].m_Index <= 59) ||
 			(m_pTele && (m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN || m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEOUT)) ||
 			(m_pSpeedup && m_pSpeedup[Ny*m_Width+Nx].m_Force > 0))

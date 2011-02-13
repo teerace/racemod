@@ -825,7 +825,7 @@ void CGameClient::OnNewSnapshot()
 				g_GameClient.m_Snap.m_NumPlayers++;
 				
 				// mark Player as online
-				Online[Cid] = true;
+				Online[ClientID] = true;
 			}
 			else if(Item.m_Type == NETOBJTYPE_PLAYERINFO)
 			{
@@ -964,7 +964,7 @@ void CGameClient::OnNewSnapshot()
 					if(Item.m_Type == NETOBJTYPE_FLAG)
 					{
 						const CNetObj_Flag *pFlag = (const CNetObj_Flag *)pData;
-						if(pFlag->m_CarriedBy == -2 && pFlag->m_Team != m_aClients[m_Snap.m_LocalCid].m_Team)
+						if(pFlag->m_CarriedBy == -2 && pFlag->m_Team != m_aClients[m_Snap.m_LocalClientID].m_Team)
 							m_FlagPos = vec2(pFlag->m_X, pFlag->m_Y);
 					}
 				}

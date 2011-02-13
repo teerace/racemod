@@ -106,7 +106,7 @@ void CGameContext::CreateDamageInd(vec2 Pos, float Angle, int Amount, int Owner)
 	float e = a+pi/3;
 	for(int i = 0; i < Amount; i++)
 	{
-		float f = mix(d, e, float(i+1)/float(Amount+2));
+		float f = mix(s, e, float(i+1)/float(Amount+2));
 		NETEVENT_DAMAGEIND *pEvent = (NETEVENT_DAMAGEIND *)m_Events.Create(NETEVENTTYPE_DAMAGEIND, sizeof(NETEVENT_DAMAGEIND), CmaskRace(this, Owner));
 		if(pEvent)
 		{
@@ -190,8 +190,8 @@ void CGameContext::CreateDeath(vec2 Pos, int ClientID)
 	NETEVENT_DEATH *pEvent = (NETEVENT_DEATH *)m_Events.Create(NETEVENTTYPE_DEATH, sizeof(NETEVENT_DEATH), CmaskRace(this, ClientID));
 	if(pEvent)
 	{
-		pEvent->m_X = (int)p.x;
-		pEvent->m_Y = (int)p.y;
+		pEvent->m_X = (int)Pos.x;
+		pEvent->m_Y = (int)Pos.y;
 		pEvent->m_ClientID = ClientID;
 	}
 }
@@ -650,9 +650,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				int Num;
 				
 				if(sscanf(pMsg->m_pMessage, "/top5 %d", &Num) == 1)
-					Score()->ShowTop5(p->GetCID(), Num);
+					Score()->ShowTop5(pPlayer->GetCID(), Num);
 				else
-					Score()->ShowTop5(p->GetCID());
+					Score()->ShowTop5(pPlayer->GetCID());
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/rank", 5))
 			{
@@ -671,10 +671,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					return;
 				}
 				
-				if(p->m_IsUsingRaceClient)
+				if(pPlayer->m_IsUsingRaceClient)
 					SendChatTarget(ClientID, "Please use the settings to switch this option.");
 				else
-					pPlayer->m_ShowOthers = !p->m_ShowOthers;
+					pPlayer->m_ShowOthers = !pPlayer->m_ShowOthers;
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/cmdlist"))
 			{
@@ -937,9 +937,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		pPlayer->KillCharacter(WEAPON_SELF);
 		pPlayer->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()*3;
 	}
-	else if (MsgId == NETMSGTYPE_CL_ISRACE)
+	else if (MsgID == NETMSGTYPE_CL_ISRACE)
 	{
-		p->m_IsUsingRaceClient = true;
+		pPlayer->m_IsUsingRaceClient = true;
 		
 		if(!g_Config.m_SvShowTimes)
 			return;
@@ -962,19 +962,19 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			}
 		}
 	}
-	else if (MsgId == NETMSGTYPE_CL_RACESHOWOTHERS)
+	else if (MsgID == NETMSGTYPE_CL_RACESHOWOTHERS)
 	{
 		if(!g_Config.m_SvShowOthers && !Server()->IsAuthed(ClientID))
 			return;
 				
-		if(p->m_Last_ShowOthers && p->m_Last_ShowOthers+Server()->TickSpeed()/2 > Server()->Tick())
+		if(pPlayer->m_Last_ShowOthers && pPlayer->m_Last_ShowOthers+Server()->TickSpeed()/2 > Server()->Tick())
 			return;
 		
-		p->m_Last_ShowOthers = Server()->Tick();
+		pPlayer->m_Last_ShowOthers = Server()->Tick();
 		
 		CNetMsg_Cl_RaceShowOthers *pMsg = (CNetMsg_Cl_RaceShowOthers *)pRawMsg;
 		
-		p->m_ShowOthers = (bool)pMsg->m_Active;
+		pPlayer->m_ShowOthers = (bool)pMsg->m_Active;
 	}
 }
 

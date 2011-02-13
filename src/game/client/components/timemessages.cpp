@@ -130,7 +130,7 @@ void CTimeMessages::OnRender()
 			else
 				TextRender()->TextColor(0.7f, 0.7f, 0.7f, Blend);
 			TextRender()->Text(0, x, y, FontSize, aDiff, -1);
-			if(m_aTimemsgs[r].m_PlayerID != m_pClient->m_Snap.m_LocalCid)
+			if(m_aTimemsgs[r].m_PlayerID != m_pClient->m_Snap.m_LocalClientID)
 				TextRender()->TextColor(1.0f, 1.0f, 1.0f, Blend);
 			
 			x -= 16.0f;
@@ -146,7 +146,7 @@ void CTimeMessages::OnRender()
 			x -= DiffW;
 			TextRender()->TextColor(0.0f, 0.5f, 1.0f, Blend);
 			TextRender()->Text(0, x, y, FontSize, aDiff, -1);
-			if(m_aTimemsgs[r].m_PlayerID != m_pClient->m_Snap.m_LocalCid)
+			if(m_aTimemsgs[r].m_PlayerID != m_pClient->m_Snap.m_LocalClientID)
 				TextRender()->TextColor(1.0f, 1.0f, 1.0f, Blend);
 			
 			x -= 16.0f;

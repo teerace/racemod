@@ -148,7 +148,7 @@ int CLayerTiles::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 	{
 		CLayerTele *pGrabbed = new CLayerTele(r.w, r.h);
 		pGrabbed->m_pEditor = m_pEditor;
-		pGrabbed->m_TexId = m_TexID;
+		pGrabbed->m_TexID = m_TexID;
 		pGrabbed->m_Image = m_Image;
 		
 		pBrush->AddLayer(pGrabbed);
@@ -168,7 +168,7 @@ int CLayerTiles::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 	{
 		CLayerSpeedup *pGrabbed = new CLayerSpeedup(r.w, r.h);
 		pGrabbed->m_pEditor = m_pEditor;
-		pGrabbed->m_TexId = m_TexID;
+		pGrabbed->m_TexID = m_TexID;
 		pGrabbed->m_Image = m_Image;
 		
 		pBrush->AddLayer(pGrabbed);
@@ -188,7 +188,7 @@ int CLayerTiles::BrushGrab(CLayerGroup *pBrush, CUIRect Rect)
 	{
 		CLayerTiles *pGrabbed = new CLayerTiles(r.w, r.h);
 		pGrabbed->m_pEditor = m_pEditor;
-		pGrabbed->m_TexId = m_TexID;
+		pGrabbed->m_TexID = m_TexID;
 		pGrabbed->m_Image = m_Image;
 		pGrabbed->m_Game = m_Game;
 		pBrush->AddLayer(pGrabbed);

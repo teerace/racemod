@@ -580,7 +580,7 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 	else if(MsgType == NETMSGTYPE_SV_KILLMSG)
 	{
 		CNetMsg_Sv_KillMsg *pMsg = (CNetMsg_Sv_KillMsg *)pRawMsg;
-		if(pMsg->m_Victim == m_pClient->m_Snap.m_LocalCid)
+		if(pMsg->m_Victim == m_pClient->m_Snap.m_LocalClientID)
 		{
 			m_CheckpointTick = 0;
 			m_RaceTime = 0;
@@ -612,7 +612,7 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 			char PlayerName[MAX_NAME_LENGTH];
 			str_copy(PlayerName, pMsg->m_pMessage, Num+1);
 			
-			if(!str_comp(PlayerName, m_pClient->m_aClients[m_pClient->m_Snap.m_LocalCid].m_aName))
+			if(!str_comp(PlayerName, m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientID].m_aName))
 			{
 				int Minutes = 0;
 				float Seconds = 0.0f;
