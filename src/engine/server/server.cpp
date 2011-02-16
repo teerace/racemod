@@ -185,9 +185,6 @@ CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
 	m_CurrentGameTick = 0;
 	m_RunServer = 1;
 
-	mem_zero(m_aBrowseinfoGametype, sizeof(m_aBrowseinfoGametype));
-	m_BrowseinfoProgression = -1;
-
 	m_pCurrentMapData = 0;
 	m_CurrentMapSize = 0;
 	
@@ -258,16 +255,6 @@ void CServer::SetClientScore(int ClientID, int Score)
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State < CClient::STATE_READY)
 		return;
 	m_aClients[ClientID].m_Score = Score;
-}
-
-void CServer::SetBrowseInfo(const char *pGameType, int Progression)
-{
-	str_copy(m_aBrowseinfoGametype, pGameType, sizeof(m_aBrowseinfoGametype));
-	m_BrowseinfoProgression = Progression;
-	if(m_BrowseinfoProgression > 100)
-		m_BrowseinfoProgression = 100;
-	if(m_BrowseinfoProgression < -1)
-		m_BrowseinfoProgression = -1;
 }
 
 void CServer::Kick(int ClientID, const char *pReason)
@@ -962,7 +949,7 @@ void CServer::SendServerInfo(NETADDR *pAddr, int Token)
 	p.AddString(GetMapName(), 32);
 
 	// gametype
-	p.AddString(m_aBrowseinfoGametype, 16);
+	p.AddString(GameServer()->GameType(), 16);
 
 	// flags
 	int i = 0;
@@ -971,10 +958,6 @@ void CServer::SendServerInfo(NETADDR *pAddr, int Token)
 	str_format(aBuf, sizeof(aBuf), "%d", i);
 	p.AddString(aBuf, 2);
 
-	// progression
-	str_format(aBuf, sizeof(aBuf), "%d", m_BrowseinfoProgression);
-	p.AddString(aBuf, 4);
-	
 	str_format(aBuf, sizeof(aBuf), "%d", PlayerCount); p.AddString(aBuf, 3);  // num players
 	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-g_Config.m_SvReservedSlots); p.AddString(aBuf, 3); // max players
 

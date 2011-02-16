@@ -189,6 +189,7 @@ public:
 	virtual void OnTeeraceAuth(int ClientID, const char *pStr);
 #endif
 
+	virtual const char *GameType();
 	virtual const char *Version();
 	virtual const char *NetVersion();
 };

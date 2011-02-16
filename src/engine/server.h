@@ -48,7 +48,6 @@ public:
 		return SendMsg(&Packer, Flags, ClientID);
 	}
 	
-	virtual void SetBrowseInfo(char const *pGameType, int Progression) = 0;
 	virtual void SetClientName(int ClientID, char const *pName) = 0;
 	virtual void SetClientScore(int ClientID, int Score) = 0;
 	
@@ -107,6 +106,7 @@ public:
 	virtual void OnTeeraceAuth(int ClientID, const char *pStr) = 0;
 #endif
 
+	virtual const char *GameType() = 0;
 	virtual const char *Version() = 0;
 	virtual const char *NetVersion() = 0;
 };

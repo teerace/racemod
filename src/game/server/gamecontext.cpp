@@ -1441,8 +1441,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		RaceController()->InitTeleporter();
 	}
 
-	Server()->SetBrowseInfo(m_pController->m_pGameType, -1);
-
 	// delete old score object
 	if(m_pScore)
 		delete m_pScore;
@@ -1530,6 +1528,7 @@ void CGameContext::OnPostSnap()
 	m_Events.Clear();
 }
 
+const char *CGameContext::GameType() { return m_pController && m_pController->m_pGameType ? m_pController->m_pGameType : ""; }
 int CmaskRace(CGameContext *pGameServer, int Owner)
 {
 	int Mask = 0;
