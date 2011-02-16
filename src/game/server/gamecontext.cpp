@@ -930,12 +930,12 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 	}
 	else if (MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
 	{
-		if(pPlayer->m_Last_Kill && pPlayer->m_Last_Kill+Server()->TickSpeed()*3 > Server()->Tick())
+		if(pPlayer->m_Last_Kill && pPlayer->m_Last_Kill+Server()->TickSpeed()/2 > Server()->Tick())
 			return;
 		
 		pPlayer->m_Last_Kill = Server()->Tick();
 		pPlayer->KillCharacter(WEAPON_SELF);
-		pPlayer->m_RespawnTick = Server()->Tick()+Server()->TickSpeed()*3;
+		pPlayer->m_RespawnTick = Server()->Tick();
 	}
 	else if (MsgID == NETMSGTYPE_CL_ISRACE)
 	{
