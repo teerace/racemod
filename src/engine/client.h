@@ -133,6 +133,8 @@ public:
 	virtual bool ConnectionProblems() = 0;
 
 	virtual bool SoundInitFailed() = 0;
+
+	virtual int GetDebugFont() = 0;
 	
 	// Race
 	virtual const char* GetCurrentMap() = 0;
