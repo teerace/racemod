@@ -22,7 +22,7 @@ class CJob
 public:
 	CJob()
 	{
-		m_Status = STATE_DONE;
+		m_Status = STATE_PENDING;
 		m_pFuncData = 0;
 	}
 	

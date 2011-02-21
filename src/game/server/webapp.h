@@ -4,41 +4,48 @@
 
 #include <string>
 #include <base/tl/array.h>
-#include "gamecontext.h"
+#include <engine/shared/jobs.h>
+
+#include "webapp/user.h"
+#include "webapp/run.h"
 
 class CWebapp
 {
-	CGameContext *m_pGameServer;
-	IServer *m_pServer;
+	class CGameContext *m_pGameServer;
+	class IServer *m_pServer;
+	
+	CJobPool m_JobPool;
 	
 	NETADDR m_Addr;
 	NETSOCKET m_Socket;
 	
 	array<std::string> m_lMapList;
+	array<CJob*> m_Jobs;
 	
-	CGameContext *GameServer() { return m_pGameServer; }
-	IServer *Server() { return m_pServer; }
+	IDataOut *m_pFirst;
+	IDataOut *m_pLast;
 	
-	bool Connect();
-	void Disconnect();
-	std::string SendAndReceive(const char* pString);
+	class CGameContext *GameServer() { return m_pGameServer; }
+	class IServer *Server() { return m_pServer; }
 	
 public:
 	CWebapp(CGameContext *pGameServer);
 	~CWebapp();
 	
+	const char *ApiKey();
+	const char *MapName();
+	
+	void AddOutput(class IDataOut *pOut);
+	void Tick();
+	
+	bool Connect();
+	void Disconnect();
+	std::string SendAndReceive(const char* pString);
+	
 	bool PingServer();
 	void LoadMapList();
-	bool PostRun(int ClientID, float Time, float *pCpTime);
-	int UserAuth(const char *pUsername, const char *pPassword);
-};
-
-// this is to buffer all the data
-struct CWenappData
-{
-	char m_aUsername[32];
-	char m_aPassword[32];
-	int m_Time;
+	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData);
+	int UpdateJobs();
 };
 
 #endif

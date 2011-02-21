@@ -181,7 +181,13 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	// post to webapp
 	if(GameServer()->Webapp() && m_WebappIsOnline && GameServer()->m_apPlayers[ID]->m_UserID > 0)
 	{
-		GameServer()->Webapp()->PostRun(ID, FinishTime, p->m_aCpCurrent);
+		CWebRun::CData *pParams = new CWebRun::CData();
+		pParams->m_ClientID = ID;
+		pParams->m_UserID = GameServer()->m_apPlayers[ID]->m_UserID;
+		str_copy(pParams->m_aName, Server()->ClientName(ID), MAX_NAME_LENGTH);
+		pParams->m_Time = FinishTime;
+		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));
+		GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
 	}
 
 	return true;

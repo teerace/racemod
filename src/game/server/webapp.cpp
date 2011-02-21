@@ -1,13 +1,5 @@
 /* CWebapp class by Sushi */
-#include <iostream>
-#include <base/tl/array.h>
-// TODO: replace crypto++ with another lib?
-#include <engine/external/encrypt/cryptlib.h>
-#include <engine/external/encrypt/osrng.h>
-#include <engine/external/encrypt/files.h>
-#include <engine/external/encrypt/base64.h>
-#include <engine/external/encrypt/fltrimpl.h>
-#include <engine/external/encrypt/rsa.h>
+//#include <iostream>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
 #include <engine/shared/config.h>
@@ -15,22 +7,105 @@
 #include "gamecontext.h"
 #include "webapp.h"
 
-using namespace CryptoPP;
-
-//static LOCK gs_WebappLock = 0;
-
 CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer),
   m_pServer(pGameServer->Server())
 {
-	net_addr_from_str(&m_Addr, g_Config.m_SvWebappIp);
+	char aBuf[512];
+	int Port = 80;
+	str_copy(aBuf, g_Config.m_SvWebappIp, sizeof(aBuf));
+
+	for(int k = 0; aBuf[k]; k++)
+	{
+		if(aBuf[k] == ':')
+		{
+			Port = str_toint(aBuf+k+1);
+			aBuf[k] = 0;
+			break;
+		}
+	}
+
+	if(net_host_lookup(aBuf, &m_Addr, NETTYPE_IPV4) != 0)
+	{
+		net_host_lookup("localhost", &m_Addr, NETTYPE_IPV4);
+	}
+	
+	m_Addr.port = Port;
+	
+	// only one at a time
+	m_JobPool.Init(1);
 	m_lMapList.clear();
+	m_Jobs.clear();
+	m_pFirst = 0;
+	m_pLast = 0;
 }
 
 CWebapp::~CWebapp()
 {
-	Disconnect();
+	// wait for the runnig jobs
+	do
+	{
+		UpdateJobs();
+	} while(m_Jobs.size() > 0);
 	m_lMapList.clear();
+	m_Jobs.clear();
+	for(IDataOut *pItem = m_pFirst; pItem; pItem = pItem->m_pNext)
+		delete pItem;
+}
+
+const char *CWebapp::ApiKey()
+{
+	return g_Config.m_SvApiKey;
+}
+
+const char *CWebapp::MapName()
+{
+	return g_Config.m_SvMap;
+}
+
+void CWebapp::AddOutput(IDataOut *pOut)
+{
+	// TODO: add a LOCK here?
+	pOut->m_pNext = 0;
+	if(m_pLast)
+		m_pLast->m_pNext = pOut;
+	else
+		m_pFirst = pOut;
+	
+	m_pLast = pOut;
+}
+
+void CWebapp::Tick()
+{
+	int Jobs = UpdateJobs();
+	if(Jobs > 0)
+		dbg_msg("", "Removed %d jobs", Jobs);
+	
+	IDataOut *pItem = m_pFirst;
+	IDataOut *pNext;
+	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
+	{
+		int Type = pItem->m_Type;
+		if(Type == WEB_USER_AUTH)
+		{
+			CWebUser::COut *pData = (CWebUser::COut*)pItem;
+			if(pData->m_UserID > 0)
+			{
+				char aBuf[128];
+				str_format(aBuf, sizeof(aBuf), "logged in: %d", pData->m_UserID);
+				GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+				GameServer()->m_apPlayers[pData->m_ClientID]->m_UserID = pData->m_UserID;
+			}
+			else
+			{
+				GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
+			}
+		}
+		pNext = pItem->m_pNext;
+		delete pItem;
+	}
+	m_pFirst = 0;
+	m_pLast = 0;
 }
 
 bool CWebapp::Connect()
@@ -71,11 +146,13 @@ std::string CWebapp::SendAndReceive(const char* pInString)
 	
 	// TODO: check the header
 	int Start = Data.find("\r\n\r\n");
-	Data = Data.substr(Start+4);
+	if(Data.length() >= Start+4)
+		Data = Data.substr(Start+4);
 	
 	return Data;
 }
 
+// TODO: thread
 bool CWebapp::PingServer()
 {
 	// connect to the server
@@ -96,6 +173,7 @@ bool CWebapp::PingServer()
 	return false;
 }
 
+// TODO: thread
 void CWebapp::LoadMapList()
 {
 	// clear maplist
@@ -124,131 +202,25 @@ void CWebapp::LoadMapList()
 	}
 }
 
-bool CWebapp::PostRun(int ClientID, float Time, float *pCpTime)
+CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData)
 {
-	if(!Connect())
-		return false;
-	
-	char aBuf[1024];
-	Json::Value Run;
-	Json::FastWriter Writer;
-	
-	Run["map_name"] = g_Config.m_SvMap;
-	Run["user_id"] = GameServer()->m_apPlayers[ClientID]->m_UserID;
-	Run["nickname"] = Server()->ClientName(ClientID);
-	// TODO
-	str_format(aBuf, sizeof(aBuf), "%.3f", Time); // damn ugly but the only way i know to do it
-	double TimeToSend;
-	sscanf(aBuf, "%lf", &TimeToSend);
-	Run["time"] = TimeToSend;
-	// TODO: not really nice
-	str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
-		pCpTime[0], pCpTime[1], pCpTime[2], pCpTime[3], pCpTime[4], pCpTime[5], pCpTime[6], pCpTime[7], pCpTime[8], pCpTime[9],
-		pCpTime[10], pCpTime[11], pCpTime[12], pCpTime[13], pCpTime[14], pCpTime[15], pCpTime[16], pCpTime[17], pCpTime[18], pCpTime[19],
-		pCpTime[20], pCpTime[21], pCpTime[22], pCpTime[23], pCpTime[24], pCpTime[25]);
-	Run["checkpoints"] = aBuf;
-	
-	std::string Json = Writer.write(Run);
-	//std::cout << "---json start---\n" << Json << "\n---json end---\n" << std::endl;
-	
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/runs/new/ HTTP/1.1\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s", g_Config.m_SvApiKey, Json.length(), Json.c_str());
-	std::string Received = SendAndReceive(aBuf);
-	Disconnect();
-	
-	// TODO check the status code
-	return true;
+	pUserData->m_pWebapp = this;
+	int i = m_Jobs.add(new CJob());
+	m_JobPool.Add(m_Jobs[i], pfnFunc, pUserData);
+	return m_Jobs[i];
 }
 
-class PEMFilter : public Unflushable<Filter>
+int CWebapp::UpdateJobs()
 {
-public:
-	PEMFilter(BufferedTransformation *attachment = NULL) : m_Count(0)
+	int Num = 0;
+	for(int i = 0; i < m_Jobs.size(); i++)
 	{
-		Detach(attachment);
-	}
-	
-	size_t Put2(const byte *begin, size_t length, int messageEnd, bool blocking)
-	{
-		FILTER_BEGIN;
-		while(m_inputPosition < length)
+		if(m_Jobs[i]->Status() == CJob::STATE_DONE)
 		{
-			if(begin[m_inputPosition++] == '-')
-				m_Count++;
-			if(m_Count)
-			{
-				if(m_Count == 10)
-					m_Count = 0;
-				continue;
-			}
-			else
-				FILTER_OUTPUT(1,begin+m_inputPosition-1,1,0);
+			delete m_Jobs[i];
+			m_Jobs.remove_index_fast(i);
+			Num++;
 		}
-		if(messageEnd)
-			FILTER_OUTPUT(2,0,0,messageEnd);
-		FILTER_END_NO_MESSAGE_END;
 	}
-	
-private:
-	int m_Count;
-};
-
-int CWebapp::UserAuth(const char *pUsername, const char *pPassword)
-{
-	if(!Connect())
-		return -1;
-	
-	AutoSeededRandomPool rng;
-	std::string cipher, cipher64;
-	
-	// RSA
-	try 
-	{
-		FileSource pubFile("public_key.pem", true, new PEMFilter(new Base64Decoder()));
-		RSAES_OAEP_SHA_Encryptor pub(pubFile);
-		
-		StringSource(pPassword, true,
-			new PK_EncryptorFilter(rng, pub,
-				new StringSink(cipher)
-		   )
-		);
-		
-		// Base64
-		StringSource(cipher, true,
-			new Base64Encoder(
-				new StringSink(cipher64),
-			false)
-		);
-	}
-	catch(Exception const& e)
-	{
-		dbg_msg("CryptoPP", "error: %s", e.what());
-		return -1;
-	}
-	
-	Json::Value Userdata;
-	Json::FastWriter Writer;
-	
-	Userdata["username"] = pUsername;
-	Userdata["password"] = cipher64;
-	
-	std::string Json = Writer.write(Userdata);
-	
-	char aBuf[1024];
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth/ HTTP/1.1\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s", g_Config.m_SvApiKey, Json.length(), Json.c_str());
-	std::string Received = SendAndReceive(aBuf);
-	Disconnect();
-	
-	//std::cout << "Recv:\n" << Received << std::endl;
-	
-	// TODO: better solution?
-	if(!Received.compare("false"))
-		return -1;
-	
-	Json::Value User;
-	Json::Reader Reader;
-	bool ParsingSuccessful = Reader.parse(Received, User);
-	if(!ParsingSuccessful)
-		return -1;
-	
-	return User["id"].asInt();
+	return Num;
 }

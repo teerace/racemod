@@ -78,6 +78,7 @@ void CGameContext::Clear()
 	CVoteOption *pVoteOptionFirst = m_pVoteOptionFirst;
 	CVoteOption *pVoteOptionLast = m_pVoteOptionLast;
 	CTuningParams Tuning = m_Tuning;
+	CWebapp *pWebapp = m_pWebapp;
 
 	m_Resetting = true;
 	this->~CGameContext();
@@ -88,6 +89,7 @@ void CGameContext::Clear()
 	m_pVoteOptionFirst = pVoteOptionFirst;
 	m_pVoteOptionLast = pVoteOptionLast;
 	m_Tuning = Tuning;
+	m_pWebapp = pWebapp;
 }
 
 
@@ -419,6 +421,8 @@ void CGameContext::OnTick()
 {
 	// check tuning
 	CheckPureTuning();
+	
+	m_pWebapp->Tick();
 
 	// copy tuning
 	m_World.m_Core.m_Tuning = m_Tuning;
@@ -679,21 +683,18 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			else if(!str_comp_num(pMsg->m_pMessage, "/login", 6))
 			{
 				// simple login, rework this later on
-				char aUsername[64];
-				char aPassword[64];
+				CWebUser::CData *pParams = new CWebUser::CData;
+				pParams->m_ClientID = ClientId;
 				bool Webapp = m_pWebapp && m_pController->m_WebappIsOnline;
-				if(Webapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", aUsername, aPassword) == 2)
+				if(Webapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", pParams->m_aUsername, pParams->m_aPassword) == 2)
+					m_pWebapp->AddJob(CWebUser::Auth, pParams);
+			}
+			else if(!str_comp(pMsg->m_pMessage, "/logout"))
+			{
+				if(p->m_UserID > 0)
 				{
-					int UserID = m_pWebapp->UserAuth(aUsername, aPassword);
-					if(UserID <= 0)
-						SendChatTarget(ClientId, "wrong username and/or password");
-					else
-					{
-						char aBuf[128];
-						str_format(aBuf, sizeof(aBuf), "logged in: %d", UserID);
-						SendChatTarget(ClientId, aBuf);
-						p->m_UserID = UserID;
-					}
+					p->m_UserID = -1;
+					SendChatTarget(ClientId, "logged out");
 				}
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/cmdlist"))
@@ -1315,10 +1316,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	// delete old score object
 	if(m_pScore)
 		delete m_pScore;
-	
-	// delete old webapp object
-	if(m_pWebapp)
-		delete m_pWebapp;
 		
 	// create score object
 #if defined(CONF_SQL)
@@ -1331,7 +1328,8 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	// create webapp object
 	if(g_Config.m_SvUseWebapp)
 	{
-		m_pWebapp = new CWebapp(this);
+		if(!m_pWebapp)
+			m_pWebapp = new CWebapp(this);
 		m_pController->m_WebappIsOnline = m_pWebapp->PingServer();
 		dbg_msg("webapp", "webapp is%s online", m_pController->m_WebappIsOnline?"":" not");
 		if(m_pController->m_WebappIsOnline)
