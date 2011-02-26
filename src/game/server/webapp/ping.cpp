@@ -18,7 +18,7 @@ int CWebPing::Ping(void *pUserData)
 	Json::Value Data;
 	Json::FastWriter Writer;
 	
-	int Num[2] = {0};
+	int Num = 0;
 	for(int i = 0; i < pData->m_Name.size(); i++)
 	{
 		int User = (pData->m_UserID[i] > 0);
@@ -30,9 +30,9 @@ int CWebPing::Ping(void *pUserData)
 		}
 		else
 		{
-			Data["anonymous"][Num[User]] = pData->m_Name[i];
+			Data["anonymous"][Num] = pData->m_Name[i];
 		}
-		Num[User]++;
+		Num++;
 		
 	}
 	Data["map"] = pWebapp->MapName();

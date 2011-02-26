@@ -191,7 +191,7 @@ int HslToRgb(int v)
 	}
 	
 	RGB = RGB*255;
-	return ((int)RGB.r)<<16|((int)RGB.g)<<8|(int)RGB.b;
+	return (((int)RGB.r)<<16)|(((int)RGB.g)<<8)|(int)RGB.b;
 }
 
 int CWebUser::UpdateSkin(void *pUserData)
