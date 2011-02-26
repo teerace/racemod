@@ -38,6 +38,7 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 	m_Jobs.clear();
 	m_pFirst = 0;
 	m_pLast = 0;
+	m_Online = 0;
 }
 
 CWebapp::~CWebapp()
@@ -49,13 +50,23 @@ CWebapp::~CWebapp()
 	} while(m_Jobs.size() > 0);
 	m_lMapList.clear();
 	m_Jobs.clear();
-	for(IDataOut *pItem = m_pFirst; pItem; pItem = pItem->m_pNext)
+	
+	IDataOut *pNext;
+	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
+	{
+		pNext = pItem->m_pNext;
 		delete pItem;
+	}
 }
 
 const char *CWebapp::ApiKey()
 {
 	return g_Config.m_SvApiKey;
+}
+
+const char *CWebapp::ServerIP()
+{
+	return g_Config.m_SvWebappIp;
 }
 
 const char *CWebapp::MapName()
@@ -79,7 +90,7 @@ void CWebapp::Tick()
 {
 	int Jobs = UpdateJobs();
 	if(Jobs > 0)
-		dbg_msg("", "Removed %d jobs", Jobs);
+		dbg_msg("webapp", "Removed %d jobs", Jobs);
 	
 	IDataOut *pItem = m_pFirst;
 	IDataOut *pNext;
@@ -100,6 +111,20 @@ void CWebapp::Tick()
 			{
 				GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
 			}
+		}
+		else if(Type == WEB_PING_PING)
+		{
+			CWebPing::COut *pData = (CWebPing::COut*)pItem;
+			m_Online = pData->m_Online;
+			dbg_msg("webapp", "webapp is%s online", m_Online?"":" not");
+			AddJob(CWebMap::LoadList, new CWebPing::CParam());
+		}
+		else if(Type == WEB_MAP_LIST)
+		{
+			CWebMap::COut *pData = (CWebMap::COut*)pItem;
+			m_lMapList = pData->m_MapList;
+			for(int i = 0; i < m_lMapList.size(); i++)
+				dbg_msg("webapp", "Map: %s", m_lMapList[i].c_str());
 		}
 		pNext = pItem->m_pNext;
 		delete pItem;
@@ -127,7 +152,7 @@ std::string CWebapp::SendAndReceive(const char* pInString)
 {
 	// send the data
 	net_tcp_connect(m_Socket, &m_Addr);
-	//std::cout << pInString << std::endl;
+	std::cout << pInString << std::endl;
 	int DataSent = net_tcp_send(m_Socket, pInString, str_length(pInString));
 	
 	// receive the data
@@ -136,13 +161,13 @@ std::string CWebapp::SendAndReceive(const char* pInString)
 	do
 	{
 		char aBuf[512] = {0};
-		Received = net_tcp_recv(m_Socket, aBuf, 511);
+		Received = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf)-1);
 
 		if(Received > 0)
 			Data.append(aBuf);
 	} while(Received > 0);
 	
-	//std::cout << "---recv start---\n" << Data << "\n---recv end---\n" << std::endl;
+	std::cout << "---recv start---\n" << Data << "\n---recv end---\n" << std::endl;
 	
 	// TODO: check the header
 	int Start = Data.find("\r\n\r\n");
@@ -152,58 +177,10 @@ std::string CWebapp::SendAndReceive(const char* pInString)
 	return Data;
 }
 
-// TODO: thread
-bool CWebapp::PingServer()
+CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData, bool NeedOnline)
 {
-	// connect to the server
-	if(!Connect())
-		return false;
-	
-	// TODO: use /api/1/ping/
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "GET /api/1/hello/ HTTP/1.1\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", g_Config.m_SvApiKey);
-	std::string Received = SendAndReceive(aBuf);
-	Disconnect();
-	
-	//std::cout << "Recv: '" << Received << "'" << std::endl;
-	
-	if(!Received.compare("\"PONG\""))
-		return true;
-	
-	return false;
-}
-
-// TODO: thread
-void CWebapp::LoadMapList()
-{
-	// clear maplist
-	m_lMapList.clear();
-	
-	if(!Connect())
-		return;
-		
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "GET /api/1/maps/list/ HTTP/1.1\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", g_Config.m_SvApiKey);
-	std::string Received = SendAndReceive(aBuf);
-	Disconnect();
-	
-	// cutting out the maps fomr the Received data
-	Json::Value Maplist;
-	Json::Reader Reader;
-	bool ParsingSuccessful = Reader.parse(Received, Maplist);
-	if(!ParsingSuccessful)
-		return;
-	
-	for(int i = 0; i < Maplist.size(); i++)
-	{
-		Json::Value Map = Maplist[i];
-		m_lMapList.add(Map["name"].asString());
-		dbg_msg("LoadedMap", "%s", m_lMapList[i].c_str());
-	}
-}
-
-CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData)
-{
+	if(NeedOnline && !m_Online)
+		return 0;
 	pUserData->m_pWebapp = this;
 	int i = m_Jobs.add(new CJob());
 	m_JobPool.Add(m_Jobs[i], pfnFunc, pUserData);

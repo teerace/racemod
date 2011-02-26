@@ -8,7 +8,7 @@
 class CWebRun
 {
 public:
-	class CData : public IDataIn
+	class CParam : public IDataIn
 	{
 	public:
 		int m_UserID;

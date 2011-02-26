@@ -6,7 +6,7 @@
 class CWebUser
 {
 public:
-	class CData : public IDataIn
+	class CParam : public IDataIn
 	{
 	public:
 		char m_aUsername[32];
@@ -19,10 +19,11 @@ public:
 	public:
 		COut(int ClientID)
 		{
-			m_ClientID = ClientID;
 			m_Type = WEB_USER_AUTH;
+			m_ClientID = ClientID;
 			m_UserID = -1;
 		}
+		int m_ClientID;
 		int m_UserID;
 	};
 	

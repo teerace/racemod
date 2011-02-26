@@ -179,9 +179,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	}
 	
 	// post to webapp
-	if(GameServer()->Webapp() && m_WebappIsOnline && GameServer()->m_apPlayers[ID]->m_UserID > 0)
+	if(GameServer()->Webapp() && GameServer()->m_apPlayers[ID]->m_UserID > 0)
 	{
-		CWebRun::CData *pParams = new CWebRun::CData();
+		CWebRun::CParam *pParams = new CWebRun::CParam();
 		pParams->m_ClientID = ID;
 		pParams->m_UserID = GameServer()->m_apPlayers[ID]->m_UserID;
 		str_copy(pParams->m_aName, Server()->ClientName(ID), MAX_NAME_LENGTH);

@@ -52,6 +52,7 @@ void CGameContext::Construct(int Resetting)
 	
 	m_pScore = 0;
 	m_pWebapp = 0;
+	m_LastPing = -1;
 }
 
 CGameContext::CGameContext(int Resetting)
@@ -422,7 +423,24 @@ void CGameContext::OnTick()
 	// check tuning
 	CheckPureTuning();
 	
-	m_pWebapp->Tick();
+	if(m_pWebapp)
+	{
+		m_pWebapp->Tick();
+		if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60*5 < Server()->Tick())
+		{
+			CWebPing::CParam *pParams = new CWebPing::CParam();
+			for(int i = 0; i < MAX_CLIENTS; i++)
+			{
+				if(m_apPlayers[i])
+				{
+					pParams->m_Name.add(Server()->ClientName(i));
+					pParams->m_UserID.add(m_apPlayers[i]->m_UserID);
+				}
+			}
+			m_pWebapp->AddJob(CWebPing::Ping, pParams, 0);
+			m_LastPing = Server()->Tick();
+		}
+	}
 
 	// copy tuning
 	m_World.m_Core.m_Tuning = m_Tuning;
@@ -683,10 +701,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			else if(!str_comp_num(pMsg->m_pMessage, "/login", 6))
 			{
 				// simple login, rework this later on
-				CWebUser::CData *pParams = new CWebUser::CData;
+				CWebUser::CParam *pParams = new CWebUser::CParam;
 				pParams->m_ClientID = ClientId;
-				bool Webapp = m_pWebapp && m_pController->m_WebappIsOnline;
-				if(Webapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", pParams->m_aUsername, pParams->m_aPassword) == 2)
+				if(m_pWebapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", pParams->m_aUsername, pParams->m_aPassword) == 2)
 					m_pWebapp->AddJob(CWebUser::Auth, pParams);
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/logout"))
@@ -1245,6 +1262,12 @@ void CGameContext::ConGetPos(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
+void CGameContext::ConPing(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	pSelf->m_LastPing = -1;
+}
+
 void CGameContext::OnConsoleInit()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
@@ -1272,6 +1295,8 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("teleport_to", "iii", CFGFLAG_SERVER, ConTeleportTo, this, "");
 	Console()->Register("get_pos", "i", CFGFLAG_SERVER, ConGetPos, this, "");
 	Console()->Register("kill_pl", "i", CFGFLAG_SERVER, ConKillPl, this, "");
+	
+	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "");
 }
 
 void CGameContext::OnInit(/*class IKernel *pKernel*/)
@@ -1326,17 +1351,8 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		m_pScore = new CFileScore(this);
 	
 	// create webapp object
-	if(g_Config.m_SvUseWebapp)
-	{
-		if(!m_pWebapp)
-			m_pWebapp = new CWebapp(this);
-		m_pController->m_WebappIsOnline = m_pWebapp->PingServer();
-		dbg_msg("webapp", "webapp is%s online", m_pController->m_WebappIsOnline?"":" not");
-		if(m_pController->m_WebappIsOnline)
-		{
-			m_pWebapp->LoadMapList();
-		}
-	}
+	if(g_Config.m_SvUseWebapp && !m_pWebapp)
+		m_pWebapp = new CWebapp(this);
 		
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)

@@ -8,6 +8,8 @@
 
 #include "webapp/user.h"
 #include "webapp/run.h"
+#include "webapp/ping.h"
+#include "webapp/map.h"
 
 class CWebapp
 {
@@ -25,15 +27,22 @@ class CWebapp
 	IDataOut *m_pFirst;
 	IDataOut *m_pLast;
 	
+	bool m_Online;
+	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
+	
+	int UpdateJobs();
 	
 public:
 	CWebapp(CGameContext *pGameServer);
 	~CWebapp();
 	
 	const char *ApiKey();
+	const char *ServerIP();
 	const char *MapName();
+	
+	bool IsOnline() { return m_Online; }
 	
 	void AddOutput(class IDataOut *pOut);
 	void Tick();
@@ -42,10 +51,7 @@ public:
 	void Disconnect();
 	std::string SendAndReceive(const char* pString);
 	
-	bool PingServer();
-	void LoadMapList();
-	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData);
-	int UpdateJobs();
+	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData, bool NeedOnline = 1);
 };
 
 #endif

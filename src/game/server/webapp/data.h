@@ -1,11 +1,11 @@
 #ifndef GAME_SERVER_WEBAPP_DATA_H
 #define GAME_SERVER_WEBAPP_DATA_H
 
-// TODO: is this data exchange really a good idea? is there a better way to do this?
-
 enum
 {
 	WEB_USER_AUTH = 0,
+	WEB_PING_PING,
+	WEB_MAP_LIST
 };
 
 class IDataIn
@@ -20,7 +20,6 @@ class IDataOut
 public:
 	IDataOut *m_pNext;
 	int m_Type;
-	int m_ClientID;
 };
 
 #endif

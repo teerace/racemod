@@ -61,11 +61,13 @@ class CGameContext : public IGameServer
 	// race
 	class IScore *m_pScore;
 	class CWebapp *m_pWebapp;
+	int m_LastPing;
 	
 	static void ConKillPl(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleport(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleportTo(IConsole::IResult *pResult, void *pUserData);
 	static void ConGetPos(IConsole::IResult *pResult, void *pUserData);
+	static void ConPing(IConsole::IResult *pResult, void *pUserData);
 	
 	CGameContext(int Resetting);
 	void Construct(int Resetting);
