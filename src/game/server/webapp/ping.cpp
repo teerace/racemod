@@ -38,7 +38,6 @@ int CWebPing::Ping(void *pUserData)
 	Data["map"] = pWebapp->MapName();
 	
 	std::string Json = Writer.write(Data);
-	
 	delete pData;
 	
 	char aBuf[1024];

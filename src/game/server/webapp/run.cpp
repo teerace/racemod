@@ -33,7 +33,7 @@ int CWebRun::Post(void *pUserData)
 	Run["checkpoints"] = aBuf;
 	
 	std::string Json = Writer.write(Run);
-	//std::cout << "---json start---\n" << Json << "\n---json end---\n" << std::endl;
+	delete pData;
 	
 	str_format(aBuf, sizeof(aBuf), "POST /api/1/runs/new/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s",
 		pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
@@ -41,6 +41,5 @@ int CWebRun::Post(void *pUserData)
 	pWebapp->Disconnect();
 	
 	// TODO check the status code
-	delete pData;
 	return 1;
 }

@@ -700,11 +700,18 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/login", 6))
 			{
-				// simple login, rework this later on
+				// TODO: use rcon login
 				CWebUser::CParam *pParams = new CWebUser::CParam;
 				pParams->m_ClientID = ClientId;
 				if(m_pWebapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", pParams->m_aUsername, pParams->m_aPassword) == 2)
 					m_pWebapp->AddJob(CWebUser::Auth, pParams);
+			}
+			else if(!str_comp_num(pMsg->m_pMessage, "/token", 6))
+			{
+				CWebUser::CParam *pParams = new CWebUser::CParam;
+				pParams->m_ClientID = ClientId;
+				if(m_pWebapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/token %s", pParams->m_aToken) == 1)
+					m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/logout"))
 			{

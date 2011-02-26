@@ -28,7 +28,7 @@ public:
 	};
 	
 	static int Auth(void *pUserData);
-	//static int AuthToken(void *pUserData);
+	static int AuthToken(void *pUserData);
 };
 
 #endif

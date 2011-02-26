@@ -50,10 +50,11 @@ int CWebUser::Auth(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;
+	int ClientID = pData->m_ClientID;
 	
 	if(!pWebapp->Connect())
 	{
-		pWebapp->AddOutput(new COut(pData->m_ClientID));
+		pWebapp->AddOutput(new COut(ClientID));
 		delete pData;
 		return 0;
 	}
@@ -83,7 +84,7 @@ int CWebUser::Auth(void *pUserData)
 	catch(Exception const& e)
 	{
 		dbg_msg("CryptoPP", "error: %s", e.what());
-		pWebapp->AddOutput(new COut(pData->m_ClientID));
+		pWebapp->AddOutput(new COut(ClientID));
 		delete pData;
 		return 0;
 	}
@@ -95,6 +96,7 @@ int CWebUser::Auth(void *pUserData)
 	Userdata["password"] = cipher64;
 	
 	std::string Json = Writer.write(Userdata);
+	delete pData;
 	
 	char aBuf[1024];
 	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s",
@@ -102,29 +104,63 @@ int CWebUser::Auth(void *pUserData)
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();
 	
-	//std::cout << "Recv:\n" << Received << std::endl;
-	
-	// TODO: better solution?
 	if(!Received.compare("false"))
 	{
-		pWebapp->AddOutput(new COut(pData->m_ClientID));
-		delete pData;
+		pWebapp->AddOutput(new COut(ClientID));
 		return 0;
 	}
 	
 	Json::Value User;
 	Json::Reader Reader;
 	bool ParsingSuccessful = Reader.parse(Received, User);
-	if(!ParsingSuccessful)
+	
+	COut *pOut = new COut(ClientID);
+	if(ParsingSuccessful)
+		pOut->m_UserID = User["id"].asInt();
+	pWebapp->AddOutput(pOut);
+	return ParsingSuccessful;
+}
+
+int CWebUser::AuthToken(void *pUserData)
+{
+	CParam *pData = (CParam*)pUserData;
+	CWebapp *pWebapp = pData->m_pWebapp;
+	int ClientID = pData->m_ClientID;
+	
+	if(!pWebapp->Connect())
 	{
-		pWebapp->AddOutput(new COut(pData->m_ClientID));
+		pWebapp->AddOutput(new COut(ClientID));
 		delete pData;
 		return 0;
 	}
 	
-	COut *pOut = new COut(pData->m_ClientID);
-	pOut->m_UserID = User["id"].asInt();
-	pWebapp->AddOutput(pOut);
+	Json::Value Userdata;
+	Json::FastWriter Writer;
+	
+	Userdata["api_token"] = pData->m_aToken;
+	
+	std::string Json = Writer.write(Userdata);
 	delete pData;
-	return 1;
+	
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth_token/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s",
+		pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	std::string Received = pWebapp->SendAndReceive(aBuf);
+	pWebapp->Disconnect();
+	
+	if(!Received.compare("false"))
+	{
+		pWebapp->AddOutput(new COut(ClientID));
+		return 0;
+	}
+	
+	Json::Value User;
+	Json::Reader Reader;
+	bool ParsingSuccessful = Reader.parse(Received, User);
+	
+	COut *pOut = new COut(ClientID);
+	if(ParsingSuccessful)
+		pOut->m_UserID = User["id"].asInt();
+	pWebapp->AddOutput(pOut);
+	return ParsingSuccessful;
 }
