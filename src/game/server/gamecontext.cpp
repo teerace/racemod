@@ -940,6 +940,16 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		
 		m_pController->OnPlayerInfoChange(pPlayer);
 		
+		if(pPlayer->m_UserID > 0)
+		{
+			CWebUser::CParam *pParams = new CWebUser::CParam;
+			pParams->m_UserID = pPlayer->m_UserID;
+			str_copy(pParams->m_SkinName, pMsg->m_pSkin, sizeof(pParams->m_SkinName));
+			pParams->m_ColorBody = pMsg->m_ColorBody;
+			pParams->m_ColorFeet = pMsg->m_ColorFeet;
+			m_pWebapp->AddJob(CWebUser::UpdateSkin, pParams);
+		}
+		
 		if(MsgID == NETMSGTYPE_CL_STARTINFO)
 		{
 			// send vote options
