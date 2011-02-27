@@ -107,6 +107,7 @@ public:
 class CClient : public IClient, public CDemoPlayer::IListner
 {
 	// needed interfaces
+	IEngine *m_pEngine;
 	IEditor *m_pEditor;
 	IEngineInput *m_pInput;
 	IEngineGraphics *m_pGraphics;
@@ -123,12 +124,11 @@ class CClient : public IClient, public CDemoPlayer::IListner
 		PREDICTION_MARGIN=1000/50/2, // magic network prediction value
 	};
 
-	CNetClient m_NetClient;
-	CDemoPlayer m_DemoPlayer;
-	CDemoRecorder m_DemoRecorder;
-	CGhostRecorder m_GhostRecorder;
-	CEngine m_Engine;
-	CServerBrowser m_ServerBrowser;
+	class CNetClient m_NetClient;
+	class CDemoPlayer m_DemoPlayer;
+	class CDemoRecorder m_DemoRecorder;
+	class CGhostRecorder m_GhostRecorder;
+	class CServerBrowser m_ServerBrowser;
 
 	char m_aServerAddressStr[256];
 
@@ -193,28 +193,30 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	CGraph m_FpsGraph;
 
 	// the game snapshots are modifiable by the game
-	CSnapshotStorage m_SnapshotStorage;
+	class CSnapshotStorage m_SnapshotStorage;
 	CSnapshotStorage::CHolder *m_aSnapshots[NUM_SNAPSHOT_TYPES];
 
 	int m_RecivedSnapshots;
 	char m_aSnapshotIncommingData[CSnapshot::MAX_SIZE];
 
-	CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
+	class CSnapshotStorage::CHolder m_aDemorecSnapshotHolders[NUM_SNAPSHOT_TYPES];
 	char *m_aDemorecSnapshotData[NUM_SNAPSHOT_TYPES][2][CSnapshot::MAX_SIZE];
 
-	CSnapshotDelta m_SnapshotDelta;
+	class CSnapshotDelta m_SnapshotDelta;
 
 	//
-	CServerInfo m_CurrentServerInfo;
+	class CServerInfo m_CurrentServerInfo;
 	int64 m_CurrentServerInfoRequestTime; // >= 0 should request, == -1 got info
 
 	// version info
 	struct
 	{
 		int m_State;
-		CHostLookup m_VersionServeraddr;
+		class CHostLookup m_VersionServeraddr;
 	} m_VersionInfo;
+
 public:
+	IEngine *Engine() { return m_pEngine; }
 	IEngineGraphics *Graphics() { return m_pGraphics; }
 	IEngineInput *Input() { return m_pInput; }
 	IEngineSound *Sound() { return m_pSound; }
@@ -300,7 +302,6 @@ public:
 
 	void Update();
 
-	void InitEngine(const char *pAppname);
 	void RegisterInterfaces();
 	void InitInterfaces();
 
@@ -342,7 +343,5 @@ public:
 	
 	void AutoScreenshot_Start();
 	void AutoScreenshot_Cleanup();
-
-	virtual class CEngine *Engine() { return &m_Engine; }
 };
 #endif

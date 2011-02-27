@@ -3,26 +3,22 @@
 
 #include <base/system.h>
 
-#include <engine/shared/config.h>
-#include <engine/shared/engine.h>
-
-#include <engine/shared/protocol.h>
-#include <engine/shared/snapshot.h>
+#include <engine/config.h>
+#include <engine/console.h>
+#include <engine/engine.h>
+#include <engine/map.h>
+#include <engine/masterserver.h>
+#include <engine/server.h>
+#include <engine/storage.h>
 
 #include <engine/shared/compression.h>
-
-#include <engine/shared/network.h>
 #include <engine/shared/config.h>
-#include <engine/shared/packer.h>
 #include <engine/shared/datafile.h>
 #include <engine/shared/demo.h>
-
-#include <engine/server.h>
-#include <engine/map.h>
-#include <engine/console.h>
-#include <engine/storage.h>
-#include <engine/masterserver.h>
-#include <engine/config.h>
+#include <engine/shared/network.h>
+#include <engine/shared/packer.h>
+#include <engine/shared/protocol.h>
+#include <engine/shared/snapshot.h>
 
 #include <mastersrv/mastersrv.h>
 
@@ -30,8 +26,8 @@
 #include "server.h"
 
 #if defined(CONF_FAMILY_WINDOWS) 
-	#define _WIN32_WINNT 0x0500
-	#define NOGDI
+	#define _WIN32_WINNT 0x0501
+	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 #endif
 
@@ -1166,11 +1162,6 @@ int CServer::LoadMap(const char *pMapName)
 	return 1;
 }
 
-void CServer::InitEngine(const char *pAppname)
-{
-	m_Engine.Init(pAppname);
-}
-
 void CServer::InitRegister(CNetServer *pNetServer, IEngineMasterServer *pMasterServer, IConsole *pConsole)
 {
 	m_Register.Init(pNetServer, pMasterServer, pConsole);
@@ -1182,9 +1173,6 @@ int CServer::Run()
 	m_pMap = Kernel()->RequestInterface<IEngineMap>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 
-	//snap_init_id();
-	net_init();
-	
 	//
 	Console()->RegisterPrintCallback(SendRconLineAuthed, this);
 
@@ -1623,14 +1611,11 @@ int main(int argc, const char **argv) // ignore_convention
 	}
 #endif
 
-	// init the engine
-	dbg_msg("server", "starting...");
 	CServer *pServer = CreateServer();
-	pServer->InitEngine("Teeworlds");
-	
 	IKernel *pKernel = IKernel::Create();
 
 	// create the components
+	IEngine *pEngine = CreateEngine("Teeworlds");
 	IEngineMap *pEngineMap = CreateEngineMap();
 	IGameServer *pGameServer = CreateGameServer();
 	IConsole *pConsole = CreateConsole(CFGFLAG_SERVER);
@@ -1644,6 +1629,7 @@ int main(int argc, const char **argv) // ignore_convention
 		bool RegisterFail = false;
 
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pServer); // register as both
+		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pEngine);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineMap*>(pEngineMap)); // register as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IMap*>(pEngineMap));
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pGameServer);
@@ -1658,7 +1644,7 @@ int main(int argc, const char **argv) // ignore_convention
 	}
 	
 	pConfig->Init();
-	pEngineMasterServer->Init(pServer->Engine());
+	pEngineMasterServer->Init();
 	pEngineMasterServer->Load();
 		
 	// register all console commands
@@ -1675,9 +1661,10 @@ int main(int argc, const char **argv) // ignore_convention
 	// restore empty config strings to their defaults
 	pConfig->RestoreStrings();
 	
-	pServer->Engine()->InitLogfile();
+	pEngine->InitLogfile();
 
 	// run the server
+	dbg_msg("server", "starting...");
 	pServer->Run();
 	
 	// free
