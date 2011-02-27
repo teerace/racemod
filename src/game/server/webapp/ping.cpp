@@ -41,7 +41,7 @@ int CWebPing::Ping(void *pUserData)
 	delete pData;
 	
 	char aBuf[1024];
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/ping/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n%s",
+	str_format(aBuf, sizeof(aBuf), "POST /api/1/ping/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s",
 		pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();

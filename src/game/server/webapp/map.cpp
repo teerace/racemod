@@ -14,7 +14,7 @@ int CWebMap::LoadList(void *pUserData)
 		return 0;
 	
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "GET /api/1/maps/list/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\n\r\n", pWebapp->ServerIP(), pWebapp->ApiKey());
+	str_format(aBuf, sizeof(aBuf), "GET /api/1/maps/list/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n", pWebapp->ServerIP(), pWebapp->ApiKey());
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();
 	
