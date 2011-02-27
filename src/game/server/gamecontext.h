@@ -178,6 +178,8 @@ public:
 	virtual void OnClientDrop(int ClientID);
 	virtual void OnClientDirectInput(int ClientID, void *pInput);
 	virtual void OnClientPredictedInput(int ClientID, void *pInput);
+	
+	virtual void OnTeeraceAuth(int ClientID, const char *pStr);
 
 	virtual const char *Version();
 	virtual const char *NetVersion();

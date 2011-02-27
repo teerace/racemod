@@ -547,6 +547,18 @@ void CGameContext::OnTick()
 }
 
 // Server hooks
+void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr)
+{
+	CPlayer *p = m_apPlayers[ClientID];
+	if(str_comp_num(pStr, "teerace:", 8) == 0)
+	{
+		CWebUser::CParam *pParams = new CWebUser::CParam;
+		pParams->m_ClientID = ClientID;
+		if(m_pWebapp && p->m_UserID <= 0 && sscanf(pStr, "teerace:%s", pParams->m_aToken) == 1)
+			m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
+	}
+}
+
 void CGameContext::OnClientDirectInput(int ClientID, void *pInput)
 {
 	if(!m_World.m_Paused)
@@ -697,29 +709,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					SendChatTarget(ClientID, "Please use the settings to switch this option.");
 				else
 					pPlayer->m_ShowOthers = !pPlayer->m_ShowOthers;
-			}
-			else if(!str_comp_num(pMsg->m_pMessage, "/login", 6))
-			{
-				// TODO: use rcon login
-				CWebUser::CParam *pParams = new CWebUser::CParam;
-				pParams->m_ClientID = ClientId;
-				if(m_pWebapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/login %s %s", pParams->m_aUsername, pParams->m_aPassword) == 2)
-					m_pWebapp->AddJob(CWebUser::Auth, pParams);
-			}
-			else if(!str_comp_num(pMsg->m_pMessage, "/token", 6))
-			{
-				CWebUser::CParam *pParams = new CWebUser::CParam;
-				pParams->m_ClientID = ClientId;
-				if(m_pWebapp && p->m_UserID <= 0 && sscanf(pMsg->m_pMessage, "/token %s", pParams->m_aToken) == 1)
-					m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
-			}
-			else if(!str_comp(pMsg->m_pMessage, "/logout"))
-			{
-				if(p->m_UserID > 0)
-				{
-					p->m_UserID = -1;
-					SendChatTarget(ClientId, "logged out");
-				}
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/cmdlist"))
 			{

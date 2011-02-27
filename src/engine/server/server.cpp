@@ -826,6 +826,12 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				
 				if(Unpacker.Error() == 0)
 				{
+					if(str_comp_num(pPw, "teerace:", 8) == 0)
+					{
+						GameServer()->OnTeeraceAuth(ClientId, pPw);
+						return;
+					}
+					
 					if(g_Config.m_SvRconPassword[0] == 0)
 					{
 						SendRconLine(ClientID, "No rcon password set on server. Set sv_rcon_password to enable the remote console.");
