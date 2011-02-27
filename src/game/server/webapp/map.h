@@ -9,20 +9,24 @@ class CWebMap
 public:
 	class CParam : public IDataIn
 	{
+	public:
+		array<std::string> m_DownloadList;
+		class IStorage *m_pStorage;
 	};
 	
 	class COut : public IDataOut
 	{
 	public:
-		COut()
+		COut(int Type)
 		{
-			m_Type = WEB_MAP_LIST;
+			m_Type = Type;
 			m_MapList.clear();
 		}
 		array<std::string> m_MapList;
 	};
 	
 	static int LoadList(void *pUserData);
+	static int DownloadMaps(void *pUserData);
 };
 
 #endif

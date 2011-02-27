@@ -24,6 +24,8 @@ public:
 	
 	int Tick() const { return m_CurrentGameTick; }
 	int TickSpeed() const { return m_TickSpeed; }
+	
+	virtual class IStorage *Storage() = 0;
 
 	virtual const char *ClientName(int ClientID) = 0;
 	virtual bool ClientIngame(int ClientID) = 0;

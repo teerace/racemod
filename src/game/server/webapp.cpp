@@ -1,11 +1,20 @@
 /* CWebapp class by Sushi */
 //#include <iostream>
+#include <base/tl/algorithm.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
 #include <engine/shared/config.h>
+#include <engine/storage.h>
 
 #include "gamecontext.h"
 #include "webapp.h"
+
+// TODO: use libcurl?
+
+const char CWebapp::GET[] = "GET %s HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nConnection: close\r\n\r\n";
+const char CWebapp::POST[] = "POST %s HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
+const char CWebapp::PUT[] = "PUT %s HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
+const char CWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
 
 CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer),
@@ -34,11 +43,11 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 	
 	// only one at a time
 	m_JobPool.Init(1);
-	m_lMapList.clear();
-	m_Jobs.clear();
+	m_Jobs.delete_all();
 	m_pFirst = 0;
 	m_pLast = 0;
 	m_Online = 0;
+	LoadMaps();
 }
 
 CWebapp::~CWebapp()
@@ -49,7 +58,7 @@ CWebapp::~CWebapp()
 		UpdateJobs();
 	} while(m_Jobs.size() > 0);
 	m_lMapList.clear();
-	m_Jobs.clear();
+	m_Jobs.delete_all();
 	
 	IDataOut *pNext;
 	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
@@ -122,9 +131,26 @@ void CWebapp::Tick()
 		else if(Type == WEB_MAP_LIST)
 		{
 			CWebMap::COut *pData = (CWebMap::COut*)pItem;
-			m_lMapList = pData->m_MapList;
-			for(int i = 0; i < m_lMapList.size(); i++)
-				dbg_msg("webapp", "Map: %s", m_lMapList[i].c_str());
+			array<std::string> NeededMaps;
+			for(int i = 0; i < pData->m_MapList.size(); i++)
+			{
+				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_MapList[i]);
+				if(r.empty())
+					NeededMaps.add(pData->m_MapList[i]);
+			}
+			if(NeededMaps.size() > 0)
+			{
+				CWebMap::CParam *pParam = new CWebMap::CParam();
+				pParam->m_DownloadList = NeededMaps;
+				pParam->m_pStorage = m_pServer->Storage();
+				AddJob(CWebMap::DownloadMaps, pParam);
+			}
+		}
+		else if(Type == WEB_MAP_DOWNLOADED)
+		{
+			CWebMap::COut *pData = (CWebMap::COut*)pItem;
+			m_lMapList.add(pData->m_MapList[0]);
+			dbg_msg("webapp", "added map: %s", pData->m_MapList[0].c_str());
 		}
 		pNext = pItem->m_pNext;
 		delete pItem;
@@ -148,12 +174,21 @@ void CWebapp::Disconnect()
 	net_tcp_close(m_Socket);
 }
 
+int CWebapp::Send(const void *pData, int Size)
+{
+	net_tcp_connect(m_Socket, &m_Addr);
+	return net_tcp_send(m_Socket, pData, Size);
+}
+
+int CWebapp::Recv(void *pData, int MaxSize)
+{
+	return  net_tcp_recv(m_Socket, pData, MaxSize);
+}
+
 std::string CWebapp::SendAndReceive(const char* pInString)
 {
-	// send the data
-	net_tcp_connect(m_Socket, &m_Addr);
 	std::cout << pInString << std::endl;
-	int DataSent = net_tcp_send(m_Socket, pInString, str_length(pInString));
+	int DataSent = Send(pInString, str_length(pInString));
 	
 	// receive the data
 	int Received = 0;
@@ -161,8 +196,8 @@ std::string CWebapp::SendAndReceive(const char* pInString)
 	do
 	{
 		char aBuf[512] = {0};
-		Received = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf)-1);
-
+		Received = Recv(aBuf, sizeof(aBuf)-1);
+		
 		if(Received > 0)
 			Data.append(aBuf);
 	} while(Received > 0);
@@ -200,4 +235,22 @@ int CWebapp::UpdateJobs()
 		}
 	}
 	return Num;
+}
+
+void CWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
+{
+	CWebapp *pWebapp = (CWebapp*)pUser;
+	int Length = str_length(pName);
+	if(IsDir || Length < 4 || str_comp(pName+Length-4, ".map") != 0)
+		return;
+	
+	char aBuf[256];
+	str_copy(aBuf, pName, min((int)sizeof(aBuf),Length-3));
+	pWebapp->m_lMapList.add(aBuf);
+}
+
+void CWebapp::LoadMaps()
+{
+	m_lMapList.clear();
+	m_pServer->Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 }

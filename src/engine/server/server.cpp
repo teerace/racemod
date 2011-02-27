@@ -1051,14 +1051,19 @@ int CServer::LoadMap(const char *pMapName)
 {
 	//DATAFILE *df;
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
+	str_format(aBuf, sizeof(aBuf), "maps/teerace/%s.map", pMapName);
 	
 	/*df = datafile_load(buf);
 	if(!df)
 		return 0;*/
 		
+	// prefer teerace maps
 	if(!m_pMap->Load(aBuf))
-		return 0;
+	{
+		str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
+		if(!m_pMap->Load(aBuf))
+			return 0;
+	}
 	
 	// stop recording when we change map
 	m_DemoRecorder.Stop();

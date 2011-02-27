@@ -5,7 +5,8 @@ enum
 {
 	WEB_USER_AUTH = 0,
 	WEB_PING_PING,
-	WEB_MAP_LIST
+	WEB_MAP_LIST,
+	WEB_MAP_DOWNLOADED
 };
 
 class IDataIn

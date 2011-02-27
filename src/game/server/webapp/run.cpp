@@ -35,8 +35,7 @@ int CWebRun::Post(void *pUserData)
 	std::string Json = Writer.write(Run);
 	delete pData;
 	
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/runs/new/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s",
-		pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/runs/new/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();
 	

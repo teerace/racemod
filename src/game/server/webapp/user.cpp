@@ -98,9 +98,8 @@ int CWebUser::Auth(void *pUserData)
 	std::string Json = Writer.write(Userdata);
 	delete pData;
 	
-	char aBuf[1024];
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s",
-		pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/users/auth/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();
 	
@@ -143,8 +142,7 @@ int CWebUser::AuthToken(void *pUserData)
 	delete pData;
 	
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "POST /api/1/users/auth_token/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s",
-		pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/users/auth_token/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();
 	
@@ -216,8 +214,9 @@ int CWebUser::UpdateSkin(void *pUserData)
 	delete pData;
 	
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "PUT /api/1/users/skin/%d/ HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s",
-		pData->m_UserID, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	char aURL[128];
+	str_format(aURL, sizeof(aURL), "/api/1/users/skin/%d/", pData->m_UserID);
+	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	std::string Received = pWebapp->SendAndReceive(aBuf);
 	pWebapp->Disconnect();
 

@@ -32,9 +32,18 @@ class CWebapp
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
 	
+	void LoadMaps();
 	int UpdateJobs();
 	
+	static void MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
+	
 public:
+	
+	static const char GET[];
+	static const char POST[];
+	static const char PUT[];
+	static const char DOWNLOAD[];
+	
 	CWebapp(CGameContext *pGameServer);
 	~CWebapp();
 	
@@ -49,6 +58,9 @@ public:
 	
 	bool Connect();
 	void Disconnect();
+	
+	int Send(const void *pData, int Size);
+	int Recv(void *pData, int MaxSize);
 	std::string SendAndReceive(const char* pString);
 	
 	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData, bool NeedOnline = 1);
