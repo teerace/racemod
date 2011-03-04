@@ -31,6 +31,9 @@ void CFlag::TickDeferedLate()
 
 void CFlag::Snap(int SnappingClient)
 {
+	if(NetworkClipped(SnappingClient))
+		return;
+
 	if((!m_pCarryingCharacter && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_Team && GameServer()->m_apPlayers[SnappingClient]->GetCharacter()
 		&& GameServer()->RaceController()->m_aRace[SnappingClient].m_RaceState == CGameControllerRACE::RACE_STARTED)
 		||(m_pCarryingCharacter && !GameServer()->m_apPlayers[SnappingClient]->m_ShowOthers && SnappingClient != m_pCarryingCharacter->GetPlayer()->GetCID()))
@@ -43,10 +46,4 @@ void CFlag::Snap(int SnappingClient)
 	pFlag->m_X = (int)m_Pos.x;
 	pFlag->m_Y = (int)m_Pos.y;
 	pFlag->m_Team = m_Team;
-	pFlag->m_CarriedBy = -1;
-	
-	if(!m_pCarryingCharacter)
-		pFlag->m_CarriedBy = -2;
-	else if(m_pCarryingCharacter && m_pCarryingCharacter->GetPlayer())
-		pFlag->m_CarriedBy = m_pCarryingCharacter->GetPlayer()->GetCID();
 }
