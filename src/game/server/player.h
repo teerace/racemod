@@ -79,6 +79,8 @@ public:
 	bool m_IsUsingRaceClient;
 	
 	int m_UserID;
+	int m_GlobalRank;
+	int m_MapRank;
 	
 private:
 	CCharacter *Character;

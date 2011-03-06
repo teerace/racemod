@@ -1041,6 +1041,11 @@ void CServer::PumpNetwork()
 	}
 }
 
+void CServer::ReloadMap()
+{
+	m_MapReload = 1;
+}
+
 char *CServer::GetMapName()
 {
 	// get the name of the map without his path

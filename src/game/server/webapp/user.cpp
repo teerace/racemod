@@ -55,7 +55,7 @@ int CWebUser::Auth(void *pUserData)
 	
 	if(!pWebapp->Connect())
 	{
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		delete pData;
 		return 0;
 	}
@@ -85,7 +85,7 @@ int CWebUser::Auth(void *pUserData)
 	catch(Exception const& e)
 	{
 		dbg_msg("CryptoPP", "error: %s", e.what());
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		delete pData;
 		return 0;
 	}
@@ -108,14 +108,14 @@ int CWebUser::Auth(void *pUserData)
 	if(Size < 0)
 	{
 		dbg_msg("webapp", "error: %d (user auth)", Size);
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
 	
 	if(str_comp(pReceived, "false") == 0)
 	{
 		mem_free(pReceived);
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
 	
@@ -124,9 +124,12 @@ int CWebUser::Auth(void *pUserData)
 	bool ParsingSuccessful = Reader.parse(pReceived, pReceived+Size, User);
 	mem_free(pReceived);
 	
-	COut *pOut = new COut(ClientID);
+	COut *pOut = new COut(WEB_USER_AUTH, ClientID);
 	if(ParsingSuccessful)
+	{
+		str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
 		pOut->m_UserID = User["id"].asInt();
+	}
 	pWebapp->AddOutput(pOut);
 	return ParsingSuccessful;
 }*/
@@ -139,7 +142,7 @@ int CWebUser::AuthToken(void *pUserData)
 	
 	if(!pWebapp->Connect())
 	{
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		delete pData;
 		return 0;
 	}
@@ -161,14 +164,14 @@ int CWebUser::AuthToken(void *pUserData)
 	if(Size < 0)
 	{
 		dbg_msg("webapp", "error: %d (user auth token)", Size);
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
 	
 	if(str_comp(pReceived, "false") == 0)
 	{
 		mem_free(pReceived);
-		pWebapp->AddOutput(new COut(ClientID));
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
 	
@@ -177,9 +180,12 @@ int CWebUser::AuthToken(void *pUserData)
 	bool ParsingSuccessful = Reader.parse(pReceived, pReceived+Size, User);
 	mem_free(pReceived);
 	
-	COut *pOut = new COut(ClientID);
+	COut *pOut = new COut(WEB_USER_AUTH, ClientID);
 	if(ParsingSuccessful)
+	{
 		pOut->m_UserID = User["id"].asInt();
+		str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
+	}
 	pWebapp->AddOutput(pOut);
 	return ParsingSuccessful;
 }
@@ -232,19 +238,77 @@ int CWebUser::UpdateSkin(void *pUserData)
 	Userdata["feet_color"] = HslToRgb(pData->m_ColorFeet);
 	
 	std::string Json = Writer.write(Userdata);
-	delete pData;
 	
 	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
 	str_format(aURL, sizeof(aURL), "/api/1/users/skin/%d/", pData->m_UserID);
 	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-		int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	mem_free(pReceived);
+	
+	delete pData;
 	
 	if(Size < 0)
 		dbg_msg("webapp", "error: %d (skin update)", Size);
 	
 	return Size >= 0;
+}
+
+int CWebUser::GetRank(void *pUserData)
+{
+	CParam *pData = (CParam*)pUserData;
+	CWebapp *pWebapp = pData->m_pWebapp;
+	int UserID = pData->m_UserID;
+	int ClientID = pData->m_ClientID;
+	bool PrintRank = pData->m_PrintRank;
+	delete pData;
+	
+	int GlobalRank;
+	int MapRank;
+	
+	if(!pWebapp->Connect())
+		return 0;
+	
+	char *pReceived = 0;
+	char aBuf[512];
+	char aURL[128];
+	str_format(aURL, sizeof(aURL), "/api/1/users/rank/%d/", UserID);
+	str_format(aBuf, sizeof(aBuf), CWebapp::GET, aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	pWebapp->Disconnect();
+	
+	if(Size < 0)
+	{
+		dbg_msg("webapp", "error: %d (user global rank)", Size);
+		return 0;
+	}
+	
+	GlobalRank = str_toint(pReceived);
+	mem_free(pReceived);
+	
+	if(!pWebapp->Connect())
+		return 0;
+	
+	str_format(aURL, sizeof(aURL), "/api/1/users/map_rank/%d/%s/", UserID, pWebapp->MapName());
+	str_format(aBuf, sizeof(aBuf), CWebapp::GET, aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
+	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	pWebapp->Disconnect();
+	
+	if(Size < 0)
+	{
+		dbg_msg("webapp", "error: %d (user map rank)", Size);
+		return 0;
+	}
+	
+	MapRank = str_toint(pReceived);
+	mem_free(pReceived);
+	
+	COut *pOut = new COut(WEB_USER_RANK, ClientID);
+	pOut->m_GlobalRank = GlobalRank;
+	pOut->m_MapRank = MapRank;
+	pOut->m_PrintRank = PrintRank;
+	pWebapp->AddOutput(pOut);
+	return 1;
 }

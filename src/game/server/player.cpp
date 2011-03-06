@@ -31,6 +31,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_IsUsingRaceClient = false;
 	
 	m_UserID = -1;
+	m_GlobalRank = 0;
+	m_MapRank = 0;
 }
 
 CPlayer::~CPlayer()

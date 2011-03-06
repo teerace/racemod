@@ -172,6 +172,8 @@ public:
 		
 
 	void PumpNetwork();
+	
+	void ReloadMap();
 
 	char *GetMapName();
 	int LoadMap(const char *pMapName);

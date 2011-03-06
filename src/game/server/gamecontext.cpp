@@ -552,7 +552,7 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr)
 	CPlayer *p = m_apPlayers[ClientID];
 	if(str_comp_num(pStr, "teerace:", 8) == 0)
 	{
-		CWebUser::CParam *pParams = new CWebUser::CParam;
+		CWebUser::CParam *pParams = new CWebUser::CParam();
 		pParams->m_ClientID = ClientID;
 		if(m_pWebapp && p->m_UserID <= 0 && sscanf(pStr, "teerace:%s", pParams->m_aToken) == 1)
 			m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
@@ -695,7 +695,21 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				if(g_Config.m_SvShowTimes && sscanf(pMsg->m_pMessage, "/rank %s", aName) == 1)
 					Score()->ShowRank(pPlayer->GetCID(), aName, true);
 				else
+				{
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
+					
+					if(p->m_UserID > 0 && p->m_GlobalRank > 0 && p->m_MapRank > 0)
+					{
+						char aBuf[128];
+						str_format(aBuf, sizeof(aBuf), "%s: %d. (Global) | %d. (Map)",
+							Server()->ClientName(ClientId), p->m_GlobalRank, p->m_MapRank);
+						
+						if(g_Config.m_SvShowTimes)
+							SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+						else
+							SendChatTarget(ClientId, aBuf);
+					}
+				}
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/show_others"))
 			{

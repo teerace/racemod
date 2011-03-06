@@ -10,9 +10,9 @@
 
 // TODO: use libcurl?
 
-const char CWebapp::GET[] = "GET %s HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nConnection: close\r\n\r\n";
-const char CWebapp::POST[] = "POST %s HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
-const char CWebapp::PUT[] = "PUT %s HTTP/1.1\r\nHost: %s\r\nAPI_AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
+const char CWebapp::GET[] = "GET %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nConnection: close\r\n\r\n";
+const char CWebapp::POST[] = "POST %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
+const char CWebapp::PUT[] = "PUT %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
 const char CWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
 
 CWebapp::CWebapp(CGameContext *pGameServer)
@@ -119,13 +119,39 @@ void CWebapp::Tick()
 				if(pData->m_UserID > 0)
 				{
 					char aBuf[128];
-					str_format(aBuf, sizeof(aBuf), "logged in: %d", pData->m_UserID);
+					str_format(aBuf, sizeof(aBuf), "logged in successfully (%s)", pData->m_aUsername);
 					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 					GameServer()->m_apPlayers[pData->m_ClientID]->m_UserID = pData->m_UserID;
+					
+					CWebUser::CParam *pParams = new CWebUser::CParam();
+					pParams->m_ClientID = pData->m_ClientID;
+					pParams->m_UserID = pData->m_UserID;
+					pParams->m_PrintRank = 1;
+					AddJob(CWebUser::GetRank, pParams);
 				}
 				else
 				{
 					GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
+				}
+			}
+		}
+		else if(Type == WEB_USER_RANK)
+		{
+			CWebUser::COut *pData = (CWebUser::COut*)pItem;
+			if(GameServer()->m_apPlayers[pData->m_ClientID])
+			{
+				GameServer()->m_apPlayers[pData->m_ClientID]->m_GlobalRank = pData->m_GlobalRank;
+				GameServer()->m_apPlayers[pData->m_ClientID]->m_MapRank = pData->m_MapRank;
+				if(pData->m_PrintRank)
+				{
+					char aBuf[128];
+					str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: %d (%s)",
+						pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
+					
+					if(g_Config.m_SvShowTimes)
+						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+					else
+						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				}
 			}
 		}
@@ -163,6 +189,8 @@ void CWebapp::Tick()
 			CWebMap::COut *pData = (CWebMap::COut*)pItem;
 			m_lMapList.add(pData->m_MapList[0]);
 			dbg_msg("webapp", "added map: %s", pData->m_MapList[0].c_str());
+			if(str_comp(pData->m_MapList[0].c_str(), MapName()) == 0)
+				Server()->ReloadMap();
 		}
 		pNext = pItem->m_pNext;
 		delete pItem;
