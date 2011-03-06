@@ -126,7 +126,7 @@ MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL 
 
 /* Webapp */
 MACRO_CONFIG_INT(SvUseWebapp, sv_use_webapp, 0, 0, 1, CFGFLAG_SERVER, "Enables sending times to a teerace website")
-MACRO_CONFIG_STR(SvWebappIp, sv_webapp_ip, 32, "127.0.0.1:7000", CFGFLAG_SERVER, "Webapp IP")
+MACRO_CONFIG_STR(SvWebappIp, sv_webapp_ip, 32, "race.teesites.net", CFGFLAG_SERVER, "Webapp IP")
 MACRO_CONFIG_STR(SvApiKey, sv_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
 
 // debug

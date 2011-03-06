@@ -13,6 +13,14 @@
 
 class CWebapp
 {
+	class CHeader
+	{
+	public:
+		int m_Size;
+		int m_StatusCode;
+		long m_ContentLength;
+	};
+	
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
 	class IStorage *m_pStorage;
@@ -42,14 +50,6 @@ class CWebapp
 	static void MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	
 public:
-	class CHeader
-	{
-	public:
-		int m_Size;
-		int m_StatusCode;
-		long m_ContentLength;
-	};
-	
 	static const char GET[];
 	static const char POST[];
 	static const char PUT[];
