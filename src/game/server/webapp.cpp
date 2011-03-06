@@ -1,5 +1,4 @@
 /* CWebapp class by Sushi */
-//#include <iostream>
 #include <base/tl/algorithm.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -18,7 +17,8 @@ const char CWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: clo
 
 CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer),
-  m_pServer(pGameServer->Server())
+  m_pServer(pGameServer->Server()),
+  m_pStorage(m_pServer->Storage())
 {
 	char aBuf[512];
 	int Port = 80;
@@ -44,8 +44,11 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 	// only one at a time
 	m_JobPool.Init(1);
 	m_Jobs.delete_all();
+	
+	m_OutputLock = lock_create();
 	m_pFirst = 0;
 	m_pLast = 0;
+	
 	m_Online = 0;
 	LoadMaps();
 }
@@ -85,14 +88,14 @@ const char *CWebapp::MapName()
 
 void CWebapp::AddOutput(IDataOut *pOut)
 {
-	// TODO: add a LOCK here?
+	lock_wait(m_OutputLock);
 	pOut->m_pNext = 0;
 	if(m_pLast)
 		m_pLast->m_pNext = pOut;
 	else
 		m_pFirst = pOut;
-	
 	m_pLast = pOut;
+	lock_release(m_OutputLock);
 }
 
 void CWebapp::Tick()
@@ -101,6 +104,8 @@ void CWebapp::Tick()
 	if(Jobs > 0)
 		dbg_msg("webapp", "Removed %d jobs", Jobs);
 	
+	// TODO: add event listener (server and client)
+	lock_wait(m_OutputLock);
 	IDataOut *pItem = m_pFirst;
 	IDataOut *pNext;
 	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
@@ -109,16 +114,19 @@ void CWebapp::Tick()
 		if(Type == WEB_USER_AUTH)
 		{
 			CWebUser::COut *pData = (CWebUser::COut*)pItem;
-			if(pData->m_UserID > 0)
+			if(GameServer()->m_apPlayers[pData->m_ClientID])
 			{
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "logged in: %d", pData->m_UserID);
-				GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-				GameServer()->m_apPlayers[pData->m_ClientID]->m_UserID = pData->m_UserID;
-			}
-			else
-			{
-				GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
+				if(pData->m_UserID > 0)
+				{
+					char aBuf[128];
+					str_format(aBuf, sizeof(aBuf), "logged in: %d", pData->m_UserID);
+					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+					GameServer()->m_apPlayers[pData->m_ClientID]->m_UserID = pData->m_UserID;
+				}
+				else
+				{
+					GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
+				}
 			}
 		}
 		else if(Type == WEB_PING_PING)
@@ -126,23 +134,27 @@ void CWebapp::Tick()
 			CWebPing::COut *pData = (CWebPing::COut*)pItem;
 			m_Online = pData->m_Online;
 			dbg_msg("webapp", "webapp is%s online", m_Online?"":" not");
-			AddJob(CWebMap::LoadList, new CWebPing::CParam());
+			AddJob(CWebMap::LoadList, new CWebMap::CParam());
 		}
 		else if(Type == WEB_MAP_LIST)
 		{
 			CWebMap::COut *pData = (CWebMap::COut*)pItem;
 			array<std::string> NeededMaps;
+			array<std::string> NeededURL;
 			for(int i = 0; i < pData->m_MapList.size(); i++)
 			{
 				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_MapList[i]);
 				if(r.empty())
+				{
 					NeededMaps.add(pData->m_MapList[i]);
+					NeededURL.add(pData->m_MapURL[i]);
+				}
 			}
 			if(NeededMaps.size() > 0)
 			{
 				CWebMap::CParam *pParam = new CWebMap::CParam();
-				pParam->m_DownloadList = NeededMaps;
-				pParam->m_pStorage = m_pServer->Storage();
+				pParam->m_MapList = NeededMaps;
+				pParam->m_MapURL = NeededURL;
 				AddJob(CWebMap::DownloadMaps, pParam);
 			}
 		}
@@ -157,6 +169,7 @@ void CWebapp::Tick()
 	}
 	m_pFirst = 0;
 	m_pLast = 0;
+	lock_release(m_OutputLock);
 }
 
 bool CWebapp::Connect()
@@ -174,42 +187,164 @@ void CWebapp::Disconnect()
 	net_tcp_close(m_Socket);
 }
 
-int CWebapp::Send(const void *pData, int Size)
+int CWebapp::GetHeaderInfo(char *pStr, int MaxSize, CHeader *pHeader)
 {
-	net_tcp_connect(m_Socket, &m_Addr);
-	return net_tcp_send(m_Socket, pData, Size);
-}
-
-int CWebapp::Recv(void *pData, int MaxSize)
-{
-	return  net_tcp_recv(m_Socket, pData, MaxSize);
-}
-
-std::string CWebapp::SendAndReceive(const char* pInString)
-{
-	std::cout << pInString << std::endl;
-	int DataSent = Send(pInString, str_length(pInString));
+	char aBuf[512] = {0};
+	char *pData = pStr;
+	while(str_comp_num(pData, "\r\n\r\n", 4) != 0)
+	{
+		pData++;
+		if(pData > pStr+MaxSize)
+			return -1;
+	}
+	pData += 4;
+	int HeaderSize = pData - pStr;
+	int BufSize = min((int)sizeof(aBuf),HeaderSize);
+	mem_copy(aBuf, pStr, BufSize);
 	
-	// receive the data
-	int Received = 0;
-	std::string Data = "";
+	pData = aBuf;
+	//dbg_msg("webapp", "\n---header start---\n%s\n---header end---\n", aBuf);
+	
+	if(sscanf(pData, "HTTP/%*d.%*d %d %*s\r\n", &pHeader->m_StatusCode) != 1)
+		return -2;
+	
+	while(sscanf(pData, "Content-Length: %ld\r\n", &pHeader->m_ContentLength) != 1)
+	{
+		while(str_comp_num(pData, "\r\n", 2) != 0)
+		{
+			pData++;
+			if(pData > aBuf+BufSize)
+				return -3;
+		}
+		pData += 2;
+	}
+	
+	return HeaderSize;
+}
+
+int CWebapp::RecvHeader(char *pBuf, int MaxSize, CHeader *pHeader)
+{
+	int HeaderSize;
+	int AddSize;
+	int Size = 0;
+	do
+	{
+		char *pWrite = pBuf + Size;
+		AddSize = net_tcp_recv(m_Socket, pWrite, MaxSize-Size);
+		Size += AddSize;
+		HeaderSize = GetHeaderInfo(pBuf, Size, pHeader);
+	} while(HeaderSize == -1 && MaxSize-Size > 0 && AddSize > 0);
+	pHeader->m_Size = HeaderSize;
+	return Size;
+}
+
+int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
+{
+	//dbg_msg("webapp", "\n---send start---\n%s\n---send end---\n", pInString);
+	
+	net_tcp_connect(m_Socket, &m_Addr);
+	int DataSent = net_tcp_send(m_Socket, pInString, str_length(pInString));
+	
+	CHeader Header;
+	int Size = 0;
+	int MemLeft = 0;
+	char *pWrite = 0;
 	do
 	{
 		char aBuf[512] = {0};
-		Received = Recv(aBuf, sizeof(aBuf)-1);
+		char *pData = aBuf;
+		if(!pWrite)
+		{
+			Size = RecvHeader(aBuf, sizeof(aBuf), &Header);
+			
+			if(Header.m_Size < 0)
+				return -1;
+			
+			if(Header.m_StatusCode != 200)
+				return -Header.m_StatusCode;
+			
+			pData += Header.m_Size;
+			MemLeft = Header.m_ContentLength;
+			*ppOutString = (char *)mem_alloc(MemLeft+1, 1);
+			mem_zero(*ppOutString, MemLeft+1);
+			pWrite = *ppOutString;
+		}
+		else
+			Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
 		
-		if(Received > 0)
-			Data.append(aBuf);
-	} while(Received > 0);
+		if(Size > 0)
+		{
+			int Write = Size - (pData - aBuf);
+			if(Write > MemLeft)
+			{
+				mem_free(*ppOutString);
+				return -2;
+			}
+			mem_copy(pWrite, pData, Write);
+			pWrite += Write;
+			MemLeft = *ppOutString + Header.m_ContentLength - pWrite;
+		}
+	} while(Size > 0);
 	
-	std::cout << "---recv start---\n" << Data << "\n---recv end---\n" << std::endl;
+	if(MemLeft != 0)
+	{
+		mem_free(*ppOutString);
+		return -3;
+	}
 	
-	// TODO: check the header
-	int Start = Data.find("\r\n\r\n");
-	if(Data.length() >= Start+4)
-		Data = Data.substr(Start+4);
+	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", *ppOutString);
 	
-	return Data;
+	return Header.m_ContentLength;
+}
+
+bool CWebapp::Download(const char *pFilename, const char *pURL)
+{
+	// TODO: limit transfer rate, crc check
+	char aStr[256];
+	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
+	
+	net_tcp_connect(m_Socket, &m_Addr);
+	int DataSent = net_tcp_send(m_Socket, aStr, str_length(aStr));
+	
+	CHeader Header;
+	int Size = 0;
+	int FileSize = 0;
+	IOHANDLE File = 0;
+	do
+	{
+		char aBuf[1024] = {0};
+		char *pData = aBuf;
+		if(!File)
+		{
+			Size = RecvHeader(aBuf, sizeof(aBuf), &Header);
+			if(Header.m_Size < 0 || Header.m_StatusCode != 200)
+				return 0;
+			
+			pData += Header.m_Size;
+			dbg_msg("webapp", "saving file to %s", pFilename);
+			File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+			if(!File)
+				return 0;
+		}
+		else
+			Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
+		
+		if(Size > 0)
+		{
+			int Write = Size - (pData - aBuf);
+			FileSize += Write;
+			io_write(File, pData, Write);
+		}
+	} while(Size > 0);
+	
+	if(File)
+	{
+		io_close(File);
+		if(FileSize != Header.m_ContentLength)
+			Storage()->RemoveFile(pFilename, IStorage::TYPE_SAVE);
+	}
+	
+	return File != 0 && FileSize == Header.m_ContentLength;
 }
 
 CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData, bool NeedOnline)

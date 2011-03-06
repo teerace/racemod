@@ -15,6 +15,7 @@ class CWebapp
 {
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
+	class IStorage *m_pStorage;
 	
 	CJobPool m_JobPool;
 	
@@ -24,6 +25,8 @@ class CWebapp
 	array<std::string> m_lMapList;
 	array<CJob*> m_Jobs;
 	
+	LOCK m_OutputLock;
+	
 	IDataOut *m_pFirst;
 	IDataOut *m_pLast;
 	
@@ -31,6 +34,7 @@ class CWebapp
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
+	class IStorage *Storage() { return m_pStorage; }
 	
 	void LoadMaps();
 	int UpdateJobs();
@@ -38,6 +42,13 @@ class CWebapp
 	static void MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	
 public:
+	class CHeader
+	{
+	public:
+		int m_Size;
+		int m_StatusCode;
+		long m_ContentLength;
+	};
 	
 	static const char GET[];
 	static const char POST[];
@@ -59,9 +70,11 @@ public:
 	bool Connect();
 	void Disconnect();
 	
-	int Send(const void *pData, int Size);
-	int Recv(void *pData, int MaxSize);
-	std::string SendAndReceive(const char* pString);
+	int GetHeaderInfo(char *pStr, int MaxSize, CHeader *pHeader);
+	int RecvHeader(char *pBuf, int MaxSize, CHeader *pHeader);
+	
+	int SendAndReceive(const char *pInString, char **ppOutString);
+	bool Download(const char *pFilename, const char *pURL);
 	
 	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData, bool NeedOnline = 1);
 };

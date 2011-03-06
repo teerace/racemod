@@ -24,7 +24,6 @@ int CWebRun::Post(void *pUserData)
 	Run["nickname"] = pData->m_aName;
 	str_format(aBuf, sizeof(aBuf), "%.3f", pData->m_Time);
 	Run["time"] = aBuf;
-	// TODO: not really nice
 	float *pCpTime = pData->m_aCpTime;
 	str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
 		pCpTime[0], pCpTime[1], pCpTime[2], pCpTime[3], pCpTime[4], pCpTime[5], pCpTime[6], pCpTime[7], pCpTime[8], pCpTime[9],
@@ -35,10 +34,14 @@ int CWebRun::Post(void *pUserData)
 	std::string Json = Writer.write(Run);
 	delete pData;
 	
+	char *pReceived = 0;
 	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/runs/new/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	std::string Received = pWebapp->SendAndReceive(aBuf);
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
+	mem_free(pReceived);
 	
-	// TODO check the status code
-	return 1;
+	if(Size < 0)
+		dbg_msg("webapp", "error: %d (post run)", Size);
+	
+	return Size >= 0;
 }

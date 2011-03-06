@@ -1,17 +1,18 @@
 // TODO: replace crypto++ with another lib?
 #include <game/server/webapp.h>
-#include <engine/external/encrypt/cryptlib.h>
+/*#include <engine/external/encrypt/cryptlib.h>
 #include <engine/external/encrypt/osrng.h>
 #include <engine/external/encrypt/files.h>
 #include <engine/external/encrypt/base64.h>
 #include <engine/external/encrypt/fltrimpl.h>
-#include <engine/external/encrypt/rsa.h>
+#include <engine/external/encrypt/rsa.h>*/
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
 
 #include "user.h"
 
-using namespace CryptoPP;
+// not needed at the moment
+/*using namespace CryptoPP;
 
 class PEMFilter : public Unflushable<Filter>
 {
@@ -62,9 +63,9 @@ int CWebUser::Auth(void *pUserData)
 	AutoSeededRandomPool rng;
 	std::string cipher, cipher64;
 	
-	// RSA
-	try 
+	try
 	{
+		// RSA
 		FileSource pubFile("public_key.pem", true, new PEMFilter(new Base64Decoder()));
 		RSAES_OAEP_SHA_Encryptor pub(pubFile);
 		
@@ -98,27 +99,37 @@ int CWebUser::Auth(void *pUserData)
 	std::string Json = Writer.write(Userdata);
 	delete pData;
 	
+	char *pReceived = 0;
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/users/auth/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	std::string Received = pWebapp->SendAndReceive(aBuf);
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
-	if(!Received.compare("false"))
+	if(Size < 0)
 	{
+		dbg_msg("webapp", "error: %d (user auth)", Size);
+		pWebapp->AddOutput(new COut(ClientID));
+		return 0;
+	}
+	
+	if(str_comp(pReceived, "false") == 0)
+	{
+		mem_free(pReceived);
 		pWebapp->AddOutput(new COut(ClientID));
 		return 0;
 	}
 	
 	Json::Value User;
 	Json::Reader Reader;
-	bool ParsingSuccessful = Reader.parse(Received, User);
+	bool ParsingSuccessful = Reader.parse(pReceived, pReceived+Size, User);
+	mem_free(pReceived);
 	
 	COut *pOut = new COut(ClientID);
 	if(ParsingSuccessful)
 		pOut->m_UserID = User["id"].asInt();
 	pWebapp->AddOutput(pOut);
 	return ParsingSuccessful;
-}
+}*/
 
 int CWebUser::AuthToken(void *pUserData)
 {
@@ -141,20 +152,30 @@ int CWebUser::AuthToken(void *pUserData)
 	std::string Json = Writer.write(Userdata);
 	delete pData;
 	
+	char *pReceived = 0;
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/users/auth_token/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	std::string Received = pWebapp->SendAndReceive(aBuf);
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
-	if(!Received.compare("false"))
+	if(Size < 0)
 	{
+		dbg_msg("webapp", "error: %d (user auth token)", Size);
+		pWebapp->AddOutput(new COut(ClientID));
+		return 0;
+	}
+	
+	if(str_comp(pReceived, "false") == 0)
+	{
+		mem_free(pReceived);
 		pWebapp->AddOutput(new COut(ClientID));
 		return 0;
 	}
 	
 	Json::Value User;
 	Json::Reader Reader;
-	bool ParsingSuccessful = Reader.parse(Received, User);
+	bool ParsingSuccessful = Reader.parse(pReceived, pReceived+Size, User);
+	mem_free(pReceived);
 	
 	COut *pOut = new COut(ClientID);
 	if(ParsingSuccessful)
@@ -213,13 +234,17 @@ int CWebUser::UpdateSkin(void *pUserData)
 	std::string Json = Writer.write(Userdata);
 	delete pData;
 	
+	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
 	str_format(aURL, sizeof(aURL), "/api/1/users/skin/%d/", pData->m_UserID);
 	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	std::string Received = pWebapp->SendAndReceive(aBuf);
+		int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
-
-	// TODO check the status code
-	return 1;
+	mem_free(pReceived);
+	
+	if(Size < 0)
+		dbg_msg("webapp", "error: %d (skin update)", Size);
+	
+	return Size >= 0;
 }

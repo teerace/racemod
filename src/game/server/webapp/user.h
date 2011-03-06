@@ -34,7 +34,7 @@ public:
 		int m_UserID;
 	};
 	
-	static int Auth(void *pUserData);
+	//static int Auth(void *pUserData);
 	static int AuthToken(void *pUserData);
 	
 	static int UpdateSkin(void *pUserData);

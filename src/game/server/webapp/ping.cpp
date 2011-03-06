@@ -41,11 +41,19 @@ int CWebPing::Ping(void *pUserData)
 	delete pData;
 	
 	char aBuf[1024];
+	char *pReceived = 0;
 	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/ping/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	std::string Received = pWebapp->SendAndReceive(aBuf);
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
-	bool Online = !Received.compare("\"PONG\"");
+	if(Size < 0)
+	{
+		dbg_msg("webapp", "error: %d (ping)", Size);
+		return 0;
+	}
+	
+	bool Online = str_comp(pReceived, "\"PONG\"") == 0;
+	mem_free(pReceived);
 	
 	pWebapp->AddOutput(new COut(Online));
 	return Online;

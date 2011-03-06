@@ -5,7 +5,6 @@
 
 class CWebPing
 {
-
 public:
 	class CParam : public IDataIn
 	{
