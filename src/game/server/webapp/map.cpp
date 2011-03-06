@@ -66,18 +66,18 @@ int CWebMap::DownloadMaps(void *pUserData)
 		char aFilename[128];
 		str_format(aFilename, sizeof(aFilename), "maps/teerace/%s.map", pMap);
 		
-		dbg_msg("wabapp", "downloading map: %s", pMap);
+		dbg_msg("webapp", "downloading map: %s", pMap);
 		
 		if(pWebapp->Download(aFilename, pURL))
 		{
-			dbg_msg("wabapp", "downloaded map: %s", pMap);
+			dbg_msg("webapp", "downloaded map: %s", pMap);
 			COut *pOut = new COut(WEB_MAP_DOWNLOADED);
 			pOut->m_MapList.add(pMap);
 			pWebapp->AddOutput(pOut);
 		}
 		else
 		{
-			dbg_msg("wabapp", "couldn't download map: %s", pMap);
+			dbg_msg("webapp", "couldn't download map: %s", pMap);
 		}
 		
 		pWebapp->Disconnect();
