@@ -64,8 +64,8 @@ void IGameController::EvaluateSpawnType(CSpawnEval *pEval, int T)
 	for(int i  = 0; i < m_aNumSpawnPoints[T]; i++)
 	{
 		// check if the position is occupado
-		if(GameServer()->m_World.FindEntities(m_aaSpawnPoints[T][i], 64, 0, 1, CGameWorld::ENTTYPE_CHARACTER))
-			continue;
+		/*if(GameServer()->m_World.FindEntities(m_aaSpawnPoints[T][i], 64, 0, 1, CGameWorld::ENTTYPE_CHARACTER))
+			continue;*/
 
 		vec2 P = m_aaSpawnPoints[T][i];
 		float S = EvaluateSpawnPos(pEval, P);
