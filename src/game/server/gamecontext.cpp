@@ -698,16 +698,16 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				{
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
 					
-					if(p->m_UserID > 0 && p->m_GlobalRank > 0 && p->m_MapRank > 0)
+					if(pPlayer->m_UserID > 0 && pPlayer->m_GlobalRank > 0 && pPlayer->m_MapRank > 0)
 					{
 						char aBuf[128];
 						str_format(aBuf, sizeof(aBuf), "%s: %d. (Global) | %d. (Map)",
-							Server()->ClientName(ClientId), p->m_GlobalRank, p->m_MapRank);
+							Server()->ClientName(ClientID), pPlayer->m_GlobalRank, pPlayer->m_MapRank);
 						
 						if(g_Config.m_SvShowTimes)
 							SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 						else
-							SendChatTarget(ClientId, aBuf);
+							SendChatTarget(ClientID, aBuf);
 					}
 				}
 			}

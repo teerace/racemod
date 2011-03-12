@@ -828,7 +828,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				{
 					if(str_comp_num(pPw, "teerace:", 8) == 0)
 					{
-						GameServer()->OnTeeraceAuth(ClientId, pPw);
+						GameServer()->OnTeeraceAuth(ClientID, pPw);
 						return;
 					}
 					
