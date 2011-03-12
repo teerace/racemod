@@ -1,3 +1,5 @@
+#if defined(CONF_TEERACE)
+
 #include <game/server/webapp.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -45,3 +47,5 @@ int CWebRun::Post(void *pUserData)
 	
 	return Size >= 0;
 }
+
+#endif

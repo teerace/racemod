@@ -26,7 +26,9 @@
 #include "score/sql_score.h"
 #endif
 #include "score/file_score.h"
+#if defined(CONF_TEERACE)
 #include "webapp.h"
+#endif
 
 enum
 {
@@ -51,8 +53,10 @@ void CGameContext::Construct(int Resetting)
 		m_pVoteOptionHeap = new CHeap();
 	
 	m_pScore = 0;
+#if defined(CONF_TEERACE)
 	m_pWebapp = 0;
 	m_LastPing = -1;
+#endif
 }
 
 CGameContext::CGameContext(int Resetting)
@@ -79,7 +83,9 @@ void CGameContext::Clear()
 	CVoteOption *pVoteOptionFirst = m_pVoteOptionFirst;
 	CVoteOption *pVoteOptionLast = m_pVoteOptionLast;
 	CTuningParams Tuning = m_Tuning;
+#if defined(CONF_TEERACE)
 	CWebapp *pWebapp = m_pWebapp;
+#endif
 
 	m_Resetting = true;
 	this->~CGameContext();
@@ -90,7 +96,9 @@ void CGameContext::Clear()
 	m_pVoteOptionFirst = pVoteOptionFirst;
 	m_pVoteOptionLast = pVoteOptionLast;
 	m_Tuning = Tuning;
+#if defined(CONF_TEERACE)
 	m_pWebapp = pWebapp;
+#endif
 }
 
 
@@ -423,6 +431,7 @@ void CGameContext::OnTick()
 	// check tuning
 	CheckPureTuning();
 	
+#if defined(CONF_TEERACE)
 	if(m_pWebapp)
 	{
 		m_pWebapp->Tick();
@@ -441,6 +450,7 @@ void CGameContext::OnTick()
 			m_LastPing = Server()->Tick();
 		}
 	}
+#endif
 
 	// copy tuning
 	m_World.m_Core.m_Tuning = m_Tuning;
@@ -547,6 +557,7 @@ void CGameContext::OnTick()
 }
 
 // Server hooks
+#if defined(CONF_TEERACE)
 void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr)
 {
 	CPlayer *p = m_apPlayers[ClientID];
@@ -558,6 +569,7 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr)
 			m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
 	}
 }
+#endif
 
 void CGameContext::OnClientDirectInput(int ClientID, void *pInput)
 {
@@ -698,6 +710,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				{
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
 					
+#if defined(CONF_TEERACE)
 					if(pPlayer->m_UserID > 0 && pPlayer->m_GlobalRank > 0 && pPlayer->m_MapRank > 0)
 					{
 						char aBuf[128];
@@ -709,6 +722,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						else
 							SendChatTarget(ClientID, aBuf);
 					}
+#endif
 				}
 			}
 			else if(!str_comp(pMsg->m_pMessage, "/show_others"))
@@ -942,7 +956,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		str_copy(pPlayer->m_TeeInfos.m_SkinName, pMsg->m_pSkin, sizeof(pPlayer->m_TeeInfos.m_SkinName));
 		
 		m_pController->OnPlayerInfoChange(pPlayer);
-		
+
+#if defined(CONF_TEERACE)
 		if(pPlayer->m_UserID > 0)
 		{
 			CWebUser::CParam *pParams = new CWebUser::CParam;
@@ -952,6 +967,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			pParams->m_ColorFeet = pMsg->m_ColorFeet;
 			m_pWebapp->AddJob(CWebUser::UpdateSkin, pParams);
 		}
+#endif
 		
 		if(MsgID == NETMSGTYPE_CL_STARTINFO)
 		{
@@ -1282,11 +1298,13 @@ void CGameContext::ConGetPos(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
+#if defined(CONF_TEERACE)
 void CGameContext::ConPing(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	pSelf->m_LastPing = -1;
 }
+#endif
 
 void CGameContext::OnConsoleInit()
 {
@@ -1315,8 +1333,10 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("teleport_to", "iii", CFGFLAG_SERVER, ConTeleportTo, this, "");
 	Console()->Register("get_pos", "i", CFGFLAG_SERVER, ConGetPos, this, "");
 	Console()->Register("kill_pl", "i", CFGFLAG_SERVER, ConKillPl, this, "");
-	
+
+#if defined(CONF_TEERACE)
 	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "");
+#endif
 }
 
 void CGameContext::OnInit(/*class IKernel *pKernel*/)
@@ -1371,8 +1391,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		m_pScore = new CFileScore(this);
 	
 	// create webapp object
+#if defined(CONF_TEERACE)
 	if(g_Config.m_SvUseWebapp && !m_pWebapp)
 		m_pWebapp = new CWebapp(this);
+#endif
 		
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)

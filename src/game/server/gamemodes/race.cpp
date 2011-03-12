@@ -4,7 +4,9 @@
 #include <game/server/player.h>
 #include <game/server/gamecontext.h>
 #include <game/server/score.h>
+#if defined(CONF_TEERACE)
 #include <game/server/webapp.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include "race.h"
@@ -178,6 +180,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 	}
 	
+#if defined(CONF_TEERACE)
 	// post to webapp
 	if(GameServer()->Webapp() && GameServer()->m_apPlayers[ID]->m_UserID > 0)
 	{
@@ -189,6 +192,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));
 		GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
 	}
+#endif
 
 	return true;
 }

@@ -24,8 +24,10 @@ public:
 	
 	int Tick() const { return m_CurrentGameTick; }
 	int TickSpeed() const { return m_TickSpeed; }
-	
+
+#if defined(CONF_TEERACE)
 	virtual class IStorage *Storage() = 0;
+#endif
 
 	virtual const char *ClientName(int ClientID) = 0;
 	virtual bool ClientIngame(int ClientID) = 0;
@@ -56,8 +58,10 @@ public:
 	
 	virtual bool IsAuthed(int ClientID) = 0;
 	virtual void Kick(int ClientID, const char *pReason) = 0;
-	
+
+#if defined(CONF_TEERACE)
 	virtual void ReloadMap() = 0;
+#endif
 };
 
 class IGameServer : public IInterface
@@ -81,9 +85,11 @@ public:
 	virtual void OnClientDrop(int ClientID) = 0;
 	virtual void OnClientDirectInput(int ClientID, void *pInput) = 0;
 	virtual void OnClientPredictedInput(int ClientID, void *pInput) = 0;
-	
+
+#if defined(CONF_TEERACE)
 	virtual void OnTeeraceAuth(int ClientID, const char *pStr) = 0;
-	
+#endif
+
 	virtual const char *Version() = 0;
 	virtual const char *NetVersion() = 0;
 };

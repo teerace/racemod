@@ -1,4 +1,4 @@
-/* CWebapp Class by Sushi */
+/* CWebapp Class by Sushi and Redix*/
 #ifndef GAME_SERVER_WEBAPP_H
 #define GAME_SERVER_WEBAPP_H
 

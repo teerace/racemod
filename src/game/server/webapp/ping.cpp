@@ -1,3 +1,5 @@
+#if defined(CONF_TEERACE)
+
 #include <game/server/webapp.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -58,3 +60,5 @@ int CWebPing::Ping(void *pUserData)
 	pWebapp->AddOutput(new COut(Online));
 	return Online;
 }
+
+#endif

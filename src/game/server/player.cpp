@@ -29,10 +29,12 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 		
 	m_ResetPickups = true;
 	m_IsUsingRaceClient = false;
-	
+
+#if defined(CONF_TEERACE)
 	m_UserID = -1;
 	m_GlobalRank = 0;
 	m_MapRank = 0;
+#endif
 }
 
 CPlayer::~CPlayer()

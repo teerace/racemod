@@ -60,15 +60,19 @@ class CGameContext : public IGameServer
 	
 	// race
 	class IScore *m_pScore;
+#if defined(CONF_TEERACE)
 	class CWebapp *m_pWebapp;
 	int m_LastPing;
+#endif
 	
 	static void ConKillPl(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleport(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleportTo(IConsole::IResult *pResult, void *pUserData);
 	static void ConGetPos(IConsole::IResult *pResult, void *pUserData);
+#if defined(CONF_TEERACE)
 	static void ConPing(IConsole::IResult *pResult, void *pUserData);
-	
+#endif
+
 	CGameContext(int Resetting);
 	void Construct(int Resetting);
 
@@ -81,7 +85,9 @@ public:
 
 	// race
 	class IScore *Score() { return m_pScore; }
+#if defined(CONF_TEERACE)
 	class CWebapp *Webapp() { return m_pWebapp; }
+#endif
 	class CGameControllerRACE *RaceController() { return (CGameControllerRACE*)m_pController; }
 	
 	CGameContext();
@@ -178,8 +184,10 @@ public:
 	virtual void OnClientDrop(int ClientID);
 	virtual void OnClientDirectInput(int ClientID, void *pInput);
 	virtual void OnClientPredictedInput(int ClientID, void *pInput);
-	
+
+#if defined(CONF_TEERACE)
 	virtual void OnTeeraceAuth(int ClientID, const char *pStr);
+#endif
 
 	virtual const char *Version();
 	virtual const char *NetVersion();

@@ -826,11 +826,13 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				
 				if(Unpacker.Error() == 0)
 				{
+#if defined(CONF_TEERACE)
 					if(str_comp_num(pPw, "teerace:", 8) == 0)
 					{
 						GameServer()->OnTeeraceAuth(ClientID, pPw);
 						return;
 					}
+#endif
 					
 					if(g_Config.m_SvRconPassword[0] == 0)
 					{
@@ -1041,10 +1043,12 @@ void CServer::PumpNetwork()
 	}
 }
 
+#if defined(CONF_TEERACE)
 void CServer::ReloadMap()
 {
 	m_MapReload = 1;
 }
+#endif
 
 char *CServer::GetMapName()
 {
@@ -1062,6 +1066,7 @@ int CServer::LoadMap(const char *pMapName)
 {
 	//DATAFILE *df;
 	char aBuf[512];
+#if defined(CONF_TEERACE)
 	str_format(aBuf, sizeof(aBuf), "maps/teerace/%s.map", pMapName);
 	
 	/*df = datafile_load(buf);
@@ -1070,6 +1075,7 @@ int CServer::LoadMap(const char *pMapName)
 		
 	// prefer teerace maps
 	if(!m_pMap->Load(aBuf))
+#endif
 	{
 		str_format(aBuf, sizeof(aBuf), "maps/%s.map", pMapName);
 		if(!m_pMap->Load(aBuf))
@@ -1621,4 +1627,3 @@ int main(int argc, const char **argv) // ignore_convention
 	delete pConfig;
 	return 0;
 }
-

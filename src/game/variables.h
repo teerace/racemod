@@ -125,9 +125,11 @@ MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL 
 #endif
 
 /* Webapp */
+#if defined(CONF_TEERACE)
 MACRO_CONFIG_INT(SvUseWebapp, sv_use_webapp, 0, 0, 1, CFGFLAG_SERVER, "Enables sending times to a teerace website")
 MACRO_CONFIG_STR(SvWebappIp, sv_webapp_ip, 32, "race.teesites.net", CFGFLAG_SERVER, "Webapp IP")
 MACRO_CONFIG_STR(SvApiKey, sv_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
+#endif
 
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly

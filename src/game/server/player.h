@@ -77,10 +77,12 @@ public:
 	bool m_ShowOthers;
 	
 	bool m_IsUsingRaceClient;
-	
+
+#if defined(CONF_TEERACE)
 	int m_UserID;
 	int m_GlobalRank;
 	int m_MapRank;
+#endif
 	
 private:
 	CCharacter *Character;

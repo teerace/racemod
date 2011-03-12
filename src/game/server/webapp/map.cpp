@@ -1,3 +1,5 @@
+#if defined(CONF_TEERACE)
+
 #include <game/server/webapp.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -85,3 +87,5 @@ int CWebMap::DownloadMaps(void *pUserData)
 	
 	return 1;
 }
+
+#endif

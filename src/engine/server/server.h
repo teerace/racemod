@@ -172,8 +172,10 @@ public:
 		
 
 	void PumpNetwork();
-	
+
+#if defined(CONF_TEERACE)
 	void ReloadMap();
+#endif
 
 	char *GetMapName();
 	int LoadMap(const char *pMapName);

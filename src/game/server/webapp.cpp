@@ -1,4 +1,6 @@
-/* CWebapp class by Sushi */
+/* CWebapp class by Sushi and Redix*/
+#if defined(CONF_TEERACE)
+
 #include <base/tl/algorithm.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -417,3 +419,5 @@ void CWebapp::LoadMaps()
 	m_lMapList.clear();
 	m_pServer->Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 }
+
+#endif

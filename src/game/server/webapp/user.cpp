@@ -1,3 +1,5 @@
+#if defined(CONF_TEERACE)
+
 // TODO: replace crypto++ with another lib?
 #include <game/server/webapp.h>
 /*#include <engine/external/encrypt/cryptlib.h>
@@ -312,3 +314,5 @@ int CWebUser::GetRank(void *pUserData)
 	pWebapp->AddOutput(pOut);
 	return 1;
 }
+
+#endif
