@@ -147,8 +147,11 @@ void CWebapp::Tick()
 				if(pData->m_PrintRank)
 				{
 					char aBuf[128];
-					str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: %d (%s)",
-						pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
+					if(!pData->m_GlobalRank)
+						str_copy(aBuf, "You are not ranked yet.", sizeof(aBuf));
+					else
+						str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: %d (%s)",
+							pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
 					
 					if(g_Config.m_SvShowTimes)
 						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
