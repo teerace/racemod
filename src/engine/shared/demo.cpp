@@ -21,8 +21,6 @@ CDemoRecorder::CDemoRecorder(class CSnapshotDelta *pSnapshotDelta)
 	m_pSnapshotDelta = pSnapshotDelta;
 }
 
-//static IOHANDLE m_File = 0;
-
 // Record
 int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetVersion, const char *pMap, int Crc, const char *pType)
 {
@@ -51,6 +49,14 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 		MapFile = pStorage->OpenFile(aMapFilename, IOFLAG_READ, IStorage::TYPE_ALL);
 	}
 #endif
+	if(!MapFile)
+	{
+		// search for the map within subfolders
+		char aBuf[512];
+		str_format(aMapFilename, sizeof(aMapFilename), "%s.map", pMap);
+		if(pStorage->FindFile(aMapFilename, "maps", IStorage::TYPE_ALL, aBuf, sizeof(aBuf)))
+			MapFile =  pStorage->OpenFile(aBuf, IOFLAG_READ, IStorage::TYPE_ALL);
+	}
 	if(!MapFile)
 	{
 		char aBuf[256];
@@ -255,7 +261,7 @@ int CDemoRecorder::Stop()
 
 	// add the demo length to the header
 	io_seek(m_File, gs_LengthOffset, IOSEEK_START);
-	int DemoLength = Length()/SERVER_TICK_SPEED;
+	int DemoLength = Length();
 	char aLength[4];
 	aLength[0] = (DemoLength>>24)&0xff;
 	aLength[1] = (DemoLength>>16)&0xff;
