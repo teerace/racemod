@@ -182,7 +182,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	
 #if defined(CONF_TEERACE)
 	// post to webapp
-	if(GameServer()->Webapp() && GameServer()->m_apPlayers[ID]->m_UserID > 0)
+	if(GameServer()->Webapp())
 	{
 		CWebRun::CParam *pParams = new CWebRun::CParam();
 		pParams->m_ClientID = ID;
