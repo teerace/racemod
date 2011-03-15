@@ -52,6 +52,9 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 	m_pLast = 0;
 	
 	m_Online = 0;
+	
+	m_CurrentMapID = -1;
+	
 	LoadMaps();
 }
 
@@ -148,7 +151,10 @@ void CWebapp::Tick()
 				{
 					char aBuf[128];
 					if(!pData->m_GlobalRank)
-						str_copy(aBuf, "You are not ranked yet.", sizeof(aBuf));
+						str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+					else if(!pData->m_MapRank)
+						str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: Not ranked yet (%s)",
+							pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 					else
 						str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: %d (%s)",
 							pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
@@ -174,6 +180,10 @@ void CWebapp::Tick()
 			array<std::string> NeededURL;
 			for(int i = 0; i < pData->m_MapList.size(); i++)
 			{
+				// get current map id
+				if(!str_comp(pData->m_MapList[i].c_str(), MapName()))
+					m_CurrentMapID = pData->m_MapID[i];
+				
 				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_MapList[i]);
 				if(r.empty())
 				{

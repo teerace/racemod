@@ -710,17 +710,16 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
 					
 #if defined(CONF_TEERACE)
-					if(Server()->GetUserID(ClientID) > 0 && pPlayer->m_GlobalRank > 0 && pPlayer->m_MapRank > 0)
+					if(Server()->GetUserID(ClientID) > 0)
 					{
-						char aBuf[128];
-						str_format(aBuf, sizeof(aBuf), "%s: %d. (Global) | %d. (Map)",
-							Server()->ClientName(ClientID), pPlayer->m_GlobalRank, pPlayer->m_MapRank);
-						
-						if(g_Config.m_SvShowTimes)
-							SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-						else
-							SendChatTarget(ClientID, aBuf);
+						CWebUser::CParam *pParams = new CWebUser::CParam();
+						pParams->m_ClientID = ClientID;
+						pParams->m_UserID = Server()->GetUserID(ClientID);
+						pParams->m_PrintRank = 1;
+						m_pWebapp->AddJob(CWebUser::GetRank, pParams);
 					}
+					else
+						SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
 #endif
 				}
 			}

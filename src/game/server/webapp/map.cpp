@@ -44,6 +44,7 @@ int CWebMap::LoadList(void *pUserData)
 		Json::Value Map = Maplist[i];
 		pOut->m_MapList.add(Map["name"].asString());
 		pOut->m_MapURL.add(Map["get_download_url"].asString());
+		pOut->m_MapID.add(Map["id"].asInt());
 	}
 	pWebapp->AddOutput(pOut);
 	return 1;

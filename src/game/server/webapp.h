@@ -40,6 +40,8 @@ class CWebapp
 	
 	bool m_Online;
 	
+	int m_CurrentMapID;
+	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
 	class IStorage *Storage() { return m_pStorage; }
@@ -61,6 +63,7 @@ public:
 	const char *ApiKey();
 	const char *ServerIP();
 	const char *MapName();
+	int MapID() { return m_CurrentMapID; }
 	
 	bool IsOnline() { return m_Online; }
 	

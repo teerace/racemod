@@ -21,7 +21,7 @@ int CWebRun::Post(void *pUserData)
 	Json::Value Run;
 	Json::FastWriter Writer;
 	
-	Run["map_name"] = pWebapp->MapName();
+	Run["map_id"] = pWebapp->MapID();
 	Run["user_id"] = pData->m_UserID;
 	Run["nickname"] = pData->m_aName;
 	str_format(aBuf, sizeof(aBuf), "%.3f", pData->m_Time);

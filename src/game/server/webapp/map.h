@@ -19,6 +19,7 @@ public:
 		COut(int Type) { m_Type = Type; }
 		array<std::string> m_MapList;
 		array<std::string> m_MapURL;
+		array<int> m_MapID;
 	};
 	
 	static int LoadList(void *pUserData);
