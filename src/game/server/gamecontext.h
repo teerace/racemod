@@ -185,6 +185,8 @@ public:
 	virtual void OnClientDirectInput(int ClientID, void *pInput);
 	virtual void OnClientPredictedInput(int ClientID, void *pInput);
 
+	virtual bool IsClientReady(int ClientID);
+
 #if defined(CONF_TEERACE)
 	virtual void OnTeeraceAuth(int ClientID, const char *pStr);
 #endif
