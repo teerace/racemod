@@ -443,7 +443,7 @@ void CGameContext::OnTick()
 				if(m_apPlayers[i])
 				{
 					pParams->m_Name.add(Server()->ClientName(i));
-					pParams->m_UserID.add(m_apPlayers[i]->m_UserID);
+					pParams->m_UserID.add(Server()->GetUserID(i));
 				}
 			}
 			m_pWebapp->AddJob(CWebPing::Ping, pParams, 0);
@@ -560,12 +560,11 @@ void CGameContext::OnTick()
 #if defined(CONF_TEERACE)
 void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr)
 {
-	CPlayer *p = m_apPlayers[ClientID];
 	if(str_comp_num(pStr, "teerace:", 8) == 0)
 	{
 		CWebUser::CParam *pParams = new CWebUser::CParam();
 		pParams->m_ClientID = ClientID;
-		if(m_pWebapp && p->m_UserID <= 0 && sscanf(pStr, "teerace:%s", pParams->m_aToken) == 1)
+		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", pParams->m_aToken) == 1)
 			m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
 	}
 }
@@ -711,7 +710,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
 					
 #if defined(CONF_TEERACE)
-					if(pPlayer->m_UserID > 0 && pPlayer->m_GlobalRank > 0 && pPlayer->m_MapRank > 0)
+					if(Server()->GetUserID(ClientID) > 0 && pPlayer->m_GlobalRank > 0 && pPlayer->m_MapRank > 0)
 					{
 						char aBuf[128];
 						str_format(aBuf, sizeof(aBuf), "%s: %d. (Global) | %d. (Map)",
@@ -958,10 +957,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		m_pController->OnPlayerInfoChange(pPlayer);
 
 #if defined(CONF_TEERACE)
-		if(pPlayer->m_UserID > 0)
+		if(Server()->GetUserID(ClientID) > 0)
 		{
 			CWebUser::CParam *pParams = new CWebUser::CParam;
-			pParams->m_UserID = pPlayer->m_UserID;
+			pParams->m_UserID = Server()->GetUserID(ClientID);
 			str_copy(pParams->m_SkinName, pMsg->m_pSkin, sizeof(pParams->m_SkinName));
 			pParams->m_ColorBody = pMsg->m_ColorBody;
 			pParams->m_ColorFeet = pMsg->m_ColorFeet;

@@ -123,7 +123,7 @@ void CWebapp::Tick()
 					char aBuf[128];
 					str_format(aBuf, sizeof(aBuf), "logged in successfully (%s)", pData->m_aUsername);
 					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-					GameServer()->m_apPlayers[pData->m_ClientID]->m_UserID = pData->m_UserID;
+					Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
 					
 					CWebUser::CParam *pParams = new CWebUser::CParam();
 					pParams->m_ClientID = pData->m_ClientID;

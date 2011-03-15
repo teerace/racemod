@@ -549,6 +549,9 @@ int CServer::NewClientCallback(int ClientID, void *pUser)
 	pThis->m_aClients[ClientID].m_aName[0] = 0;
 	pThis->m_aClients[ClientID].m_aClan[0] = 0;
 	pThis->m_aClients[ClientID].m_Authed = 0;
+#if defined(CONF_TEERACE)
+	pThis->m_aClients[ClientID].m_UserID = 0;
+#endif
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].Reset();
 	return 0;
@@ -575,6 +578,9 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientID].m_aName[0] = 0;
 	pThis->m_aClients[ClientID].m_aClan[0] = 0;
 	pThis->m_aClients[ClientID].m_Authed = 0;
+#if defined(CONF_TEERACE)
+	pThis->m_aClients[ClientID].m_UserID = 0;
+#endif
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
 	return 0;

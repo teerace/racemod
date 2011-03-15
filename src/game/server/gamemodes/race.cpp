@@ -185,8 +185,8 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	if(GameServer()->Webapp())
 	{
 		CWebRun::CParam *pParams = new CWebRun::CParam();
+		pParams->m_UserID = Server()->GetUserID(ID);
 		pParams->m_ClientID = ID;
-		pParams->m_UserID = GameServer()->m_apPlayers[ID]->m_UserID;
 		str_copy(pParams->m_aName, Server()->ClientName(ID), MAX_NAME_LENGTH);
 		pParams->m_Time = FinishTime;
 		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));

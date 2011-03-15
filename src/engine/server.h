@@ -61,6 +61,9 @@ public:
 
 #if defined(CONF_TEERACE)
 	virtual void ReloadMap() = 0;
+	
+	virtual void SetUserID(int ClientID, int UserID) = 0;
+	virtual int GetUserID(int ClientID) = 0;
 #endif
 };
 

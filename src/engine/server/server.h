@@ -92,7 +92,10 @@ public:
 		int m_Score;
 		int m_Authed;
 		int m_AuthTries;
-		
+
+#if defined(CONF_TEERACE)
+		int m_UserID;
+#endif
 		void Reset();
 	};
 	
@@ -175,6 +178,9 @@ public:
 
 #if defined(CONF_TEERACE)
 	void ReloadMap();
+	
+	void SetUserID(int ClientID, int UserID) { m_aClients[ClientID].m_UserID = UserID; }
+	int GetUserID(int ClientID) { return m_aClients[ClientID].m_UserID; }
 #endif
 
 	char *GetMapName();
