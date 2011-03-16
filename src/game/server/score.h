@@ -55,12 +55,21 @@ class IScore
 	CPlayerData m_aPlayerData[MAX_CLIENTS];
 	CPlayerData m_CurrentRecord;
 	
+#if defined(CONF_TEERACE)
+	bool m_Active;
+#endif
+	
 public:
 	IScore() { m_CurrentRecord.Reset(); }
 	virtual ~IScore() {}
 	
 	CPlayerData *PlayerData(int ID) { return &m_aPlayerData[ID]; }
 	CPlayerData *GetRecord() { return &m_CurrentRecord; }
+
+#if defined(CONF_TEERACE)
+	bool Active() { return m_Active; }
+	void SetActive(bool Active) { m_Active = Active; }
+#endif
 
 	bool CheckRecord(int ClientID)
 	{

@@ -19,6 +19,13 @@ CSqlScore::CSqlScore(CGameContext *pGameServer)
   m_pIp(g_Config.m_SvSqlIp),
   m_Port(g_Config.m_SvSqlPort)
 {
+#if defined(CONF_TEERACE)
+	SetActive(g_Config.m_SvStandardScoring);
+	
+	if(!g_Config.m_SvStandardScoring);
+		return;
+#endif
+	
 	str_copy(m_aMap, g_Config.m_SvMap, sizeof(m_aMap));
 	ClearString(m_aMap, sizeof(m_aMap));
 	
@@ -30,6 +37,11 @@ CSqlScore::CSqlScore(CGameContext *pGameServer)
 
 CSqlScore::~CSqlScore()
 {
+#if defined(CONF_TEERACE)
+	if(!Active())
+		return;
+#endif
+
 	lock_wait(gs_SqlLock);
 	lock_release(gs_SqlLock);
 }
@@ -223,6 +235,11 @@ void CSqlScore::LoadScoreThread(void *pUser)
 
 void CSqlScore::LoadScore(int ClientID)
 {
+#if defined(CONF_TEERACE)
+	if(!Active())
+		return;
+#endif
+	
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientID), sizeof(Tmp->m_aName));
@@ -307,6 +324,11 @@ void CSqlScore::SaveScoreThread(void *pUser)
 
 void CSqlScore::SaveScore(int ClientID)
 {
+#if defined(CONF_TEERACE)
+	if(!Active())
+		return;
+#endif
+	
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;
 	Tmp->m_Time = PlayerData(ClientID)->m_Time;
@@ -401,6 +423,11 @@ void CSqlScore::ShowRankThread(void *pUser)
 
 void CSqlScore::ShowRank(int ClientID, const char* pName, bool Search)
 {
+#if defined(CONF_TEERACE)
+	if(!Active())
+		return;
+#endif
+	
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;
 	str_copy(Tmp->m_aName, pName, sizeof(Tmp->m_aName));
@@ -467,6 +494,11 @@ void CSqlScore::ShowTop5Thread(void *pUser)
 
 void CSqlScore::ShowTop5(int ClientID, int Debut)
 {
+#if defined(CONF_TEERACE)
+	if(!Active())
+		return;
+#endif
+	
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_Num = Debut;
 	Tmp->m_ClientID = ClientID;
