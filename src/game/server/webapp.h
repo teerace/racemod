@@ -42,6 +42,8 @@ class CWebapp
 	
 	int m_CurrentMapID;
 	
+	bool m_StandardScoring;
+	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
 	class IStorage *Storage() { return m_pStorage; }
@@ -66,6 +68,8 @@ public:
 	int MapID() { return m_CurrentMapID; }
 	
 	bool IsOnline() { return m_Online; }
+	
+	bool StandardScoring() { return m_StandardScoring; }
 	
 	void AddOutput(class IDataOut *pOut);
 	void Tick();

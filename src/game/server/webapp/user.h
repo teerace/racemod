@@ -46,6 +46,8 @@ public:
 	static int UpdateSkin(void *pUserData);
 	
 	static int GetRank(void *pUserData);
+	
+	static int GetTop5(void *pUserData);
 };
 
 #endif

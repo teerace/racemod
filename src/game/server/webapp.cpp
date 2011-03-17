@@ -20,7 +20,8 @@ const char CWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: clo
 CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer),
   m_pServer(pGameServer->Server()),
-  m_pStorage(m_pServer->Storage())
+  m_pStorage(m_pServer->Storage()),
+  m_StandardScoring(g_Config.m_SvStandardScoring)
 {
 	char aBuf[512];
 	int Port = 80;
@@ -182,7 +183,10 @@ void CWebapp::Tick()
 			{
 				// get current map id
 				if(!str_comp(pData->m_MapList[i].c_str(), MapName()))
+				{
+					GameServer()->Score()->GetRecord()->Set(pData->m_MapRecord[i].m_Time, pData->m_MapRecord[i].m_aCpTime);
 					m_CurrentMapID = pData->m_MapID[i];
+				}
 				
 				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_MapList[i]);
 				if(r.empty())

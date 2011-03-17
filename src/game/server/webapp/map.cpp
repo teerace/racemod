@@ -45,6 +45,22 @@ int CWebMap::LoadList(void *pUserData)
 		pOut->m_MapList.add(Map["name"].asString());
 		pOut->m_MapURL.add(Map["get_download_url"].asString());
 		pOut->m_MapID.add(Map["id"].asInt());
+		
+		// getting times
+		CPlayerData MapRecord;
+		if(!pWebapp->StandardScoring() && Map["run_count"].asInt() > 0)
+		{
+			float Time = str_tofloat(Map["get_best_score"]["time"].asString().c_str());
+			float aCheckpointTimes[25] = {0.0f};
+			Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
+			for(int i = 0; i < Checkpoint.size(); i++)
+				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asString().c_str());
+			MapRecord.Set(Time, aCheckpointTimes);
+			
+			pOut->m_MapRecord.add(MapRecord);
+		}
+		else
+			pOut->m_MapRecord.add(MapRecord);
 	}
 	pWebapp->AddOutput(pOut);
 	return 1;

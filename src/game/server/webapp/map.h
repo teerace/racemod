@@ -1,6 +1,7 @@
 #ifndef GAME_SERVER_WEBAPP_MAP_H
 #define GAME_SERVER_WEBAPP_MAP_H
 
+#include "../score.h"
 #include "data.h"
 
 class CWebMap
@@ -20,6 +21,7 @@ public:
 		array<std::string> m_MapList;
 		array<std::string> m_MapURL;
 		array<int> m_MapID;
+		array<CPlayerData> m_MapRecord;
 	};
 	
 	static int LoadList(void *pUserData);
