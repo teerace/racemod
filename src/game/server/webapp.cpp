@@ -152,7 +152,11 @@ void CWebapp::Tick()
 				{
 					char aBuf[128];
 					if(!pData->m_GlobalRank)
+					{
 						str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+						continue;
+					}
 					else if(!pData->m_MapRank)
 						str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: Not ranked yet (%s)",
 							pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
