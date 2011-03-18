@@ -144,6 +144,7 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	bool m_AutoScreenshotRecycle;
 	bool m_EditorActive;
 	bool m_SoundInitFailed;
+	bool m_ResortServerBrowser;
 
 	int m_AckGameTick;
 	int m_CurrentRecvTick;
@@ -327,6 +328,7 @@ public:
 	static void Con_Play(IConsole::IResult *pResult, void *pUserData);
 	static void Con_Record(IConsole::IResult *pResult, void *pUserData);
 	static void Con_StopRecord(IConsole::IResult *pResult, void *pUserData);
+	static void ConchainServerBrowserUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	// Race
 	virtual const char* GetCurrentMap();
@@ -350,5 +352,7 @@ public:
 	
 	void AutoScreenshot_Start();
 	void AutoScreenshot_Cleanup();
+
+	void ServerBrowserUpdate();
 };
 #endif
