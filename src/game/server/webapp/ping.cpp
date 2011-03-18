@@ -33,9 +33,8 @@ int CWebPing::Ping(void *pUserData)
 		else
 		{
 			Data["anonymous"][Num] = pData->m_Name[i];
-		}
-		Num++;
-		
+			Num++;
+		}		
 	}
 	Data["map"] = pWebapp->MapName();
 	
