@@ -171,6 +171,22 @@ void CWebapp::Tick()
 				}
 			}
 		}
+		else if(Type == WEB_USER_TOP)
+		{
+			CWebTop::COut *pData = (CWebTop::COut*)pItem;
+			if(GameServer()->m_apPlayers[pData->m_ClientID])
+			{
+				char aBuf[256];
+				GameServer()->SendChatTarget(pData->m_ClientID, "----------- Top 5 -----------");
+				for(int i = 0; i < pData->m_lUserRanks.size() && i < 5; i++)
+				{
+					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
+						i+1, pData->m_lUserRanks[i].m_aName, (int)pData->m_lUserRanks[i].m_Time/60, fmod(pData->m_lUserRanks[i].m_Time, 60));
+					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+				}
+				GameServer()->SendChatTarget(pData->m_ClientID, "------------------------------");
+			}
+		}
 		else if(Type == WEB_PING_PING)
 		{
 			CWebPing::COut *pData = (CWebPing::COut*)pItem;

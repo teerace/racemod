@@ -7,6 +7,7 @@
 #include <engine/shared/jobs.h>
 
 #include "webapp/user.h"
+#include "webapp/top.h"
 #include "webapp/run.h"
 #include "webapp/ping.h"
 #include "webapp/map.h"
