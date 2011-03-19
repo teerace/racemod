@@ -112,9 +112,7 @@ void CWebapp::Tick()
 	
 	// TODO: add event listener (server and client)
 	lock_wait(m_OutputLock);
-	IDataOut *pItem = m_pFirst;
-	IDataOut *pNext;
-	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
+	for(IDataOut *pItem = m_pFirst; pItem; pItem = pItem->m_pNext, delete pItem)
 	{
 		int Type = pItem->m_Type;
 		if(Type == WEB_USER_AUTH)
@@ -231,8 +229,6 @@ void CWebapp::Tick()
 			if(str_comp(pData->m_MapList[0].c_str(), MapName()) == 0)
 				Server()->ReloadMap();
 		}
-		pNext = pItem->m_pNext;
-		delete pItem;
 	}
 	m_pFirst = 0;
 	m_pLast = 0;
