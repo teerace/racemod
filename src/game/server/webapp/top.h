@@ -18,6 +18,8 @@ public:
 		
 		float m_Time;
 		char m_aName[32];
+		
+		bool operator<(const CUserRank& Other) { return (this->m_Time < Other.m_Time); }
 	};
 	
 	class CParam : public IDataIn
@@ -32,7 +34,7 @@ public:
 	public:
 		COut(int Type) { m_Type = Type; }
 		int m_ClientID;
-		array<CUserRank> m_lUserRanks;
+		sorted_array<CUserRank> m_lUserRanks;
 	};
 	
 	static int GetTop5(void *pUserData);

@@ -4,6 +4,7 @@
 
 #include <string>
 #include <base/tl/array.h>
+#include <base/tl/sorted_array.h>
 #include <engine/shared/jobs.h>
 
 #include "webapp/user.h"
