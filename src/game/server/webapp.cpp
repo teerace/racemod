@@ -54,8 +54,6 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 	
 	m_Online = 0;
 	
-	m_CurrentMapID = -1;
-	
 	LoadMaps();
 }
 
@@ -197,36 +195,39 @@ void CWebapp::Tick()
 			CWebMap::COut *pData = (CWebMap::COut*)pItem;
 			array<std::string> NeededMaps;
 			array<std::string> NeededURL;
-			for(int i = 0; i < pData->m_MapList.size(); i++)
+			for(int i = 0; i < pData->m_lMapName.size(); i++)
 			{
-				// get current map id
-				if(!str_comp(pData->m_MapList[i].c_str(), MapName()))
+				// get current map
+				if(!str_comp(pData->m_lMapName[i].c_str(), MapName()))
 				{
-					GameServer()->Score()->GetRecord()->Set(pData->m_MapRecord[i].m_Time, pData->m_MapRecord[i].m_aCpTime);
-					m_CurrentMapID = pData->m_MapID[i];
+					GameServer()->Score()->GetRecord()->Set(pData->m_lMapRecord[i].m_Time, pData->m_lMapRecord[i].m_aCpTime);
+					m_CurrentMap.m_ID = pData->m_lMapID[i];
+					m_CurrentMap.m_RunCount = pData->m_lMapRunCount[i];
+					str_copy(m_CurrentMap.m_aURL, pData->m_lMapURL[i].c_str(), sizeof(m_CurrentMap.m_aURL));
+					str_copy(m_CurrentMap.m_aAuthor, pData->m_lMapAuthor[i].c_str(), sizeof(m_CurrentMap.m_aAuthor));
 				}
 				
-				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_MapList[i]);
+				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_lMapName[i]);
 				if(r.empty())
 				{
-					NeededMaps.add(pData->m_MapList[i]);
-					NeededURL.add(pData->m_MapURL[i]);
+					NeededMaps.add(pData->m_lMapName[i]);
+					NeededURL.add(pData->m_lMapURL[i]);
 				}
 			}
 			if(NeededMaps.size() > 0)
 			{
 				CWebMap::CParam *pParam = new CWebMap::CParam();
-				pParam->m_MapList = NeededMaps;
-				pParam->m_MapURL = NeededURL;
+				pParam->m_lMapName = NeededMaps;
+				pParam->m_lMapURL = NeededURL;
 				AddJob(CWebMap::DownloadMaps, pParam);
 			}
 		}
 		else if(Type == WEB_MAP_DOWNLOADED)
 		{
 			CWebMap::COut *pData = (CWebMap::COut*)pItem;
-			m_lMapList.add(pData->m_MapList[0]);
-			dbg_msg("webapp", "added map: %s", pData->m_MapList[0].c_str());
-			if(str_comp(pData->m_MapList[0].c_str(), MapName()) == 0)
+			m_lMapList.add(pData->m_lMapName[0]);
+			dbg_msg("webapp", "added map: %s", pData->m_lMapName[0].c_str());
+			if(str_comp(pData->m_lMapName[0].c_str(), MapName()) == 0)
 				Server()->ReloadMap();
 		}
 	}

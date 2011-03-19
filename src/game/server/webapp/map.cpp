@@ -42,13 +42,16 @@ int CWebMap::LoadList(void *pUserData)
 	for(int i = 0; i < Maplist.size(); i++)
 	{
 		Json::Value Map = Maplist[i];
-		pOut->m_MapList.add(Map["name"].asString());
-		pOut->m_MapURL.add(Map["get_download_url"].asString());
-		pOut->m_MapID.add(Map["id"].asInt());
+		int RoundCount = Map["run_count"].asInt();
+		pOut->m_lMapName.add(Map["name"].asString());
+		pOut->m_lMapURL.add(Map["get_download_url"].asString());
+		pOut->m_lMapAuthor.add(Map["author"].asString());
+		pOut->m_lMapRunCount.add(RoundCount);
+		pOut->m_lMapID.add(Map["id"].asInt());
 		
 		// getting times
 		CPlayerData MapRecord;
-		if(!pWebapp->StandardScoring() && Map["run_count"].asInt() > 0)
+		if(!pWebapp->StandardScoring() && RoundCount > 0)
 		{
 			float Time = str_tofloat(Map["get_best_score"]["time"].asString().c_str());
 			float aCheckpointTimes[25] = {0.0f};
@@ -57,10 +60,10 @@ int CWebMap::LoadList(void *pUserData)
 				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asString().c_str());
 			MapRecord.Set(Time, aCheckpointTimes);
 			
-			pOut->m_MapRecord.add(MapRecord);
+			pOut->m_lMapRecord.add(MapRecord);
 		}
 		else
-			pOut->m_MapRecord.add(MapRecord);
+			pOut->m_lMapRecord.add(MapRecord);
 	}
 	pWebapp->AddOutput(pOut);
 	return 1;
@@ -70,8 +73,8 @@ int CWebMap::DownloadMaps(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;
-	array<std::string> Maps = pData->m_MapList;
-	array<std::string> URL = pData->m_MapURL;
+	array<std::string> Maps = pData->m_lMapName;
+	array<std::string> URL = pData->m_lMapURL;
 	delete pData;
 	
 	for(int i = 0; i < Maps.size(); i++)
@@ -91,7 +94,7 @@ int CWebMap::DownloadMaps(void *pUserData)
 		{
 			dbg_msg("webapp", "downloaded map: %s", pMap);
 			COut *pOut = new COut(WEB_MAP_DOWNLOADED);
-			pOut->m_MapList.add(pMap);
+			pOut->m_lMapName.add(pMap);
 			pWebapp->AddOutput(pOut);
 		}
 		else

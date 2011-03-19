@@ -10,18 +10,20 @@ public:
 	class CParam : public IDataIn
 	{
 	public:
-		array<std::string> m_MapList;
-		array<std::string> m_MapURL;
+		array<std::string> m_lMapName;
+		array<std::string> m_lMapURL;
 	};
 	
 	class COut : public IDataOut
 	{
 	public:
 		COut(int Type) { m_Type = Type; }
-		array<std::string> m_MapList;
-		array<std::string> m_MapURL;
-		array<int> m_MapID;
-		array<CPlayerData> m_MapRecord;
+		array<int> m_lMapRunCount;
+		array<int> m_lMapID;
+		array<std::string> m_lMapName;
+		array<std::string> m_lMapURL;
+		array<std::string> m_lMapAuthor;
+		array<CPlayerData> m_lMapRecord;
 	};
 	
 	static int LoadList(void *pUserData);

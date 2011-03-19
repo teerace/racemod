@@ -191,6 +191,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 		pParams->m_Time = FinishTime;
 		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));
 		GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
+		
+		// higher run count
+		GameServer()->Webapp()->CurrentMap()->m_RunCount++;
 	}
 #endif
 

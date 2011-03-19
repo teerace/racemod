@@ -23,6 +23,16 @@ class CWebapp
 		long m_ContentLength;
 	};
 	
+	class CMapInfo
+	{
+	public:
+		CMapInfo() { m_ID = -1; }
+		int m_RunCount;
+		int m_ID;
+		char m_aURL[128];
+		char m_aAuthor[32];
+	};
+	
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
 	class IStorage *m_pStorage;
@@ -42,7 +52,7 @@ class CWebapp
 	
 	bool m_Online;
 	
-	int m_CurrentMapID;
+	CMapInfo m_CurrentMap;
 	
 	bool m_StandardScoring;
 	
@@ -67,7 +77,7 @@ public:
 	const char *ApiKey();
 	const char *ServerIP();
 	const char *MapName();
-	int MapID() { return m_CurrentMapID; }
+	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	
 	bool IsOnline() { return m_Online; }
 	

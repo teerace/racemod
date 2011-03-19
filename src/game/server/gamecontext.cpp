@@ -733,6 +733,22 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 #endif
 				}
 			}
+#if defined(CONF_TEERACE)
+			else if(!str_comp(pMsg->m_pMessage, "/mapinfo"))
+			{
+				char aBuf[256];
+				SendChatTarget(ClientID, "----------- Mapinfo -----------");
+				str_format(aBuf, sizeof(aBuf), "Name: %s", m_pWebapp->MapName());
+				SendChatTarget(ClientID, aBuf);
+				str_format(aBuf, sizeof(aBuf), "Author: %s", m_pWebapp->CurrentMap()->m_aAuthor);
+				SendChatTarget(ClientID, aBuf);
+				str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_SvWebappIp, m_pWebapp->CurrentMap()->m_aURL);
+				SendChatTarget(ClientID, aBuf);
+				str_format(aBuf, sizeof(aBuf), "Finished runs: %d", m_pWebapp->CurrentMap()->m_RunCount);
+				SendChatTarget(ClientID, aBuf);
+				SendChatTarget(ClientID, "-------------------------------");
+			}
+#endif
 			else if(!str_comp(pMsg->m_pMessage, "/show_others"))
 			{
 				if(!g_Config.m_SvShowOthers && !Server()->IsAuthed(ClientID))
@@ -754,6 +770,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				SendChatTarget(ClientID, "\"/rank\" shows your rank");
 				SendChatTarget(ClientID, "\"/rank NAME\" shows the rank of a specific player");
 				SendChatTarget(ClientID, "\"/top5 X\" shows the top 5");
+#if defined(CONF_TEERACE)
+				SendChatTarget(ClientID, "\"/mapinfo\" shows infos about the map");
+#endif
 				SendChatTarget(ClientID, "\"/show_others\" show others players?");
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/", 1))

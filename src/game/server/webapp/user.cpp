@@ -293,7 +293,7 @@ int CWebUser::GetRank(void *pUserData)
 	if(!pWebapp->Connect())
 		return 0;
 	
-	str_format(aURL, sizeof(aURL), "/api/1/users/map_rank/%d/%d/", UserID, pWebapp->MapID());
+	str_format(aURL, sizeof(aURL), "/api/1/users/map_rank/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
 	str_format(aBuf, sizeof(aBuf), CWebapp::GET, aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
 	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
