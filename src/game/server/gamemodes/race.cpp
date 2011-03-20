@@ -16,7 +16,12 @@ CGameControllerRACE::CGameControllerRACE(class CGameContext *pGameServer) : IGam
 	m_pGameType = "Race";
 	
 	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
 		m_aRace[i].Reset();
+#if defined(CONF_TEERACE)
+		m_aStopRecordTick[i] = -1;
+#endif
+	}
 }
 
 CGameControllerRACE::~CGameControllerRACE()
@@ -53,10 +58,34 @@ void CGameControllerRACE::InitTeleporter()
 			m_pTeleporter[GameServer()->Collision()->m_pTele[i].m_Number-1] = vec2(i%GameServer()->Collision()->Layers()->TeleLayer()->m_Width*32+16, i/GameServer()->Collision()->Layers()->TeleLayer()->m_Width*32+16);
 	}
 }
+
+#if defined(CONF_TEERACE)
+void CGameControllerRACE::OnCharacterSpawn(class CCharacter *pChr)
+{
+	IGameController::OnCharacterSpawn(pChr);
 	
+	if(g_Config.m_SvAutoRecord)
+	{
+		int ClientID = pChr->GetPlayer()->GetCID();
+		if(Server()->IsRecording(ClientID))
+			Server()->StopRecord(ClientID);
+		
+		if(Server()->GetUserID(ClientID) > 0)
+			Server()->StartRecord(ClientID);
+	}		
+}
+#endif
+
 int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
-	m_aRace[pVictim->GetPlayer()->GetCID()].Reset();
+	int ClientID = pVictim->GetPlayer()->GetCID();
+	m_aRace[ClientID].Reset();
+	
+#if defined(CONF_TEERACE)
+	if(Server()->IsRecording(ClientID))
+		Server()->StopRecord(ClientID);
+#endif
+
 	return 0;
 }
 
@@ -96,6 +125,16 @@ void CGameControllerRACE::Tick()
 
 			p->m_RefreshTime = Server()->Tick();
 		}
+		
+#if defined(CONF_TEERACE)
+		// stop recording
+		if(Server()->Tick() == m_aStopRecordTick[i])
+		{
+			m_aStopRecordTick[i] = -1;
+			if(Server()->IsRecording(i))
+				Server()->StopRecord(i);
+		}
+#endif
 	}
 }
 
@@ -181,6 +220,10 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	}
 	
 #if defined(CONF_TEERACE)
+	// set stop record tick
+	if(Server()->IsRecording(ID))
+		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
+	
 	// post to webapp
 	if(GameServer()->Webapp())
 	{

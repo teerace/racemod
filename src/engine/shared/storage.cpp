@@ -65,6 +65,9 @@ public:
 			fs_makedir(GetPath(TYPE_SAVE, "dumps", aPath, sizeof(aPath)));
 			fs_makedir(GetPath(TYPE_SAVE, "downloadedmaps", aPath, sizeof(aPath)));
 			fs_makedir(GetPath(TYPE_SAVE, "demos", aPath, sizeof(aPath)));
+#if defined(CONF_TEERACE)
+			fs_makedir(GetPath(TYPE_SAVE, "demos/teerace", aPath, sizeof(aPath)));
+#endif
 			fs_makedir(GetPath(TYPE_SAVE, "demos/auto", aPath, sizeof(aPath)));
 			fs_makedir(GetPath(TYPE_SAVE, "ghosts", aPath, sizeof(aPath)));
 		}

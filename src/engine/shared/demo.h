@@ -30,6 +30,9 @@ class CDemoRecorder : public IDemoRecorder
 	void Write(int Type, const void *pData, int Size);
 public:
 	CDemoRecorder(class CSnapshotDelta *pSnapshotDelta);
+#if defined(CONF_TEERACE)
+	CDemoRecorder() {}
+#endif
 	
 	int Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetversion, const char *pMap, int MapCrc, const char *pType);
 	int Stop();

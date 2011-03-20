@@ -125,7 +125,12 @@ public:
 	unsigned char *m_pCurrentMapData;
 	int m_CurrentMapSize;	
 	
+#if defined(CONF_TEERACE)
+	CDemoRecorder m_aDemoRecorder[MAX_CLIENTS+1];
+#else
 	CDemoRecorder m_DemoRecorder;
+#endif
+
 	CEngine m_Engine;
 	CRegister m_Register;
 	
@@ -181,6 +186,10 @@ public:
 	
 	void SetUserID(int ClientID, int UserID) { m_aClients[ClientID].m_UserID = UserID; }
 	int GetUserID(int ClientID) { return m_aClients[ClientID].m_UserID; }
+	
+	void StartRecord(int ClientID);
+	void StopRecord(int ClientID);
+	bool IsRecording(int ClientID);
 #endif
 
 	char *GetMapName();

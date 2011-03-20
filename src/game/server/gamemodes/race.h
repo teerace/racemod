@@ -44,10 +44,17 @@ public:
 	
 	vec2 *m_pTeleporter;
 	
+#if defined(CONF_TEERACE)
+	int m_aStopRecordTick[MAX_CLIENTS];
+#endif
+	
 	void InitTeleporter();
 	
 	virtual void Tick();
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
+#if defined(CONF_TEERACE)
+	virtual void OnCharacterSpawn(class CCharacter *pChr);
+#endif
 
 	virtual bool OnCheckpoint(int ID, int z);
 	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check=true);

@@ -7,6 +7,8 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include "gamemodes/race.h"
+
 #include "gamecontext.h"
 #include "webapp.h"
 
@@ -125,6 +127,13 @@ void CWebapp::Tick()
 					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 					Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
 					
+					// start recording if the user didint start a race already
+					if(g_Config.m_SvAutoRecord)
+					{
+						if(GameServer()->RaceController()->m_aRace[pData->m_ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
+							Server()->StartRecord(pData->m_ClientID);
+					}
+							
 					CWebUser::CParam *pParams = new CWebUser::CParam();
 					pParams->m_ClientID = pData->m_ClientID;
 					pParams->m_UserID = pData->m_UserID;

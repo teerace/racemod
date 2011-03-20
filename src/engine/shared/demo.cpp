@@ -49,6 +49,14 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 		str_format(aMapFilename, sizeof(aMapFilename), "downloadedmaps/%s_%08x.map", pMap, Crc);
 		MapFile = pStorage->OpenFile(aMapFilename, IOFLAG_READ, IStorage::TYPE_ALL);
 	}
+#if defined(CONF_TEERACE)
+	if(!MapFile)
+	{
+		// try the teerace maps
+		str_format(aMapFilename, sizeof(aMapFilename), "maps/teerace/%s.map", pMap);
+		MapFile = pStorage->OpenFile(aMapFilename, IOFLAG_READ, IStorage::TYPE_ALL);
+	}
+#endif
 	if(!MapFile)
 	{
 		char aBuf[256];
