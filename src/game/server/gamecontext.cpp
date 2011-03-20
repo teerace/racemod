@@ -435,7 +435,7 @@ void CGameContext::OnTick()
 	if(m_pWebapp)
 	{
 		m_pWebapp->Tick();
-		if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60*5 < Server()->Tick())
+		if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60 < Server()->Tick())
 		{
 			CWebPing::CParam *pParams = new CWebPing::CParam();
 			for(int i = 0; i < MAX_CLIENTS; i++)
