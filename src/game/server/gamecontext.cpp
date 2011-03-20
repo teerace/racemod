@@ -1584,6 +1584,11 @@ bool CGameContext::IsClientReady(int ClientID)
 	return m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_IsReady ? true : false;
 }
 
+bool CGameContext::IsClientPlayer(int ClientID)
+{
+	return m_apPlayers[ClientID] && m_apPlayers[ClientID]->GetTeam() == TEAM_SPECTATORS ? false : true;
+}
+
 const char *CGameContext::GameType() { return m_pController && m_pController->m_pGameType ? m_pController->m_pGameType : ""; }
 int CmaskRace(CGameContext *pGameServer, int Owner)
 {
