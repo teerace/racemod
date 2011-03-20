@@ -59,23 +59,6 @@ void CGameControllerRACE::InitTeleporter()
 	}
 }
 
-#if defined(CONF_TEERACE)
-void CGameControllerRACE::OnCharacterSpawn(class CCharacter *pChr)
-{
-	IGameController::OnCharacterSpawn(pChr);
-	
-	if(g_Config.m_SvAutoRecord)
-	{
-		int ClientID = pChr->GetPlayer()->GetCID();
-		if(Server()->IsRecording(ClientID))
-			Server()->StopRecord(ClientID);
-		
-		if(Server()->GetUserID(ClientID) > 0)
-			Server()->StartRecord(ClientID);
-	}		
-}
-#endif
-
 int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
 	int ClientID = pVictim->GetPlayer()->GetCID();
@@ -127,11 +110,18 @@ void CGameControllerRACE::Tick()
 		}
 		
 #if defined(CONF_TEERACE)
-		// stop recording
-		if(Server()->Tick() == m_aStopRecordTick[i])
+		// stop recording at the finish
+		if(Server()->IsRecording(i))
 		{
-			m_aStopRecordTick[i] = -1;
-			if(Server()->IsRecording(i))
+			if(Server()->Tick() == m_aStopRecordTick[i])
+			{
+				m_aStopRecordTick[i] = -1;
+				Server()->StopRecord(i);
+				continue;
+			}
+			
+			CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
+			if(m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
 				Server()->StopRecord(i);
 		}
 #endif

@@ -526,7 +526,17 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 	
 	// or are not allowed to aim in the center
 	if(m_Input.m_TargetX == 0 && m_Input.m_TargetY == 0)
-		m_Input.m_TargetY = -1;	
+		m_Input.m_TargetY = -1;
+	
+#if defined(CONF_TEERACE)
+	// start demo recording
+	if(g_Config.m_SvAutoRecord && m_LastAction == Server()->Tick())
+	{
+		int ClientID = m_pPlayer->GetCID();
+		if(Server()->GetUserID(ClientID) > 0 && !Server()->IsRecording(ClientID) && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
+			Server()->StartRecord(ClientID);
+	}
+#endif
 }
 
 void CCharacter::OnDirectInput(CNetObj_PlayerInput *pNewInput)
@@ -545,6 +555,12 @@ void CCharacter::OnDirectInput(CNetObj_PlayerInput *pNewInput)
 
 void CCharacter::Tick()
 {
+#if defined(CONF_TEERACE)
+	// stop demo recording
+	if(Server()->IsRecording(m_pPlayer->GetCID()) && m_LastAction+Server()->TickSpeed()*10 < Server()->Tick())
+		Server()->StopRecord(m_pPlayer->GetCID());
+#endif
+
 	if(m_pPlayer->m_ForceBalanced)
 	{
 		char Buf[128];

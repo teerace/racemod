@@ -73,11 +73,7 @@ int CGameControllerFC::OnCharacterDeath(class CCharacter *pVictim, class CPlayer
 
 void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
 {
-#if defined(CONF_TEERACE)
-	CGameControllerRACE::OnCharacterSpawn(pChr);
-#else
 	IGameController::OnCharacterSpawn(pChr);
-#endif
 	
 	//full armor
 	pChr->IncreaseArmor(10);
