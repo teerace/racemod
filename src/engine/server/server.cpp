@@ -1137,7 +1137,17 @@ int CServer::LoadMap(const char *pMapName)
 	// stop recording when we change map
 #if defined(CONF_TEERACE)
 	for(int i = 0; i < MAX_CLIENTS+1; i++)
+	{
 		m_aDemoRecorder[i].Stop();
+		
+		// remove tmp demos
+		if(i < MAX_CLIENTS)
+		{
+			char aPath[256];
+			str_format(aPath, sizeof(aPath), "demos/teerace/%s_%d_tmp.demo", m_aCurrentMap, i);
+			Storage()->RemoveFile(aPath, IStorage::TYPE_SAVE);
+		}
+	}
 #else
 	m_DemoRecorder.Stop();
 #endif
