@@ -692,7 +692,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					return;
 				}
 				
-				int Num;
+				int Num = 1;
 				
 				if(sscanf(pMsg->m_pMessage, "/top5 %d", &Num) == 1)
 					Score()->ShowTop5(pPlayer->GetCID(), Num);

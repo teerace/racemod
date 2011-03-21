@@ -37,6 +37,7 @@ public:
 		char m_aUsername[32];
 		int m_GlobalRank;
 		int m_MapRank;
+		float m_Time;
 		bool m_PrintRank;
 	};
 	

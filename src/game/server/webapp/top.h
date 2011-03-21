@@ -33,6 +33,7 @@ public:
 	{
 	public:
 		COut(int Type) { m_Type = Type; }
+		int m_Start;
 		int m_ClientID;
 		sorted_array<CUserRank> m_lUserRanks;
 	};

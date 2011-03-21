@@ -267,8 +267,9 @@ int CWebUser::GetRank(void *pUserData)
 	bool PrintRank = pData->m_PrintRank;
 	delete pData;
 	
-	int GlobalRank;
-	int MapRank;
+	int GlobalRank = 0;
+	int MapRank = 0;
+	float Time = 0.0f;
 	
 	if(!pWebapp->Connect())
 		return 0;
@@ -304,12 +305,23 @@ int CWebUser::GetRank(void *pUserData)
 		return 0;
 	}
 	
-	MapRank = str_toint(pReceived);
+	Json::Value Rank;
+	Json::Reader Reader;
+	if(!Reader.parse(pReceived, pReceived+Size, Rank))
+	{
+		mem_free(pReceived);
+		return 0;
+	}
+	
 	mem_free(pReceived);
+		
+	MapRank = Rank["position"].asInt();
+	Time = str_tofloat(Rank["bestrun"]["time"].asString().c_str());
 	
 	COut *pOut = new COut(WEB_USER_RANK, ClientID);
 	pOut->m_GlobalRank = GlobalRank;
 	pOut->m_MapRank = MapRank;
+	pOut->m_Time = Time;
 	pOut->m_PrintRank = PrintRank;
 	pWebapp->AddOutput(pOut);
 	return 1;

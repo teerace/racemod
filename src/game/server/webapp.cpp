@@ -177,7 +177,7 @@ void CWebapp::Tick()
 				for(int i = 0; i < pData->m_lUserRanks.size() && i < 5; i++)
 				{
 					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-						i+1, pData->m_lUserRanks[i].m_aName, (int)pData->m_lUserRanks[i].m_Time/60, fmod(pData->m_lUserRanks[i].m_Time, 60));
+						i+pData->m_Start, pData->m_lUserRanks[i].m_aName, (int)pData->m_lUserRanks[i].m_Time/60, fmod(pData->m_lUserRanks[i].m_Time, 60));
 					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				}
 				GameServer()->SendChatTarget(pData->m_ClientID, "------------------------------");

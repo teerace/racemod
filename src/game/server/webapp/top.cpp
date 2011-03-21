@@ -27,7 +27,7 @@ int CWebTop::GetTop5(void *pUserData)
 	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
-	str_format(aURL, sizeof(aURL), "/api/1/runs/best/%d/", pWebapp->CurrentMap()->m_ID);
+	str_format(aURL, sizeof(aURL), " /api/1/maps/rank/%d/%d/", pWebapp->CurrentMap()->m_ID, Start);
 	str_format(aBuf, sizeof(aBuf), CWebapp::GET, aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
@@ -50,11 +50,12 @@ int CWebTop::GetTop5(void *pUserData)
 	
 	COut *pOut = new COut(WEB_USER_TOP);
 	pOut->m_ClientID = ClientID;
+	pOut->m_Start = Start;
 	for(int i = 0; i < Top.size(); i++)
 	{
-		Json::Value User = Top[i];
-		CUserRank UserRank = CUserRank(User["user"]["username"].asString().c_str(),
-								str_tofloat(User["time"].asString().c_str()));
+		Json::Value Run = Top[i];
+		CUserRank UserRank = CUserRank(Run["run"]["user"]["username"].asString().c_str(),
+								str_tofloat(Run["run"]["time"].asString().c_str()));
 		pOut->m_lUserRanks.add(UserRank);
 	}
 	
