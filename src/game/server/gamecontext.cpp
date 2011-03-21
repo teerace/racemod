@@ -714,7 +714,46 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				char aName[256];
 				
 				if(g_Config.m_SvShowTimes && sscanf(pMsg->m_pMessage, "/rank %s", aName) == 1)
+				{
 					Score()->ShowRank(pPlayer->GetCID(), aName, true);
+					
+#if defined(CONF_TEERACE)
+					int UserID = 0;
+					// search for players on the server
+					for(int i = 0; i < MAX_CLIENTS; i++)
+					{
+						// search for 100% match
+						if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && !str_comp(Server()->ClientName(i), aName))
+						{
+							UserID = Server()->GetUserID(i);
+							str_copy(aName, Server()->GetUserName(i), sizeof(aName));
+							break;
+						}
+					}
+					
+					if(!UserID)
+					{
+						// search for players on the server
+						for(int i = 0; i < MAX_CLIENTS; i++)
+						{
+							// search for part match
+							if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && str_find_nocase(Server()->ClientName(i), aName))
+							{
+								UserID = Server()->GetUserID(i);
+								str_copy(aName, Server()->GetUserName(i), sizeof(aName));
+								break;
+							}
+						}
+					}
+					
+					CWebUser::CParam *pParams = new CWebUser::CParam();
+					str_copy(pParams->m_aName, aName, sizeof(pParams->m_aName));
+					pParams->m_ClientID = ClientID;
+					pParams->m_UserID = UserID;
+					pParams->m_PrintRank = 1;
+					m_pWebapp->AddJob(CWebUser::GetRank, pParams);
+#endif
+				}
 				else
 				{
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
@@ -723,6 +762,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					if(Server()->GetUserID(ClientID) > 0)
 					{
 						CWebUser::CParam *pParams = new CWebUser::CParam();
+						str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));
 						pParams->m_ClientID = ClientID;
 						pParams->m_UserID = Server()->GetUserID(ClientID);
 						pParams->m_PrintRank = 1;

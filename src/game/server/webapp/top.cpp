@@ -54,8 +54,8 @@ int CWebTop::GetTop5(void *pUserData)
 	for(int i = 0; i < Top.size(); i++)
 	{
 		Json::Value Run = Top[i];
-		CUserRank UserRank = CUserRank(Run["run"]["user"]["username"].asString().c_str(),
-								str_tofloat(Run["run"]["time"].asString().c_str()));
+		CUserRank UserRank = CUserRank(Run["run"]["user"]["username"].asCString(),
+								str_tofloat(Run["run"]["time"].asCString()));
 		pOut->m_lUserRanks.add(UserRank);
 	}
 	

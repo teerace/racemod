@@ -53,11 +53,11 @@ int CWebMap::LoadList(void *pUserData)
 		CPlayerData MapRecord;
 		if(!pWebapp->StandardScoring() && RoundCount > 0)
 		{
-			float Time = str_tofloat(Map["get_best_score"]["time"].asString().c_str());
+			float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
 			float aCheckpointTimes[25] = {0.0f};
 			Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
 			for(int i = 0; i < Checkpoint.size(); i++)
-				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asString().c_str());
+				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
 			MapRecord.Set(Time, aCheckpointTimes);
 			
 			pOut->m_lMapRecord.add(MapRecord);

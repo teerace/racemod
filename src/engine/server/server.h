@@ -95,6 +95,7 @@ public:
 
 #if defined(CONF_TEERACE)
 		int m_UserID;
+		char m_aUsername[64];
 #endif
 		void Reset();
 	};
@@ -186,6 +187,9 @@ public:
 	
 	void SetUserID(int ClientID, int UserID) { m_aClients[ClientID].m_UserID = UserID; }
 	int GetUserID(int ClientID) { return m_aClients[ClientID].m_UserID; }
+	
+	void SetUserName(int ClientID, const char* pUsername) { str_copy(m_aClients[ClientID].m_aUsername, pUsername, sizeof(m_aClients[ClientID].m_aUsername)); }
+	const char* GetUserName(int ClientID) { return m_aClients[ClientID].m_aUsername; }
 	
 	void StartRecord(int ClientID);
 	void StopRecord(int ClientID);

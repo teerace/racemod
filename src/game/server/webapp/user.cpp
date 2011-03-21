@@ -265,7 +265,11 @@ int CWebUser::GetRank(void *pUserData)
 	int UserID = pData->m_UserID;
 	int ClientID = pData->m_ClientID;
 	bool PrintRank = pData->m_PrintRank;
+	char aName[64];
+	str_copy(aName, pData->m_aName, sizeof(aName));
 	delete pData;
+	
+	int Size = 0;
 	
 	int GlobalRank = 0;
 	int MapRank = 0;
@@ -277,9 +281,49 @@ int CWebUser::GetRank(void *pUserData)
 	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
+	
+	// get userid if there is none
+	if(!UserID)
+	{
+		Json::Value PostUser;
+		Json::FastWriter Writer;
+
+		PostUser["username"] = aName;
+
+		std::string Json = Writer.write(PostUser);
+	
+		str_format(aURL, sizeof(aURL), "/api/1/users/get_by_name/");
+		str_format(aBuf, sizeof(aBuf), CWebapp::POST, aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+		Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+		pWebapp->Disconnect();
+		
+		if(Size < 0)
+		{
+			dbg_msg("webapp", "error: %d (user global rank)", Size);
+			return 0;
+		}
+		
+		Json::Value User;
+		Json::Reader Reader;
+		if(!Reader.parse(pReceived, pReceived+Size, User))
+		{
+			mem_free(pReceived);
+			return 0;
+		}
+		
+		mem_free(pReceived);
+		
+		UserID = User["id"].asInt();
+		str_copy(aName, User["username"].asCString(), sizeof(aName));
+		
+		if(!pWebapp->Connect())
+			return 0;
+	}
+	
+	// global rank
 	str_format(aURL, sizeof(aURL), "/api/1/users/rank/%d/", UserID);
 	str_format(aBuf, sizeof(aBuf), CWebapp::GET, aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
 	if(Size < 0)
@@ -316,13 +360,16 @@ int CWebUser::GetRank(void *pUserData)
 	mem_free(pReceived);
 		
 	MapRank = Rank["position"].asInt();
-	Time = str_tofloat(Rank["bestrun"]["time"].asString().c_str());
+	if(MapRank)
+		Time = str_tofloat(Rank["bestrun"]["time"].asCString());
 	
 	COut *pOut = new COut(WEB_USER_RANK, ClientID);
 	pOut->m_GlobalRank = GlobalRank;
 	pOut->m_MapRank = MapRank;
 	pOut->m_Time = Time;
+	pOut->m_UserID = UserID;
 	pOut->m_PrintRank = PrintRank;
+	str_copy(pOut->m_aUsername, aName, sizeof(pOut->m_aUsername));
 	pWebapp->AddOutput(pOut);
 	return 1;
 }

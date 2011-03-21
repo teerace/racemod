@@ -124,8 +124,10 @@ void CWebapp::Tick()
 					str_format(aBuf, sizeof(aBuf), "logged in successfully (%s)", pData->m_aUsername);
 					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 					Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
+					Server()->SetUserName(pData->m_ClientID, pData->m_aUsername);
 					
 					CWebUser::CParam *pParams = new CWebUser::CParam();
+					str_copy(pParams->m_aName, Server()->GetUserName(pData->m_ClientID), sizeof(pParams->m_aName));
 					pParams->m_ClientID = pData->m_ClientID;
 					pParams->m_UserID = pData->m_UserID;
 					pParams->m_PrintRank = 1;
@@ -149,16 +151,19 @@ void CWebapp::Tick()
 					char aBuf[128];
 					if(!pData->m_GlobalRank)
 					{
-						str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+						if(pData->m_UserID == Server()->GetUserID(pData->m_ClientID))
+							str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+						else
+							str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pData->m_aUsername);
 						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 						continue;
 					}
 					else if(!pData->m_MapRank)
-						str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: Not ranked yet (%s)",
-							pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
+						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
+							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 					else
-						str_format(aBuf, sizeof(aBuf), "Global Rank: %d | Map Rank: %d (%s)",
-							pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
+						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d (%s)",
+							pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
 					
 					if(g_Config.m_SvShowTimes)
 						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);

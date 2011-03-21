@@ -9,9 +9,7 @@ public:
 	class CParam : public IDataIn
 	{
 	public:
-		// auth
-		char m_aUsername[32];
-		char m_aPassword[32];
+		char m_aName[64];
 		// auth token
 		char m_aToken[32];
 		// skin

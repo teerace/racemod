@@ -65,6 +65,9 @@ public:
 	virtual void SetUserID(int ClientID, int UserID) = 0;
 	virtual int GetUserID(int ClientID) = 0;
 	
+	virtual void SetUserName(int ClientID, const char* pUsername) = 0;
+	virtual const char* GetUserName(int ClientID) = 0;
+	
 	virtual void StartRecord(int ClientID) = 0;
 	virtual void StopRecord(int ClientID) = 0;
 	virtual bool IsRecording(int ClientID) = 0;
