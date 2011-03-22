@@ -265,6 +265,7 @@ int CWebUser::GetRank(void *pUserData)
 	int UserID = pData->m_UserID;
 	int ClientID = pData->m_ClientID;
 	bool PrintRank = pData->m_PrintRank;
+	bool GetBestRun = pData->m_GetBestRun;
 	char aName[64];
 	str_copy(aName, pData->m_aName, sizeof(aName));
 	delete pData;
@@ -273,7 +274,6 @@ int CWebUser::GetRank(void *pUserData)
 	
 	int GlobalRank = 0;
 	int MapRank = 0;
-	float Time = 0.0f;
 	
 	if(!pWebapp->Connect())
 		return 0;
@@ -314,6 +314,16 @@ int CWebUser::GetRank(void *pUserData)
 		mem_free(pReceived);
 		
 		UserID = User["id"].asInt();
+		// no user found
+		if(!UserID)
+		{
+			COut *pOut = new COut(WEB_USER_RANK, ClientID);
+			pOut->m_PrintRank = PrintRank;
+			pOut->m_MatchFound = 0;
+			str_copy(pOut->m_aUsername, aName, sizeof(pOut->m_aUsername));
+			pWebapp->AddOutput(pOut);
+			return 1;
+		}
 		str_copy(aName, User["username"].asCString(), sizeof(aName));
 		
 		if(!pWebapp->Connect())
@@ -360,15 +370,28 @@ int CWebUser::GetRank(void *pUserData)
 	mem_free(pReceived);
 		
 	MapRank = Rank["position"].asInt();
+	CPlayerData Run;
 	if(MapRank)
-		Time = str_tofloat(Rank["bestrun"]["time"].asCString());
+	{
+		// getting times
+		if(!pWebapp->StandardScoring())
+		{
+			float Time = str_tofloat(Rank["bestrun"]["time"].asCString());
+			float aCheckpointTimes[25] = {0.0f};
+			Json::Value Checkpoint = Rank["bestrun"]["checkpoints_list"];
+			for(int i = 0; i < Checkpoint.size(); i++)
+				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
+			Run.Set(Time, aCheckpointTimes);
+		}
+	}
 	
 	COut *pOut = new COut(WEB_USER_RANK, ClientID);
 	pOut->m_GlobalRank = GlobalRank;
 	pOut->m_MapRank = MapRank;
-	pOut->m_Time = Time;
+	pOut->m_BestRun = Run;
 	pOut->m_UserID = UserID;
 	pOut->m_PrintRank = PrintRank;
+	pOut->m_GetBestRun = GetBestRun;
 	str_copy(pOut->m_aUsername, aName, sizeof(pOut->m_aUsername));
 	pWebapp->AddOutput(pOut);
 	return 1;

@@ -130,7 +130,7 @@ void CWebapp::Tick()
 					str_copy(pParams->m_aName, Server()->GetUserName(pData->m_ClientID), sizeof(pParams->m_aName));
 					pParams->m_ClientID = pData->m_ClientID;
 					pParams->m_UserID = pData->m_UserID;
-					pParams->m_PrintRank = 1;
+					pParams->m_GetBestRun = 1;
 					AddJob(CWebUser::GetRank, pParams);
 				}
 				else
@@ -148,13 +148,18 @@ void CWebapp::Tick()
 				GameServer()->m_apPlayers[pData->m_ClientID]->m_MapRank = pData->m_MapRank;
 				if(pData->m_PrintRank)
 				{
-					char aBuf[128];
+					char aBuf[256];
 					if(!pData->m_GlobalRank)
 					{
-						if(pData->m_UserID == Server()->GetUserID(pData->m_ClientID))
-							str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+						if(pData->m_MatchFound)
+						{
+							if(pData->m_UserID == Server()->GetUserID(pData->m_ClientID))
+								str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+							else
+								str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pData->m_aUsername);
+						}
 						else
-							str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pData->m_aUsername);
+							str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pData->m_aUsername);
 						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 						continue;
 					}
@@ -162,8 +167,14 @@ void CWebapp::Tick()
 						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
 							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 					else
+					{
+						// saving the best run
+						if(pData->m_GetBestRun)
+							GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
+						
 						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d (%s)",
 							pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
+					}
 					
 					if(g_Config.m_SvShowTimes)
 						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
