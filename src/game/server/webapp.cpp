@@ -1,6 +1,8 @@
 /* CWebapp class by Sushi and Redix*/
 #if defined(CONF_TEERACE)
 
+#include <stdio.h>
+
 #include <base/tl/algorithm.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -323,7 +325,7 @@ int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
 	dbg_msg("webapp", "\n---send start---\n%s\n---send end---\n", pInString);
 	
 	net_tcp_connect(m_Socket, &m_Addr);
-	int DataSent = net_tcp_send(m_Socket, pInString, str_length(pInString));
+	net_tcp_send(m_Socket, pInString, str_length(pInString));
 	
 	CHeader Header;
 	int Size = 0;
@@ -384,7 +386,7 @@ bool CWebapp::Download(const char *pFilename, const char *pURL)
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
 	
 	net_tcp_connect(m_Socket, &m_Addr);
-	int DataSent = net_tcp_send(m_Socket, aStr, str_length(aStr));
+	net_tcp_send(m_Socket, aStr, str_length(aStr));
 	
 	CHeader Header;
 	int Size = 0;
