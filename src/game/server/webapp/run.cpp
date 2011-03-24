@@ -23,6 +23,8 @@ int CWebRun::Post(void *pUserData)
 	
 	Run["map_id"] = pWebapp->CurrentMap()->m_ID;
 	Run["user_id"] = pData->m_UserID;
+	// TODO: take this out after 0.6 release
+	str_sanitize_strong(pData->m_aName);
 	Run["nickname"] = pData->m_aName;
 	str_format(aBuf, sizeof(aBuf), "%.3f", pData->m_Time);
 	Run["time"] = aBuf;

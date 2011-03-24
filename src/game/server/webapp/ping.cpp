@@ -27,12 +27,20 @@ int CWebPing::Ping(void *pUserData)
 		if(User)
 		{
 			char aBuf[16];
+			// TODO: take this out after 0.6 release
+			char aName[32];
+			str_copy(aName, pData->m_Name[i].c_str(), sizeof(aName));
+			str_sanitize_strong(aName);
 			str_format(aBuf, sizeof(aBuf), "%d", pData->m_UserID[i]);
-			Data["users"][aBuf] = pData->m_Name[i];
+			Data["users"][aBuf] = aName;
 		}
 		else
 		{
-			Data["anonymous"][Num] = pData->m_Name[i];
+			// TODO: take this out after 0.6 release
+			char aName[32];
+			str_copy(aName, pData->m_Name[i].c_str(), sizeof(aName));
+			str_sanitize_strong(aName);
+			Data["anonymous"][Num] = aName;
 			Num++;
 		}		
 	}

@@ -320,7 +320,7 @@ int CWebapp::RecvHeader(char *pBuf, int MaxSize, CHeader *pHeader)
 
 int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
 {
-	//dbg_msg("webapp", "\n---send start---\n%s\n---send end---\n", pInString);
+	dbg_msg("webapp", "\n---send start---\n%s\n---send end---\n", pInString);
 	
 	net_tcp_connect(m_Socket, &m_Addr);
 	int DataSent = net_tcp_send(m_Socket, pInString, str_length(pInString));
@@ -340,8 +340,8 @@ int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
 			if(Header.m_Size < 0)
 				return -1;
 			
-			if(Header.m_StatusCode != 200)
-				return -Header.m_StatusCode;
+			/*if(Header.m_StatusCode != 200)
+				return -Header.m_StatusCode;*/
 			
 			pData += Header.m_Size;
 			MemLeft = Header.m_ContentLength;
@@ -372,7 +372,7 @@ int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
 		return -3;
 	}
 	
-	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", *ppOutString);
+	dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", *ppOutString);
 	
 	return Header.m_ContentLength;
 }
