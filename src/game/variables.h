@@ -88,8 +88,6 @@ MACRO_CONFIG_INT(SvVoteKickBantime, sv_vote_kick_bantime, 5, 0, 1440, CFGFLAG_SE
 MACRO_CONFIG_INT(SvReservedSlots, sv_reserved_slots, 0, 0, 12, CFGFLAG_SERVER, "Number of reserved slots")
 MACRO_CONFIG_STR(SvReservedSlotsPass, sv_reserved_slots_pass, 32, "", CFGFLAG_SERVER, "Password for reserved slots")
 
-MACRO_CONFIG_INT(SvMulticonnect, sv_multiconnect, 0, 0, 1, CFGFLAG_SERVER, "Allow multi connections on the server")
-
 /* race - server*/
 MACRO_CONFIG_INT(SvRegen, sv_regen, 0, 0, 50, CFGFLAG_SERVER, "Set regeneration")
 MACRO_CONFIG_INT(SvStrip, sv_strip, 0, 0, 1, CFGFLAG_SERVER, "Enable or disable keeping weapon after teleporting")

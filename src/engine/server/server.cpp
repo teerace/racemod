@@ -698,26 +698,6 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				m_NetServer.Drop(ClientID, "server is full");
 				return;
 			}
-
-			if(!g_Config.m_SvMulticonnect)
-            {
-				// temp addres for multiconnect
-				NETADDR TmpAddr;
-				
-				Addr = m_NetServer.ClientAddr(ClientID);
-				for(int i = 0; i < MAX_CLIENTS; i++)
-				{
-					if(i == ClientID)
-						continue;
-						
-					TmpAddr = m_NetServer.ClientAddr(i);
-					if(!net_addr_comp(&Addr, &TmpAddr))
-					{
-						m_NetServer.Drop(ClientID, "You are already connected to this server");
-						return;
-					}
-				}
-			}
 			
 			m_aClients[ClientID].m_State = CClient::STATE_CONNECTING;
 			SendMap(ClientID);
