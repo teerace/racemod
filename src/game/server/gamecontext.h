@@ -105,7 +105,7 @@ public:
 	class CCharacter *GetPlayerChar(int ClientID);
 	
 	// voting
-	void StartVote(const char *pDesc, const char *pCommand);
+	void StartVote(const char *pDesc, const char *pCommand, const char *pReason);
 	void EndVote();
 	void SendVoteSet(int ClientID);
 	void SendVoteStatus(int ClientID, int Total, int Yes, int No);
@@ -117,6 +117,7 @@ public:
 	int m_VotePos;
 	char m_aVoteDescription[64];
 	char m_aVoteCommand[512];
+	char m_aVoteReason[16];
 	int m_VoteEnforce;
 	enum
 	{
