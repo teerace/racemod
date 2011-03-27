@@ -113,6 +113,7 @@ client_depends = {}
 server_sql_depends = {}
 
 if family == "windows" then
+	table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib\\freetype.dll"))
 	table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\vc2005libs\\SDL.dll"))
 	table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\vc2005libs\\mysqlcppconn.dll"))
 	table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\vc2005libs\\libmysql.dll"))
