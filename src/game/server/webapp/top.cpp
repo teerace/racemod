@@ -51,7 +51,7 @@ int CWebTop::GetTop5(void *pUserData)
 	COut *pOut = new COut(WEB_USER_TOP);
 	pOut->m_ClientID = ClientID;
 	pOut->m_Start = Start;
-	for(int i = 0; i < Top.size(); i++)
+	for(unsigned int i = 0; i < Top.size(); i++)
 	{
 		Json::Value Run = Top[i];
 		CUserRank UserRank = CUserRank(Run["run"]["user"]["username"].asCString(),

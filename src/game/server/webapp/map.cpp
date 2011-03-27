@@ -39,7 +39,7 @@ int CWebMap::LoadList(void *pUserData)
 	mem_free(pReceived);
 	
 	COut *pOut = new COut(WEB_MAP_LIST);
-	for(int i = 0; i < Maplist.size(); i++)
+	for(unsigned int i = 0; i < Maplist.size(); i++)
 	{
 		Json::Value Map = Maplist[i];
 		int RoundCount = Map["run_count"].asInt();
@@ -56,8 +56,8 @@ int CWebMap::LoadList(void *pUserData)
 			float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
 			float aCheckpointTimes[25] = {0.0f};
 			Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
-			for(int i = 0; i < Checkpoint.size(); i++)
-				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
+			for(unsigned int j = 0; j < Checkpoint.size(); j++)
+				aCheckpointTimes[j] = str_tofloat(Checkpoint[j].asCString());
 			MapRecord.Set(Time, aCheckpointTimes);
 			
 			pOut->m_lMapRecord.add(MapRecord);

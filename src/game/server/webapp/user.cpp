@@ -379,7 +379,7 @@ int CWebUser::GetRank(void *pUserData)
 			float Time = str_tofloat(Rank["bestrun"]["time"].asCString());
 			float aCheckpointTimes[25] = {0.0f};
 			Json::Value Checkpoint = Rank["bestrun"]["checkpoints_list"];
-			for(int i = 0; i < Checkpoint.size(); i++)
+			for(unsigned int i = 0; i < Checkpoint.size(); i++)
 				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
 			Run.Set(Time, aCheckpointTimes);
 		}
