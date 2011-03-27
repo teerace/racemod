@@ -700,7 +700,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowTop5(pPlayer->GetCID());
 				
 #if defined(CONF_TEERACE)
-				if(!m_pWebapp->StandardScoring())
+				if(!m_pWebapp->DefaultScoring())
 				{
 					CWebTop::CParam *pParams = new CWebTop::CParam();
 					pParams->m_Start = Num;

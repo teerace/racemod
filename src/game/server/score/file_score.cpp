@@ -21,9 +21,9 @@ CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Time, const char
 CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_pServer(pGameServer->Server())
 {
 #if defined(CONF_TEERACE)
-	SetActive(g_Config.m_SvStandardScoring);
+	SetActive(g_Config.m_SvDefaultScoring);
 	
-	if(!g_Config.m_SvStandardScoring);
+	if(!g_Config.m_SvDefaultScoring);
 		return;
 #endif
 

@@ -374,7 +374,7 @@ int CWebUser::GetRank(void *pUserData)
 	if(MapRank)
 	{
 		// getting times
-		if(!pWebapp->StandardScoring())
+		if(!pWebapp->DefaultScoring())
 		{
 			float Time = str_tofloat(Rank["bestrun"]["time"].asCString());
 			float aCheckpointTimes[25] = {0.0f};

@@ -54,7 +54,7 @@ class CWebapp
 	
 	CMapInfo m_CurrentMap;
 	
-	bool m_StandardScoring;
+	bool m_DefaultScoring;
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
@@ -81,7 +81,7 @@ public:
 	
 	bool IsOnline() { return m_Online; }
 	
-	bool StandardScoring() { return m_StandardScoring; }
+	bool DefaultScoring() { return m_DefaultScoring; }
 	
 	void AddOutput(class IDataOut *pOut);
 	void Tick();

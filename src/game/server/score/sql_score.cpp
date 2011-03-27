@@ -20,9 +20,9 @@ CSqlScore::CSqlScore(CGameContext *pGameServer)
   m_Port(g_Config.m_SvSqlPort)
 {
 #if defined(CONF_TEERACE)
-	SetActive(g_Config.m_SvStandardScoring);
+	SetActive(g_Config.m_SvDefaultScoring);
 	
-	if(!g_Config.m_SvStandardScoring);
+	if(!g_Config.m_SvDefaultScoring);
 		return;
 #endif
 	

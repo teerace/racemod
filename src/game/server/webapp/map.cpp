@@ -51,7 +51,7 @@ int CWebMap::LoadList(void *pUserData)
 		
 		// getting times
 		CPlayerData MapRecord;
-		if(!pWebapp->StandardScoring() && RoundCount > 0)
+		if(!pWebapp->DefaultScoring() && RoundCount > 0)
 		{
 			float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
 			float aCheckpointTimes[25] = {0.0f};

@@ -23,7 +23,7 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer),
   m_pServer(pGameServer->Server()),
   m_pStorage(m_pServer->Storage()),
-  m_StandardScoring(g_Config.m_SvStandardScoring)
+  m_DefaultScoring(g_Config.m_SvDefaultScoring)
 {
 	char aBuf[512];
 	int Port = 80;
