@@ -42,16 +42,15 @@ int CWebMap::LoadList(void *pUserData)
 	for(unsigned int i = 0; i < Maplist.size(); i++)
 	{
 		Json::Value Map = Maplist[i];
-		int RoundCount = Map["run_count"].asInt();
 		pOut->m_lMapName.add(Map["name"].asString());
 		pOut->m_lMapURL.add(Map["get_download_url"].asString());
 		pOut->m_lMapAuthor.add(Map["author"].asString());
-		pOut->m_lMapRunCount.add(RoundCount);
+		pOut->m_lMapRunCount.add(Map["run_count"].asInt());
 		pOut->m_lMapID.add(Map["id"].asInt());
 		
 		// getting times
 		CPlayerData MapRecord;
-		if(!pWebapp->DefaultScoring() && RoundCount > 0)
+		if(!pWebapp->DefaultScoring() && Map["get_best_score"].type())
 		{
 			float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
 			float aCheckpointTimes[25] = {0.0f};
