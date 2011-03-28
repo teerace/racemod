@@ -128,6 +128,7 @@ public:
 	
 #if defined(CONF_TEERACE)
 	CDemoRecorder m_aDemoRecorder[MAX_CLIENTS+1];
+	CGhostRecorder m_aGhostRecorder[MAX_CLIENTS];
 #else
 	CDemoRecorder m_DemoRecorder;
 #endif
@@ -194,6 +195,11 @@ public:
 	void StartRecord(int ClientID);
 	void StopRecord(int ClientID);
 	bool IsRecording(int ClientID);
+	
+	void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet);
+	void StopGhostRecord(int ClientID, float Time=0.0f);
+	bool IsGhostRecording(int ClientID);
+	void GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlayer);
 #endif
 
 	char *GetMapName();

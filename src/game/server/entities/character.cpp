@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
+#include <engine/shared/ghost.h>
 #include <engine/shared/config.h>
 #include <game/server/gamecontext.h>
 #include <game/mapitems.h>
@@ -533,7 +534,7 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 	if(g_Config.m_SvAutoRecord && m_LastAction == Server()->Tick())
 	{
 		int ClientID = m_pPlayer->GetCID();
-		if(Server()->GetUserID(ClientID) > 0 && !Server()->IsRecording(ClientID) && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
+		if(!Server()->IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
 			Server()->StartRecord(ClientID);
 	}
 #endif
@@ -556,9 +557,16 @@ void CCharacter::OnDirectInput(CNetObj_PlayerInput *pNewInput)
 void CCharacter::Tick()
 {
 #if defined(CONF_TEERACE)
-	// stop demo recording
-	if(Server()->IsRecording(m_pPlayer->GetCID()) && m_LastAction+Server()->TickSpeed()*10 < Server()->Tick())
-		Server()->StopRecord(m_pPlayer->GetCID());
+	if(m_LastAction+Server()->TickSpeed()*10 < Server()->Tick())
+	{
+		// stop demo recording
+		if(Server()->IsRecording(m_pPlayer->GetCID()))
+			Server()->StopRecord(m_pPlayer->GetCID());
+		
+		// stop ghost recording
+		if(Server()->IsGhostRecording(m_pPlayer->GetCID()))
+			Server()->StopRecord(m_pPlayer->GetCID());
+	}
 #endif
 
 	if(m_pPlayer->m_ForceBalanced)
@@ -797,6 +805,26 @@ void CCharacter::TickDefered()
 			m_SendCore = m_Core;
 			m_ReckoningCore = m_Core;
 		}
+		
+#if defined(CONF_TEERACE)
+		// ghost record
+		if(Server()->IsGhostRecording(m_pPlayer->GetCID()))
+		{
+			IGhostRecorder::CGhostCharacter Player;
+			Player.m_X = Current.m_X;
+			Player.m_Y = Current.m_Y;
+			Player.m_VelX = Current.m_VelX;
+			Player.m_VelY = Current.m_VelY;
+			Player.m_Angle = Current.m_Angle;
+			Player.m_Direction = Current.m_Direction;
+			Player.m_Weapon = Current.m_Weapon;
+			Player.m_HookState = Current.m_HookState;
+			Player.m_HookX = Current.m_HookX;
+			Player.m_HookY = Current.m_HookY;
+			Player.m_AttackTick = Current.m_AttackTick;
+			Server()->GhostAddInfo(m_pPlayer->GetCID(), &Player);
+		}
+#endif
 	}
 }
 

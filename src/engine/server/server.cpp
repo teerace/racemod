@@ -1082,6 +1082,28 @@ bool CServer::IsRecording(int ClientID)
 {
 	return m_aDemoRecorder[ClientID].IsRecording();
 }
+
+void CServer::StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
+{
+	char aFilename[128];
+	str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%s_%d_tmp.gho", m_aCurrentMap, ClientID);
+	m_aGhostRecorder[ClientID].Start(Storage(), Console(), aFilename, m_aCurrentMap, m_CurrentMapCrc, ClientName(ClientID), pSkinName, UseCustomColor, ColorBody, ColorFeet);
+}
+
+void CServer::StopGhostRecord(int ClientID, float Time)
+{
+	m_aGhostRecorder[ClientID].Stop(Time);
+}
+
+bool CServer::IsGhostRecording(int ClientID)
+{
+	return m_aGhostRecorder[ClientID].IsRecording();
+}
+
+void CServer::GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlayer)
+{
+	m_aGhostRecorder[ClientID].AddInfos(pPlayer);
+}
 #endif
 
 char *CServer::GetMapName()

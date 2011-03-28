@@ -2,8 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef ENGINE_SERVER_H
 #define ENGINE_SERVER_H
+
 #include "kernel.h"
 #include "message.h"
+#include <engine/shared/ghost.h>
 
 class IServer : public IInterface
 {
@@ -71,6 +73,11 @@ public:
 	virtual void StartRecord(int ClientID) = 0;
 	virtual void StopRecord(int ClientID) = 0;
 	virtual bool IsRecording(int ClientID) = 0;
+	
+	virtual void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet) = 0;
+	virtual void StopGhostRecord(int ClientID, float Time=0.0f) = 0;
+	virtual bool IsGhostRecording(int ClientID) = 0;
+	virtual void GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlayer) = 0;
 #endif
 };
 

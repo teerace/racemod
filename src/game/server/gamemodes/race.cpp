@@ -68,6 +68,9 @@ int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlay
 #if defined(CONF_TEERACE)
 	if(Server()->IsRecording(ClientID))
 		Server()->StopRecord(ClientID);
+	
+	if(Server()->IsGhostRecording(ClientID))
+		Server()->StopGhostRecord(ClientID);
 #endif
 
 	return 0;
@@ -112,6 +115,7 @@ void CGameControllerRACE::Tick()
 		
 #if defined(CONF_TEERACE)
 		// stop recording at the finish
+		CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
 		if(Server()->IsRecording(i))
 		{
 			if(Server()->Tick() == m_aStopRecordTick[i])
@@ -121,10 +125,13 @@ void CGameControllerRACE::Tick()
 				continue;
 			}
 			
-			CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
 			if(m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
 				Server()->StopRecord(i);
 		}
+		
+		// stop ghost if time is bigger then best time
+		if(Server()->IsGhostRecording(i) && m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
+			Server()->StopGhostRecord(i);
 #endif
 	}
 }
@@ -165,6 +172,11 @@ bool CGameControllerRACE::OnRaceStart(int ID, float StartAddTime, bool Check)
 		if(!pChr->HasWeapon(WEAPON_GRENADE))
 			GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
 	}
+
+#if defined(CONF_TEERACE)
+	if(Server()->GetUserID(ID) > 0 && !Server()->IsGhostRecording(ID))
+		Server()->StartGhostRecord(ID, pChr->GetPlayer()->m_TeeInfos.m_SkinName, pChr->GetPlayer()->m_TeeInfos.m_UseCustomColor, pChr->GetPlayer()->m_TeeInfos.m_ColorBody, pChr->GetPlayer()->m_TeeInfos.m_ColorFeet);
+#endif
 
 	return true;
 }
@@ -214,6 +226,10 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	// set stop record tick
 	if(Server()->IsRecording(ID))
 		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
+	
+	// stop ghost record
+	if(Server()->IsGhostRecording(ID))
+		Server()->StopGhostRecord(ID, FinishTime);
 	
 	// post to webapp
 	if(GameServer()->Webapp())
