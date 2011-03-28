@@ -14,6 +14,7 @@
 CGameControllerRACE::CGameControllerRACE(class CGameContext *pGameServer) : IGameController(pGameServer)
 {
 	m_pGameType = "Race";
+	m_pTeleporter = 0;
 	
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
