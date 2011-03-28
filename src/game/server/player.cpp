@@ -229,7 +229,7 @@ void CPlayer::TryRespawn()
 {
 	vec2 SpawnPos;
 	
-	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
+	if(!GameServer()->m_pController->CanSpawn(this, &SpawnPos))
 		return;
 
 	m_Spawning = false;

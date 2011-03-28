@@ -82,7 +82,7 @@ void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
 	pChr->GiveWeapon(WEAPON_GRENADE, 10);
 }
 
-bool CGameControllerFC::CanSpawn(class CPlayer *pPlayer, vec2 *pOutPos)
+bool CGameControllerFC::CanSpawn(CPlayer *pPlayer, vec2 *pOutPos)
 {
 	CSpawnEval Eval;
 	

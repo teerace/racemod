@@ -78,9 +78,10 @@ void IGameController::EvaluateSpawnType(CSpawnEval *pEval, int T)
 	}
 }
 
-bool IGameController::CanSpawn(int Team, vec2 *pOutPos)
+bool IGameController::CanSpawn(CPlayer *pPlayer, vec2 *pOutPos)
 {
 	CSpawnEval Eval;
+	int Team = pPlayer->GetTeam();
 	
 	// spectators can't spawn
 	if(Team == TEAM_SPECTATORS)
