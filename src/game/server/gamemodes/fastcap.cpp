@@ -79,7 +79,8 @@ void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
 	pChr->IncreaseArmor(10);
 	
 	// give nades
-	pChr->GiveWeapon(WEAPON_GRENADE, 10);
+	if(!g_Config.m_SvNoItems)
+		pChr->GiveWeapon(WEAPON_GRENADE, 10);
 }
 
 bool CGameControllerFC::CanSpawn(CPlayer *pPlayer, vec2 *pOutPos)
