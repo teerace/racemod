@@ -123,8 +123,8 @@ void CWebapp::Tick()
 				if(pData->m_UserID > 0)
 				{
 					char aBuf[128];
-					str_format(aBuf, sizeof(aBuf), "logged in successfully (%s)", pData->m_aUsername);
-					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+					str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(pData->m_ClientID), pData->m_aUsername);
+					GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 					Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
 					Server()->SetUserName(pData->m_ClientID, pData->m_aUsername);
 					
