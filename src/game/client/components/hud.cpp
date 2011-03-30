@@ -280,6 +280,9 @@ void CHud::RenderConnectionWarning()
 
 void CHud::RenderTeambalanceWarning()
 {
+	if(m_pClient->m_IsRace)
+		return;
+	
 	// render prompt about team-balance
 	bool Flash = time_get()/(time_freq()/2)%2 == 0;
 	if (m_pClient->m_Snap.m_pGameobj && (m_pClient->m_Snap.m_pGameobj->m_Flags&GAMEFLAG_TEAMS) != 0)
