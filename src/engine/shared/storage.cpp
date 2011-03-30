@@ -72,7 +72,7 @@ public:
 			fs_makedir(GetPath(TYPE_SAVE, "ghosts", aPath, sizeof(aPath)));
 #if defined(CONF_TEERACE)
 			fs_makedir(GetPath(TYPE_SAVE, "ghosts/teerace", aPath, sizeof(aPath)));
-#endif;
+#endif
 		}
 
 		return m_NumPaths ? 0 : 1;
