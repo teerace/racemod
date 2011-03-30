@@ -23,7 +23,7 @@ CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), 
 #if defined(CONF_TEERACE)
 	SetActive(g_Config.m_SvDefaultScoring);
 	
-	if(!g_Config.m_SvDefaultScoring);
+	if(!g_Config.m_SvDefaultScoring)
 		return;
 #endif
 
