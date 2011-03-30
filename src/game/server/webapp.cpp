@@ -169,20 +169,18 @@ void CWebapp::Tick()
 						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
 							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 					else
-					{
-						// saving the best run
-						if(pData->m_GetBestRun)
-							GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
-						
 						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d (%s)",
 							pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
-					}
 					
 					if(g_Config.m_SvShowTimes)
 						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 					else
 						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				}
+				
+				// saving the best run
+				if(pData->m_GetBestRun && pData->m_MapRank)
+					GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
 			}
 		}
 		else if(Type == WEB_USER_TOP)

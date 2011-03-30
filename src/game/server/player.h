@@ -81,6 +81,7 @@ public:
 #if defined(CONF_TEERACE)
 	int m_GlobalRank;
 	int m_MapRank;
+	bool m_RequestedBestTime;
 #endif
 	
 private:

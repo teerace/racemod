@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <engine/shared/config.h>
 
+#include "webapp/user.h"
+
+#include "webapp.h"
 #include "player.h"
 
 
@@ -33,6 +36,7 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 #if defined(CONF_TEERACE)
 	m_GlobalRank = 0;
 	m_MapRank = 0;
+	m_RequestedBestTime = false;
 #endif
 }
 
@@ -52,6 +56,26 @@ void CPlayer::Tick()
 
 	Server()->SetClientScore(m_ClientID, m_Score);
 
+#if defined(CONF_TEERACE)
+	// getting best time if nessesary
+	if(!m_RequestedBestTime)
+	{
+		m_RequestedBestTime = true;
+		
+		int UserID = Server()->GetUserID(m_ClientID);
+		if(UserID > 0)
+		{
+			CWebUser::CParam *pParams = new CWebUser::CParam();
+			str_copy(pParams->m_aName, Server()->GetUserName(m_ClientID), sizeof(pParams->m_aName));
+			pParams->m_ClientID = m_ClientID;
+			pParams->m_UserID = UserID;
+			pParams->m_PrintRank = 0;
+			pParams->m_GetBestRun = 1;
+			GameServer()->Webapp()->AddJob(CWebUser::GetRank, pParams);
+		}
+	}
+#endif
+	
 	// do latency stuff
 	{
 		IServer::CClientInfo Info;
