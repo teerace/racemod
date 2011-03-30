@@ -843,13 +843,13 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				
 				if(Unpacker.Error() == 0)
 				{
-#if defined(CONF_TEERACE)
 					if(str_comp_num(pPw, "teerace:", 8) == 0)
 					{
+#if defined(CONF_TEERACE)
 						GameServer()->OnTeeraceAuth(ClientID, pPw);
+#endif
 						return;
 					}
-#endif
 					
 					if(g_Config.m_SvRconPassword[0] == 0)
 					{
