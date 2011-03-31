@@ -63,7 +63,7 @@ class CWebapp
 	void LoadMaps();
 	int UpdateJobs();
 	
-	static void MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
+	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	
 public:
 	static const char GET[];

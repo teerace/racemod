@@ -460,16 +460,18 @@ int CWebapp::UpdateJobs()
 	return Num;
 }
 
-void CWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
+int CWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
 {
 	CWebapp *pWebapp = (CWebapp*)pUser;
 	int Length = str_length(pName);
 	if(IsDir || Length < 4 || str_comp(pName+Length-4, ".map") != 0)
-		return;
+		return 0;
 	
 	char aBuf[256];
 	str_copy(aBuf, pName, min((int)sizeof(aBuf),Length-3));
 	pWebapp->m_lMapList.add(aBuf);
+	
+	return 0;
 }
 
 void CWebapp::LoadMaps()
