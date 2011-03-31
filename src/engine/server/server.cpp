@@ -15,6 +15,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
 #include <engine/shared/demo.h>
+#include <engine/shared/mapchecker.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
@@ -1147,6 +1148,13 @@ int CServer::LoadMap(const char *pMapName)
 	/*df = datafile_load(buf);
 	if(!df)
 		return 0;*/
+
+	// check for valid standard map
+	if(!m_MapChecker.ReadAndValidateMap(Storage(), aBuf, IStorage::TYPE_ALL))
+	{
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mapchecker", "invalid standard map");
+		return 0;
+	}
 		
 	// prefer teerace maps
 	if(!m_pMap->Load(aBuf))

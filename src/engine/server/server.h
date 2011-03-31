@@ -131,6 +131,7 @@ public:
 #endif
 
 	CRegister m_Register;
+	CMapChecker m_MapChecker;
 	
 	CServer();
 	
