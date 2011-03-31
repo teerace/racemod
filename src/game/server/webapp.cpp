@@ -169,8 +169,16 @@ void CWebapp::Tick()
 						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
 							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 					else
-						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d (%s)",
-							pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, Server()->ClientName(pData->m_ClientID));
+					{
+						if(pData->m_BestRun.m_Time < 60.0f)
+							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
+								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, pData->m_BestRun.m_Time,
+								Server()->ClientName(pData->m_ClientID));
+						else
+							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
+								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, (int)pData->m_BestRun.m_Time/60,
+								fmod(pData->m_BestRun.m_Time, 60), Server()->ClientName(pData->m_ClientID));
+					}
 					
 					if(g_Config.m_SvShowTimes)
 						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
