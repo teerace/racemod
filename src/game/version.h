@@ -4,6 +4,7 @@
 #define GAME_VERSION_H
 #include "generated/nethash.c"
 #define GAME_VERSION "0.6 trunk"
-#define GAME_NETVERSION "0.6 " GAME_NETVERSION_HASH
+//#define GAME_NETVERSION "0.6 " GAME_NETVERSION_HASH
+#define GAME_NETVERSION "0.6 48ece3e66417d617"
 #define RACE_VERSION "3.0-dev"
 #endif
