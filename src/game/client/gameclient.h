@@ -91,7 +91,7 @@ public:
 	bool m_IsFastCap;
 	bool m_RaceMsgSent;
 	int m_ShowOthers;
-	vec2 m_FlagPos;
+	vec2 m_aFlagPos[2];
 
 	// TODO: move this
 	CTuningParams m_Tuning;

@@ -264,7 +264,8 @@ void CGameClient::OnInit()
 	m_IsRace = false;
 	m_RaceMsgSent = false;
 	m_ShowOthers = -1;
-	m_FlagPos = vec2(-1, -1);
+	for(int i = 0; i < 2; i++)
+		m_aFlagPos[i] = vec2(-1, -1);
 }
 
 void CGameClient::DispatchInput()
@@ -327,6 +328,15 @@ void CGameClient::OnConnected()
 	
 	// send the inital info
 	SendInfo(true);
+	
+	// get flag positions
+	for(int i = 0; i < m_Collision.GetWidth()*m_Collision.GetHeight(); i++)
+	{
+		if(m_Collision.GetCollisionRace(i) == ENTITY_FLAGSTAND_RED)
+			m_aFlagPos[TEAM_RED] = vec2((i%m_Collision.GetWidth())*32+16, (i/m_Collision.GetWidth())*32+16);
+		else if(m_Collision.GetCollisionRace(i) == ENTITY_FLAGSTAND_BLUE)
+			m_aFlagPos[TEAM_RED] = vec2((i%m_Collision.GetWidth())*32+16, (i/m_Collision.GetWidth())*32+16);
+	}
 }
 
 void CGameClient::OnReset()
@@ -357,7 +367,8 @@ void CGameClient::OnReset()
 	m_IsRace = false;
 	m_RaceMsgSent = false;
 	m_ShowOthers = -1;
-	m_FlagPos = vec2(-1, -1);
+	for(int i = 0; i < 2; i++)
+		m_aFlagPos[i] = vec2(-1, -1);
 }
 
 
