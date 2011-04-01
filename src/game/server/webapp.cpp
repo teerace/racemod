@@ -264,7 +264,7 @@ bool CWebapp::Connect()
 {
 	// connect to the server
 	m_Socket = net_tcp_create(&m_Addr);
-	if(m_Socket == NETSOCKET_INVALID)
+	if(m_Socket.type == NETTYPE_INVALID)
 		return false;
 	
 	return true;

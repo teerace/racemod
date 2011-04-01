@@ -23,8 +23,6 @@
 #include <engine/shared/ghost.h>
 #include <engine/shared/network.h>
 
-#include "srvbrowse.h"
-
 class CGraph
 {
 public:

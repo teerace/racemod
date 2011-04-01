@@ -243,7 +243,7 @@ void CSqlScore::LoadScore(int ClientID)
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientID), sizeof(Tmp->m_aName));
-	Server()->GetClientIP(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
+	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	Tmp->m_pSqlData = this;
 	
 	void *LoadThread = thread_create(LoadScoreThread, Tmp);
@@ -334,7 +334,7 @@ void CSqlScore::SaveScore(int ClientID)
 	Tmp->m_Time = PlayerData(ClientID)->m_Time;
 	mem_copy(Tmp->m_aCpCurrent, PlayerData(ClientID)->m_aCpTime, sizeof(Tmp->m_aCpCurrent));
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientID), sizeof(Tmp->m_aName));
-	Server()->GetClientIP(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
+	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	Tmp->m_pSqlData = this;
 	
 	void *SaveThread = thread_create(SaveScoreThread, Tmp);
@@ -431,7 +431,7 @@ void CSqlScore::ShowRank(int ClientID, const char* pName, bool Search)
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;
 	str_copy(Tmp->m_aName, pName, sizeof(Tmp->m_aName));
-	Server()->GetClientIP(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
+	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	Tmp->m_Search = Search;
 	str_format(Tmp->m_aRequestingPlayer, sizeof(Tmp->m_aRequestingPlayer), " (%s)", Server()->ClientName(ClientID));
 	Tmp->m_pSqlData = this;

@@ -144,7 +144,7 @@ void CFileScore::Init()
 CFileScore::CPlayerScore *CFileScore::SearchScore(int ID, bool ScoreIP, int *pPosition)
 {
 	char aIP[16];
-	Server()->GetClientIP(ID, aIP, sizeof(aIP));
+	Server()->GetClientAddr(ID, aIP, sizeof(aIP));
 	
 	int Pos = 1;
 	for(sorted_array<CPlayerScore>::range r = m_Top.all(); !r.empty(); r.pop_front())
@@ -199,7 +199,7 @@ void CFileScore::LoadScore(int ClientID)
 #endif
 
 	char aIP[16];
-	Server()->GetClientIP(ClientID, aIP, sizeof(aIP));
+	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));
 	CPlayerScore *pPlayer = SearchScore(ClientID, 0, 0);
 	if(pPlayer && strcmp(pPlayer->m_aIP, aIP) != 0)
 	{
@@ -223,7 +223,7 @@ void CFileScore::SaveScore(int ClientID)
 
 	const char *pName = Server()->ClientName(ClientID);
 	char aIP[16];
-	Server()->GetClientIP(ClientID, aIP, sizeof(aIP));
+	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));
 
 	lock_wait(gs_ScoreLock);
 	CPlayerScore *pPlayer = SearchScore(ClientID, 1, 0);
