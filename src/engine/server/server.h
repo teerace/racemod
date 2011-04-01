@@ -129,7 +129,6 @@ public:
 	CDemoRecorder m_DemoRecorder;
 #endif
 
-	CEngine m_Engine;
 	CRegister m_Register;
 	
 	CServer();

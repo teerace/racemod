@@ -438,7 +438,7 @@ void CHud::RenderSpeedmeter()
 		Speed += SmoothTable[i];
 	Speed /= SMOOTH_TABLE_SIZE;
 
-	int GameFlags = m_pClient->m_Snap.m_pGameobj->m_Flags;
+	int GameFlags = m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_FLAGS;
 	int LastIndex = SmoothIndex - 1;
 	if(LastIndex < 0)
 		LastIndex = SMOOTH_TABLE_SIZE - 1;
@@ -456,8 +456,8 @@ void CHud::RenderSpeedmeter()
 	if(GameFlags&GAMEFLAG_TEAMS)
 	{
 		char aScoreTeam[2][32];
-		str_format(aScoreTeam[TEAM_RED], sizeof(aScoreTeam)/2, "%d", m_pClient->m_Snap.m_pGameobj->m_TeamscoreRed);
-		str_format(aScoreTeam[TEAM_BLUE], sizeof(aScoreTeam)/2, "%d", m_pClient->m_Snap.m_pGameobj->m_TeamscoreBlue);
+		str_format(aScoreTeam[TEAM_RED], sizeof(aScoreTeam)/2, "%d", m_pClient->m_Snap.m_pGameDataObj->m_TeamscoreRed);
+		str_format(aScoreTeam[TEAM_BLUE], sizeof(aScoreTeam)/2, "%d", m_pClient->m_Snap.m_pGameDataObj->m_TeamscoreBlue);
 		float aScoreTeamWidth[2] = {TextRender()->TextWidth(0, 14.0f, aScoreTeam[TEAM_RED], -1), TextRender()->TextWidth(0, 14.0f, aScoreTeam[TEAM_BLUE], -1)};
 		float ScoreWidthMax = max(max(aScoreTeamWidth[TEAM_RED], aScoreTeamWidth[TEAM_BLUE]), TextRender()->TextWidth(0, 14.0f, "100", -1));
 		float Split = 3.0f;

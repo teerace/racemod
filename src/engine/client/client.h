@@ -18,7 +18,6 @@
 #include <engine/masterserver.h>
 #include <engine/storage.h>
 
-#include <engine/shared/engine.h>
 #include <engine/shared/protocol.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/ghost.h>
