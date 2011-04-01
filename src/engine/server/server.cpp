@@ -655,6 +655,12 @@ void CServer::SendMap(int ClientID)
 	SendMsgEx(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID, true);
 }
 
+void CServer::SendConnectionReady(int ClientID)
+{
+	CMsgPacker Msg(NETMSG_CON_READY);
+	SendMsgEx(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID, true);
+}
+
 void CServer::SendRconLine(int ClientID, const char *pLine)
 {
 	CMsgPacker Msg(NETMSG_RCON_LINE);

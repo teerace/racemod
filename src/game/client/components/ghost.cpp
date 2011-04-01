@@ -510,7 +510,7 @@ void CGhost::OnConsoleInit()
 void CGhost::OnMessage(int MsgType, void *pRawMsg)
 {
 	// only for race
-	if(!m_pClient->m_IsRace || !g_Config.m_ClRaceGhost || m_pClient->m_Snap.m_Spectate)
+	if(!m_pClient->m_IsRace || !g_Config.m_ClRaceGhost || m_pClient->m_Snap.m_SpecInfo.m_Active)
 		return;
 	
 	// check for messages from server
