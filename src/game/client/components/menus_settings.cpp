@@ -1030,7 +1030,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		RenderSettingsGraphics(MainView);
 	else if(s_SettingsPage == 6)
 		RenderSettingsSound(MainView);
-	else if(s_SettingsPage == 5)
+	else if(s_SettingsPage == 7)
 		RenderSettingsRace(MainView);
 
 	if(m_NeedRestartGraphics || m_NeedRestartSound)
