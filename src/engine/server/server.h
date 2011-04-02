@@ -119,7 +119,7 @@ public:
 	//static NETADDR4 master_server;
 
 	char m_aCurrentMap[64];
-	int m_CurrentMapCrc;
+	unsigned m_CurrentMapCrc;
 	unsigned char *m_pCurrentMapData;
 	int m_CurrentMapSize;	
 	

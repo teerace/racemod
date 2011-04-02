@@ -26,7 +26,7 @@ public:
 	CDemoRecorder() {}
 #endif
 	
-	int Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetversion, const char *pMap, int MapCrc, const char *pType);
+	int Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetversion, const char *pMap, unsigned MapCrc, const char *pType);
 	int Stop();
 
 	void RecordSnapshot(int Tick, const void *pData, int Size);
