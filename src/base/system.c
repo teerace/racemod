@@ -1115,7 +1115,7 @@ int net_tcp_connect(NETSOCKET sock, const NETADDR *a)
 	// workaround for teerace
 	struct sockaddr_in addr;
 	netaddr_to_sockaddr_in(a, &addr);
-	return connect(sock.ipv4sock, &addr, sizeof(addr));
+	return connect(sock.ipv4sock, (struct sockaddr *)&addr, sizeof(addr));
 }
 
 int net_tcp_connect_non_blocking(NETSOCKET sock, const NETADDR *a)
