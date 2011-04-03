@@ -42,6 +42,7 @@ public:
 		int m_ClientID;
 		int m_UserID;
 		char m_aUsername[32];
+		char m_aClan[MAX_CLAN_LENGTH];
 		int m_GlobalRank;
 		int m_MapRank;
 		CPlayerData m_BestRun;

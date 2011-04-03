@@ -13,6 +13,7 @@ public:
 	public:
 		int m_UserID;
 		char m_aName[MAX_NAME_LENGTH];
+		char m_aClan[MAX_CLAN_LENGTH];
 		float m_Time;
 		float m_aCpTime[NUM_CHECKPOINTS];
 	};

@@ -21,18 +21,19 @@ int CWebPing::Ping(void *pUserData)
 	Json::FastWriter Writer;
 	
 	int Num = 0;
-	for(int i = 0; i < pData->m_Name.size(); i++)
+	for(int i = 0; i < pData->m_lName.size(); i++)
 	{
-		int User = (pData->m_UserID[i] > 0);
+		int User = (pData->m_lUserID[i] > 0);
 		if(User)
 		{
+			// TODO: send clan
 			char aBuf[16];
-			str_format(aBuf, sizeof(aBuf), "%d", pData->m_UserID[i]);
-			Data["users"][aBuf] = pData->m_Name[i];
+			str_format(aBuf, sizeof(aBuf), "%d", pData->m_lUserID[i]);
+			Data["users"][aBuf] = pData->m_lName[i];
 		}
 		else
 		{
-			Data["anonymous"][Num] = pData->m_Name[i];
+			Data["anonymous"][Num] = pData->m_lName[i];
 			Num++;
 		}		
 	}

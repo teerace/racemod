@@ -238,6 +238,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 		pParams->m_UserID = Server()->GetUserID(ID);
 		pParams->m_ClientID = ID;
 		str_copy(pParams->m_aName, Server()->ClientName(ID), MAX_NAME_LENGTH);
+		str_copy(pParams->m_aClan, Server()->ClientClan(ID), MAX_CLAN_LENGTH);
 		pParams->m_Time = FinishTime;
 		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));
 		GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);

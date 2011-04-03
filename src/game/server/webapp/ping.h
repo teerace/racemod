@@ -9,8 +9,9 @@ public:
 	class CParam : public IDataIn
 	{
 	public:
-		array<std::string> m_Name;
-		array<int> m_UserID;
+		array<std::string> m_lName;
+		array<std::string> m_lClan;
+		array<int> m_lUserID;
 	};
 	
 	class COut : public IDataOut

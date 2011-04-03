@@ -258,7 +258,7 @@ int CWebUser::UpdateSkin(void *pUserData)
 	return Size >= 0;
 }
 
-int CWebUser::GetRank(void *pUserData)
+int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;

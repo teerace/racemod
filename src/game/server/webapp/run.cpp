@@ -26,6 +26,8 @@ int CWebRun::Post(void *pUserData)
 	// TODO: take this out after 0.6 release
 	str_sanitize_strong(pData->m_aName);
 	Run["nickname"] = pData->m_aName;
+	if(pData->m_aClan[0])
+		Run["clan"] = pData->m_aClan;
 	str_format(aBuf, sizeof(aBuf), "%.3f", pData->m_Time);
 	Run["time"] = aBuf;
 	float *pCpTime = pData->m_aCpTime;

@@ -446,8 +446,9 @@ void CGameContext::OnTick()
 			{
 				if(m_apPlayers[i])
 				{
-					pParams->m_Name.add(Server()->ClientName(i));
-					pParams->m_UserID.add(Server()->GetUserID(i));
+					pParams->m_lName.add(Server()->ClientName(i));
+					pParams->m_lClan.add(Server()->ClientClan(i));
+					pParams->m_lUserID.add(Server()->GetUserID(i));
 				}
 			}
 			m_pWebapp->AddJob(CWebPing::Ping, pParams, 0);
