@@ -1111,7 +1111,11 @@ int net_tcp_connect(NETSOCKET sock, const NETADDR *a)
 	netaddr_to_sockaddr(a, &addr);
 	return connect(sock, &addr, sizeof(addr));
 	*/
-	return 0;
+	//return 0;
+	// workaround for teerace
+	struct sockaddr_in addr;
+	netaddr_to_sockaddr_in(a, &addr);
+	return connect(sock.ipv4sock, &addr, sizeof(addr));
 }
 
 int net_tcp_connect_non_blocking(NETSOCKET sock, const NETADDR *a)
@@ -1133,6 +1137,8 @@ int net_tcp_send(NETSOCKET sock, const void *data, int size)
 {
 	int bytes = 0;
 	/* bytes = send((int)sock, (const char*)data, size, 0); */
+	// workaround for teerace
+	bytes = send((int)sock.ipv4sock, (const char*)data, size, 0);
 	return bytes;
 }
 
@@ -1140,6 +1146,8 @@ int net_tcp_recv(NETSOCKET sock, void *data, int maxsize)
 {
 	int bytes = 0;
 	/* bytes = recv((int)sock, (char*)data, maxsize, 0); */
+	// workaround for teerace
+	bytes = recv((int)sock.ipv4sock, (char*)data, maxsize, 0);
 	return bytes;
 }
 
