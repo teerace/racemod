@@ -44,10 +44,25 @@ int CWebRun::Post(void *pUserData)
 	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/runs/new/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
-	mem_free(pReceived);
 	
 	if(Size < 0)
-		dbg_msg("webapp", "error: %d (post run)", Size);
+	{
+		dbg_msg("webapp", "error: %d (run)", Size);
+		return 0;
+	}
+	
+	Json::Reader Reader;
+	if(!Reader.parse(pReceived, pReceived+Size, Run))
+	{
+		mem_free(pReceived);
+		return 0;
+	}
+	
+	mem_free(pReceived);
+	
+	COut *pOut = new COut(WEB_RUN);
+	pOut->m_RunID = Run["id"].asInt();
+	pWebapp->AddOutput(pOut);
 	
 	return Size >= 0;
 }

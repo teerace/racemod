@@ -1,4 +1,5 @@
 /* copyright (c) 2007 rajh, race mod stuff */
+#include <engine/storage.h>
 #include <engine/shared/config.h>
 #include <game/server/entities/character.h>
 #include <game/server/player.h>
@@ -222,15 +223,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 	}
 	
-#if defined(CONF_TEERACE)
-	// set stop record tick
-	if(Server()->IsRecording(ID))
-		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
-	
-	// stop ghost record
-	if(Server()->IsGhostRecording(ID))
-		Server()->StopGhostRecord(ID, FinishTime);
-	
+#if defined(CONF_TEERACE)	
 	// post to webapp
 	if(GameServer()->Webapp())
 	{
@@ -241,11 +234,27 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 		str_copy(pParams->m_aClan, Server()->ClientClan(ID), MAX_CLAN_LENGTH);
 		pParams->m_Time = FinishTime;
 		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));
+		
+		if(NewRecord && Server()->GetUserID(ID) > 0)
+		{
+			// set demo and ghost so that it is saved
+			Server()->SaveGhostDemo(ID);
+			pParams->m_Tick = Server()->Tick();
+		}
+		
 		GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
 		
 		// higher run count
 		GameServer()->Webapp()->CurrentMap()->m_RunCount++;
 	}
+	
+	// set stop record tick
+	if(Server()->IsRecording(ID))
+		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
+	
+	// stop ghost record
+	if(Server()->IsGhostRecording(ID))
+		Server()->StopGhostRecord(ID, FinishTime);
 #endif
 
 	return true;

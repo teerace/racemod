@@ -164,7 +164,12 @@ void CServer::CClient::Reset()
 	m_LastInputTick = -1;
 	m_SnapRate = CClient::SNAPRATE_INIT;
 	m_Score = 0;
+#if defined(CONF_TEERACE)
+	m_SaveDemoTick = -1;
+	m_SaveGhostTick = -1;
+#endif
 }
+
 #if defined(CONF_TEERACE)
 CServer::CServer()
 #else
@@ -611,6 +616,8 @@ int CServer::NewClientCallback(int ClientID, void *pUser)
 #if defined(CONF_TEERACE)
 	pThis->m_aClients[ClientID].m_UserID = 0;
 	mem_zero(pThis->m_aClients[ClientID].m_aUsername, sizeof(pThis->m_aClients[ClientID].m_aUsername));
+	pThis->m_aClients[ClientID].m_SaveDemoTick = -1;
+	pThis->m_aClients[ClientID].m_SaveGhostTick = -1;
 #endif
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].Reset();
@@ -640,6 +647,8 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 #if defined(CONF_TEERACE)
 	pThis->m_aClients[ClientID].m_UserID = 0;
 	mem_zero(pThis->m_aClients[ClientID].m_aUsername, sizeof(pThis->m_aClients[ClientID].m_aUsername));
+	pThis->m_aClients[ClientID].m_SaveDemoTick = -1;
+	pThis->m_aClients[ClientID].m_SaveGhostTick = -1;
 #endif
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
@@ -1086,6 +1095,12 @@ void CServer::ReloadMap()
 	m_MapReload = 1;
 }
 
+void CServer::SaveGhostDemo(int ClientID)
+{
+	m_aClients[ClientID].m_SaveDemoTick = Tick();
+	m_aClients[ClientID].m_SaveGhostTick = Tick();
+}
+
 void CServer::StartRecord(int ClientID)
 {
 	char aFilename[128];
@@ -1096,6 +1111,18 @@ void CServer::StartRecord(int ClientID)
 void CServer::StopRecord(int ClientID)
 {
 	m_aDemoRecorder[ClientID].Stop();
+
+	if(m_aClients[ClientID].m_SaveDemoTick > -1)
+	{
+		// rename the demo
+		char aOldFilename[256];
+		char aNewFilename[256];
+		str_format(aOldFilename, sizeof(aOldFilename), "demos/teerace/%s_%d_tmp.demo", m_aCurrentMap, ClientID);
+		str_format(aNewFilename, sizeof(aNewFilename), "demos/teerace/%d_%d.demo", m_aClients[ClientID].m_SaveDemoTick, ClientID);
+		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
+		
+		m_aClients[ClientID].m_SaveDemoTick = -1;
+	}
 }
 
 bool CServer::IsRecording(int ClientID)
@@ -1113,6 +1140,18 @@ void CServer::StartGhostRecord(int ClientID, const char* pSkinName, int UseCusto
 void CServer::StopGhostRecord(int ClientID, float Time)
 {
 	m_aGhostRecorder[ClientID].Stop(Time);
+
+	if(m_aClients[ClientID].m_SaveGhostTick > -1)
+	{
+		// rename the ghost
+		char aOldFilename[256];
+		char aNewFilename[256];
+		str_format(aOldFilename, sizeof(aOldFilename), "ghosts/teerace/%s_%d_tmp.gho", m_aCurrentMap, ClientID);
+		str_format(aNewFilename, sizeof(aNewFilename), "ghosts/teerace/%d_%d.gho", m_aClients[ClientID].m_SaveGhostTick, ClientID);
+		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
+		
+		m_aClients[ClientID].m_SaveGhostTick = -1;
+	}
 }
 
 bool CServer::IsGhostRecording(int ClientID)

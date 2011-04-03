@@ -73,6 +73,10 @@ public:
 	virtual void SetUserName(int ClientID, const char* pUsername) = 0;
 	virtual const char* GetUserName(int ClientID) = 0;
 	
+	virtual char *GetMapName() = 0;
+	
+	virtual void SaveGhostDemo(int ClientID) = 0;
+	
 	virtual void StartRecord(int ClientID) = 0;
 	virtual void StopRecord(int ClientID) = 0;
 	virtual bool IsRecording(int ClientID) = 0;
