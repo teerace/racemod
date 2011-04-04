@@ -860,7 +860,9 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 	
 	// api token box
 	LeftView.HSplitTop(20.0f, &Button, &LeftView);
-	UI()->DoLabel(&Button, "Api token:", 14.0, -1);
+	char aBuf[32];
+	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Api token"));
+	UI()->DoLabel(&Button, aBuf, 14.0, -1);
 	Button.VSplitLeft(80.0f, 0, &Button);
 	Button.VSplitLeft(180.0f, &Button, 0);
 	static float Offset = 0.0f;
