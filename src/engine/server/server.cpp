@@ -1388,7 +1388,7 @@ int CServer::Run()
 			}
 			
 			// master server stuff
-			m_Register.RegisterUpdate();
+			m_Register.RegisterUpdate(BindAddr.type);
 	
 			PumpNetwork();
 	
