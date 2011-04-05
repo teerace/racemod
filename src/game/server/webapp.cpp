@@ -50,6 +50,8 @@ CWebapp::CWebapp(CGameContext *pGameServer)
 	m_JobPool.Init(1);
 	m_Jobs.delete_all();
 	
+	m_lUploads.delete_all();
+	
 	m_OutputLock = lock_create();
 	m_pFirst = 0;
 	m_pLast = 0;
@@ -68,6 +70,7 @@ CWebapp::~CWebapp()
 	} while(m_Jobs.size() > 0);
 	m_lMapList.clear();
 	m_Jobs.delete_all();
+	m_lUploads.delete_all();
 	
 	IDataOut *pNext;
 	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
@@ -257,12 +260,59 @@ void CWebapp::Tick()
 		else if(Type == WEB_RUN)
 		{
 			CWebRun::COut *pData = (CWebRun::COut*)pItem;
-			// start demo and ghost upload here
+			if(pData->m_Tick > -1)
+			{
+				// demo
+				CUpload *pDemo = new CUpload(UPLOAD_DEMO);
+				pDemo->m_ClientID = pData->m_ClientID;
+				pDemo->m_RunID = pData->m_RunID;
+				str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
+				m_lUploads.add(pDemo);
+				
+				// ghost
+				CUpload *pGhost = new CUpload(UPLOAD_GHOST);
+				pGhost->m_ClientID = pData->m_ClientID;
+				pGhost->m_RunID = pData->m_RunID;
+				str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
+				m_lUploads.add(pGhost);
+			}
 		}
 	}
 	m_pFirst = 0;
 	m_pLast = 0;
 	lock_release(m_OutputLock);
+	
+	// uploading stuff to webapp
+	for(int i = 0; i < m_lUploads.size(); i++)
+	{
+		CUpload *pUpload = m_lUploads[i];
+		if(pUpload->m_Type == UPLOAD_DEMO)
+		{
+			if(!Server()->IsRecording(pUpload->m_ClientID))
+			{
+				CWebUpload::CParam *pParams = new CWebUpload::CParam();
+				pParams->m_RunID = pUpload->m_RunID;
+				str_copy(pParams->m_aFilename, pUpload->m_aFilename, sizeof(pParams->m_aFilename));
+				AddJob(CWebUpload::UploadDemo, pParams);
+				
+				delete pUpload;
+				m_lUploads.remove_index_fast(i);
+			}
+		}
+		else if(pUpload->m_Type == UPLOAD_GHOST)
+		{
+			if(!Server()->IsGhostRecording(pUpload->m_ClientID))
+			{
+				CWebUpload::CParam *pParams = new CWebUpload::CParam();
+				pParams->m_RunID = pUpload->m_RunID;
+				str_copy(pParams->m_aFilename, pUpload->m_aFilename, sizeof(pParams->m_aFilename));
+				AddJob(CWebUpload::UploadGhost, pParams);
+				
+				delete pUpload;
+				m_lUploads.remove_index_fast(i);
+			}
+		}
+	}
 }
 
 bool CWebapp::Connect()

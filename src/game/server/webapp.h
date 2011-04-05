@@ -12,6 +12,7 @@
 #include "webapp/run.h"
 #include "webapp/ping.h"
 #include "webapp/map.h"
+#include "webapp/upload.h"
 
 class CWebapp
 {
@@ -44,6 +45,8 @@ class CWebapp
 	
 	array<std::string> m_lMapList;
 	array<CJob*> m_Jobs;
+	
+	array<CUpload*> m_lUploads;
 	
 	LOCK m_OutputLock;
 	

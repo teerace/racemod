@@ -9,7 +9,10 @@ enum
 	WEB_PING_PING,
 	WEB_MAP_LIST,
 	WEB_MAP_DOWNLOADED,
-	WEB_RUN
+	WEB_RUN,
+	
+	UPLOAD_DEMO = 0,
+	UPLOAD_GHOST
 };
 
 class IDataIn
@@ -26,4 +29,15 @@ public:
 	int m_Type;
 };
 
+
+class CUpload
+{
+public:
+	CUpload(int Type) { m_Type = Type; }
+	int m_Type;
+	int m_ClientID;
+	int m_RunID;
+	char m_aFilename[256];
+};
+	
 #endif

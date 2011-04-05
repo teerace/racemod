@@ -10,6 +10,8 @@ int CWebRun::Post(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;
+	int ClientID = pData->m_ClientID;
+	int Tick = pData->m_Tick;
 	
 	if(!pWebapp->Connect())
 	{
@@ -62,6 +64,8 @@ int CWebRun::Post(void *pUserData)
 	
 	COut *pOut = new COut(WEB_RUN);
 	pOut->m_RunID = Run["id"].asInt();
+	pOut->m_Tick = Tick;
+	pOut->m_ClientID = ClientID;
 	pWebapp->AddOutput(pOut);
 	
 	return Size >= 0;

@@ -25,6 +25,7 @@ public:
 	public:
 		COut(int Type) { m_Type = Type; }
 		int m_RunID;
+		int m_ClientID;
 		int m_Tick;
 	};
 	
