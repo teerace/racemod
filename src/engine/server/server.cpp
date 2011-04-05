@@ -1104,7 +1104,7 @@ void CServer::SaveGhostDemo(int ClientID)
 void CServer::StartRecord(int ClientID)
 {
 	char aFilename[128];
-	str_format(aFilename, sizeof(aFilename), "demos/teerace/%s_%d_tmp.demo", m_aCurrentMap, ClientID);
+	str_format(aFilename, sizeof(aFilename), "demos/teerace/%s_%d_%d_tmp.demo", m_aCurrentMap, g_Config.m_SvPort, ClientID);
 	m_aDemoRecorder[ClientID].Start(Storage(), Console(), aFilename, GameServer()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
 }
 
@@ -1117,8 +1117,8 @@ void CServer::StopRecord(int ClientID)
 		// rename the demo
 		char aOldFilename[256];
 		char aNewFilename[256];
-		str_format(aOldFilename, sizeof(aOldFilename), "demos/teerace/%s_%d_tmp.demo", m_aCurrentMap, ClientID);
-		str_format(aNewFilename, sizeof(aNewFilename), "demos/teerace/%d_%d.demo", m_aClients[ClientID].m_SaveDemoTick, ClientID);
+		str_format(aOldFilename, sizeof(aOldFilename), "demos/teerace/%s_%d_%d_tmp.demo", m_aCurrentMap, g_Config.m_SvPort, ClientID);
+		str_format(aNewFilename, sizeof(aNewFilename), "demos/teerace/%d_%d_%d.demo", m_aClients[ClientID].m_SaveDemoTick, g_Config.m_SvPort, ClientID);
 		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
 		
 		m_aClients[ClientID].m_SaveDemoTick = -1;
@@ -1133,7 +1133,7 @@ bool CServer::IsRecording(int ClientID)
 void CServer::StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
 {
 	char aFilename[128];
-	str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%s_%d_tmp.gho", m_aCurrentMap, ClientID);
+	str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%s_%d_%d_tmp.gho", m_aCurrentMap, g_Config.m_SvPort, ClientID);
 	m_aGhostRecorder[ClientID].Start(Storage(), Console(), aFilename, m_aCurrentMap, m_CurrentMapCrc, ClientName(ClientID), pSkinName, UseCustomColor, ColorBody, ColorFeet);
 }
 
@@ -1146,8 +1146,8 @@ void CServer::StopGhostRecord(int ClientID, float Time)
 		// rename the ghost
 		char aOldFilename[256];
 		char aNewFilename[256];
-		str_format(aOldFilename, sizeof(aOldFilename), "ghosts/teerace/%s_%d_tmp.gho", m_aCurrentMap, ClientID);
-		str_format(aNewFilename, sizeof(aNewFilename), "ghosts/teerace/%d_%d.gho", m_aClients[ClientID].m_SaveGhostTick, ClientID);
+		str_format(aOldFilename, sizeof(aOldFilename), "ghosts/teerace/%s_%d_%d_tmp.gho", m_aCurrentMap, g_Config.m_SvPort, ClientID);
+		str_format(aNewFilename, sizeof(aNewFilename), "ghosts/teerace/%d_%d_%d.gho", m_aClients[ClientID].m_SaveGhostTick, g_Config.m_SvPort, ClientID);
 		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
 		
 		m_aClients[ClientID].m_SaveGhostTick = -1;
