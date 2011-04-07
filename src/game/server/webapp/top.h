@@ -25,8 +25,7 @@ public:
 	class CParam : public IDataIn
 	{
 	public:
-		int m_Start; // TODO: actually use this
-		int m_ClientID;
+		int m_Start;
 	};
 	
 	class COut : public IDataOut
