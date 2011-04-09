@@ -6,5 +6,5 @@
 #define GAME_VERSION "0.6.0"
 //#define GAME_NETVERSION "0.6 " GAME_NETVERSION_HASH
 #define GAME_NETVERSION "0.6 626fce9a778df4d4"
-#define RACE_VERSION "3.0"
+#define RACE_VERSION "3.0-dev"
 #endif
