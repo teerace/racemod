@@ -690,14 +690,12 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			if(!str_comp(pMsg->m_pMessage, "/info"))
 			{
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Race mod %s (C)Rajh v1.0-v1.6 & (C)Redix 2.0-current (%s) (say /mods).", RACE_VERSION, Server()->ClientName(ClientID));
+				str_format(aBuf, sizeof(aBuf), "Race mod %s (C)Rajh, Redix and Sushi (%s)", RACE_VERSION, Server()->ClientName(ClientID));
 				SendChatTarget(-1, aBuf);
-			}
-			else if(!str_comp(pMsg->m_pMessage, "/mods"))
-			{
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Mod used: Sushi Tee SQL Support");
+#if defined(CONF_TEERACE)
+				str_format(aBuf, sizeof(aBuf), "Please visit 'http://%s/about/' for more information about teerace.", g_Config.m_SvWebappIp);
 				SendChatTarget(-1, aBuf);
+#endif
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/top5", 5))
 			{
@@ -819,14 +817,13 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			{
 				SendChatTarget(ClientID, "---Command List---");
 				SendChatTarget(ClientID, "\"/info\" information about the mod");
-				SendChatTarget(ClientID, "\"/mods\" shows the used mods");
 				SendChatTarget(ClientID, "\"/rank\" shows your rank");
 				SendChatTarget(ClientID, "\"/rank NAME\" shows the rank of a specific player");
 				SendChatTarget(ClientID, "\"/top5 X\" shows the top 5");
 #if defined(CONF_TEERACE)
 				SendChatTarget(ClientID, "\"/mapinfo\" shows infos about the map");
 #endif
-				SendChatTarget(ClientID, "\"/show_others\" show others players?");
+				SendChatTarget(ClientID, "\"/show_others\" show other players?");
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/", 1))
 			{
