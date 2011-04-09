@@ -108,9 +108,6 @@ MACRO_CONFIG_INT(SvTeleportVelReset, sv_teleport_vel_reset, 0, 0, 1, CFGFLAG_SER
 MACRO_CONFIG_INT(SvDeleteGrenadesAfterDeath, sv_delete_grenades_after_death, 1, 0, 1, CFGFLAG_SERVER, "Delete grenades after the player dies")
 MACRO_CONFIG_INT(SvRocketJumpDamage, sv_rocket_jump_damage, 1, 0, 1, CFGFLAG_SERVER, "Enable or disable rocket jump damage")
 MACRO_CONFIG_INT(SvPickupRespawn, sv_pickup_respawn, -1, -1, 120, CFGFLAG_SERVER, "Time before a pickup respawn")
-MACRO_CONFIG_INT(SvSpeedupMult, sv_speedup_mult, 10, 1, 100, CFGFLAG_SERVER, "Boost power by multiplication")
-MACRO_CONFIG_INT(SvSpeedupAdd, sv_speedup_add, 0, -100, 100, CFGFLAG_SERVER, "Boost power")
-MACRO_CONFIG_INT(SvJumperAdd, sv_jumper_add, 0, -100, 100, CFGFLAG_SERVER, "Jumper power")
 MACRO_CONFIG_INT(SvScoreIP, sv_score_ip, 1, 0, 1, CFGFLAG_SERVER, "Check score for ip, too")
 MACRO_CONFIG_INT(SvCheckpointSave, sv_checkpoint_save, 1, 0, 1, CFGFLAG_SERVER, "Save checkpoint times to score file")
 
