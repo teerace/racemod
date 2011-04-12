@@ -24,6 +24,8 @@ public:
 
 	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check);
 	virtual bool OnRaceEnd(int ID, float FinishTime);
+	
+	virtual void Snap(int SnappingClient);
 };
 
 #endif

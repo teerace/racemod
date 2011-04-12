@@ -155,3 +155,35 @@ bool CGameControllerFC::OnRaceEnd(int ID, float FinishTime)
 
 	return true;
 }
+
+void CGameControllerFC::Snap(int SnappingClient)
+{
+	IGameController::Snap(SnappingClient);
+
+	CNetObj_GameData *pGameDataObj = (CNetObj_GameData *)Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData));
+	if(!pGameDataObj)
+		return;
+
+	pGameDataObj->m_TeamscoreRed = 0;
+	pGameDataObj->m_TeamscoreBlue = 0;
+
+	if(m_apPlFlags[SnappingClient])
+	{
+		if(m_apPlFlags[SnappingClient]->m_Team == TEAM_RED)
+		{
+			pGameDataObj->m_FlagCarrierRed = SnappingClient;
+			pGameDataObj->m_FlagCarrierBlue = FLAG_MISSING;
+		}
+		else if(m_apPlFlags[SnappingClient]->m_Team == TEAM_BLUE)
+		{
+			pGameDataObj->m_FlagCarrierBlue = SnappingClient;
+			pGameDataObj->m_FlagCarrierRed = FLAG_MISSING;
+		}
+	}
+	else
+	{
+		pGameDataObj->m_FlagCarrierRed = FLAG_MISSING;
+		pGameDataObj->m_FlagCarrierBlue = FLAG_MISSING;
+	}
+		
+}
