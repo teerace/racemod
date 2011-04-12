@@ -570,7 +570,7 @@ int CMenus::RenderMenubar(CUIRect r)
 	else
 	{
 		// online menus
-		Box.VSplitLeft(90.0f, &Button, &Box);
+		Box.VSplitLeft(85.0f, &Button, &Box);
 		static int s_GameButton=0;
 		if(DoButton_MenuTab(&s_GameButton, Localize("Game"), m_ActivePage==PAGE_GAME, &Button, CUI::CORNER_TL))
 			NewPage = PAGE_GAME;
@@ -580,23 +580,20 @@ int CMenus::RenderMenubar(CUIRect r)
 		if(DoButton_MenuTab(&s_PlayersButton, Localize("Players"), m_ActivePage==PAGE_PLAYERS, &Button, 0))
 			NewPage = PAGE_PLAYERS;
 
-		Box.VSplitLeft(130.0f, &Button, &Box);
+		Box.VSplitLeft(120.0f, &Button, &Box);
 		static int s_ServerInfoButton=0;
 		if(DoButton_MenuTab(&s_ServerInfoButton, Localize("Server info"), m_ActivePage==PAGE_SERVER_INFO, &Button, 0))
 			NewPage = PAGE_SERVER_INFO;
 
-		Box.VSplitLeft(130.0f, &Button, &Box);
 		if(m_pClient->m_IsRace)
 		{
-			Box.VSplitLeft(4.0f, 0, &Box);
-			Box.VSplitLeft(100.0f, &Button, &Box);
+			Box.VSplitLeft(65.0f, &Button, &Box);
 			static int s_GhostButton=0;
-			if(DoButton_MenuTab(&s_GhostButton, Localize("Ghost"), m_ActivePage==PAGE_GHOST, &Button, CUI::CORNER_T))
+			if(DoButton_MenuTab(&s_GhostButton, Localize("Ghost"), m_ActivePage==PAGE_GHOST, &Button, 0))
 				NewPage = PAGE_GHOST;
 		}
 		
-		Box.VSplitLeft(4.0f, 0, &Box);
-		Box.VSplitLeft(140.0f, &Button, &Box);
+		Box.VSplitLeft(100.0f, &Button, &Box);
 		static int s_CallVoteButton=0;
 		if(DoButton_MenuTab(&s_CallVoteButton, Localize("Call vote"), m_ActivePage==PAGE_CALLVOTE, &Button, CUI::CORNER_TR))
 			NewPage = PAGE_CALLVOTE;
@@ -613,13 +610,12 @@ int CMenus::RenderMenubar(CUIRect r)
 	
 	Box.VSplitRight(90.0f, &Box, &Button);
 	static int s_QuitButton=0;
-	if(DoButton_MenuTab(&s_QuitButton, Localize("Quit"), 0, &Button, CUI::CORNER_T))
+	if(DoButton_MenuTab(&s_QuitButton, Localize("Quit"), 0, &Button, CUI::CORNER_TR))
 		m_Popup = POPUP_QUIT;
 
-	Box.VSplitRight(10.0f, &Box, &Button);
 	Box.VSplitRight(130.0f, &Box, &Button);
 	static int s_SettingsButton=0;
-	if(DoButton_MenuTab(&s_SettingsButton, Localize("Settings"), m_ActivePage==PAGE_SETTINGS, &Button, CUI::CORNER_T))
+	if(DoButton_MenuTab(&s_SettingsButton, Localize("Settings"), m_ActivePage==PAGE_SETTINGS, &Button, CUI::CORNER_TL))
 		NewPage = PAGE_SETTINGS;
 	
 	if(NewPage != -1)
