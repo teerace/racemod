@@ -11,7 +11,7 @@ CFlag::CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, CCharacter *pOwner)
 	m_Pos = Pos;
 	m_ProximityRadius = ms_PhysSize;
 	m_pCarryingCharacter = pOwner;
-	
+
 	GameServer()->m_World.InsertEntity(this);
 }
 

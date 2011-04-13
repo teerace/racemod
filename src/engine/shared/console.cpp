@@ -38,21 +38,21 @@ int CConsole::ParseStart(CResult *pResult, const char *pString, int Length)
 	int Len = sizeof(pResult->m_aStringStorage);
 	if(Length < Len)
 		Len = Length;
-		
+
 	str_copy(pResult->m_aStringStorage, pString, Length);
 	pStr = pResult->m_aStringStorage;
-	
+
 	// get command
 	pStr = str_skip_whitespaces(pStr);
 	pResult->m_pCommand = pStr;
 	pStr = str_skip_to_whitespace(pStr);
-	
+
 	if(*pStr)
 	{
 		pStr[0] = 0;
 		pStr++;
 	}
-	
+
 	pResult->m_pArgsStart = pStr;
 	return 0;
 }
@@ -63,38 +63,38 @@ int CConsole::ParseArgs(CResult *pResult, const char *pFormat)
 	char *pStr;
 	int Optional = 0;
 	int Error = 0;
-	
+
 	pStr = pResult->m_pArgsStart;
 
-	while(1)	
+	while(1)
 	{
 		// fetch command
 		Command = *pFormat;
 		pFormat++;
-		
+
 		if(!Command)
 			break;
-		
+
 		if(Command == '?')
 			Optional = 1;
 		else
 		{
 			pStr = str_skip_whitespaces(pStr);
-		
+
 			if(!(*pStr)) // error, non optional command needs value
 			{
 				if(!Optional)
 					Error = 1;
 				break;
 			}
-			
+
 			// add token
 			if(*pStr == '"')
 			{
 				char *pDst;
 				pStr++;
 				pResult->AddArgument(pStr);
-				
+
 				pDst = pStr; // we might have to process escape data
 				while(1)
 				{
@@ -109,22 +109,22 @@ int CConsole::ParseArgs(CResult *pResult, const char *pFormat)
 					}
 					else if(pStr[0] == 0)
 						return 1; // return error
-						
+
 					*pDst = *pStr;
 					pDst++;
 					pStr++;
 				}
-				
+
 				// write null termination
 				*pDst = 0;
 
-				
+
 				pStr++;
 			}
 			else
 			{
 				pResult->AddArgument(pStr);
-				
+
 				if(Command == 'r') // rest of the string
 					break;
 				else if(Command == 'i') // validate int
@@ -167,14 +167,14 @@ bool CConsole::LineIsValid(const char *pStr)
 {
 	if(!pStr || *pStr == 0)
 		return false;
-	
+
 	do
 	{
 		CResult Result;
 		const char *pEnd = pStr;
 		const char *pNextPart = 0;
 		int InString = 0;
-		
+
 		while(*pEnd)
 		{
 			if(*pEnd == '"')
@@ -186,25 +186,25 @@ bool CConsole::LineIsValid(const char *pStr)
 			}
 			else if(!InString)
 			{
-				if(*pEnd == ';')  // command separator
+				if(*pEnd == ';') // command separator
 				{
 					pNextPart = pEnd+1;
 					break;
 				}
-				else if(*pEnd == '#')  // comment, no need to do anything more
+				else if(*pEnd == '#') // comment, no need to do anything more
 					break;
 			}
-			
+
 			pEnd++;
 		}
-		
+
 		if(ParseStart(&Result, pStr, (pEnd-pStr) + 1) != 0)
 			return false;
 
 		CCommand *pCommand = FindCommand(Result.m_pCommand, m_FlagMask);
 		if(!pCommand || ParseArgs(&Result, pCommand->m_pParams))
 			return false;
-		
+
 		pStr = pNextPart;
 	}
 	while(pStr && *pStr);
@@ -213,14 +213,14 @@ bool CConsole::LineIsValid(const char *pStr)
 }
 
 void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd)
-{	
+{
 	while(pStr && *pStr)
 	{
 		CResult Result;
 		const char *pEnd = pStr;
 		const char *pNextPart = 0;
 		int InString = 0;
-		
+
 		while(*pEnd)
 		{
 			if(*pEnd == '"')
@@ -232,18 +232,18 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 			}
 			else if(!InString)
 			{
-				if(*pEnd == ';')  // command separator
+				if(*pEnd == ';') // command separator
 				{
 					pNextPart = pEnd+1;
 					break;
 				}
-				else if(*pEnd == '#')  // comment, no need to do anything more
+				else if(*pEnd == '#') // comment, no need to do anything more
 					break;
 			}
-			
+
 			pEnd++;
 		}
-		
+
 		if(ParseStart(&Result, pStr, (pEnd-pStr) + 1) != 0)
 			return;
 
@@ -273,7 +273,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 				Result.AddArgument(m_paStrokeStr[Stroke]);
 				IsStrokeCommand = 1;
 			}
-			
+
 			if(Stroke || IsStrokeCommand)
 			{
 				if(ParseArgs(&Result, pCommand->m_pParams))
@@ -299,7 +299,7 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 			str_format(aBuf, sizeof(aBuf), "No such command: %s.", Result.m_pCommand);
 			Print(OUTPUT_LEVEL_STANDARD, "Console", aBuf);
 		}
-		
+
 		pStr = pNextPart;
 	}
 }
@@ -314,7 +314,7 @@ void CConsole::PossibleCommands(const char *pStr, int FlagMask, FPossibleCallbac
 			if(str_find_nocase(pCommand->m_pName, pStr))
 				pfnCallback(pCommand->m_pName, pUser);
 		}
-	}	
+	}
 }
 
 CConsole::CCommand *CConsole::FindCommand(const char *pName, int FlagMask)
@@ -327,8 +327,8 @@ CConsole::CCommand *CConsole::FindCommand(const char *pName, int FlagMask)
 			if(str_comp_nocase(pCommand->m_pName, pName) == 0)
 				return pCommand;
 		}
-	}	
-	
+	}
+
 	return 0x0;
 }
 
@@ -350,7 +350,7 @@ void CConsole::ExecuteFile(const char *pFilename)
 		m_pStorage = Kernel()->RequestInterface<IStorage>();
 	if(!m_pStorage)
 		return;
-		
+
 	// push this one to the stack
 	CExecFile ThisFile;
 	CExecFile *pPrev = m_pFirstExec;
@@ -360,13 +360,13 @@ void CConsole::ExecuteFile(const char *pFilename)
 
 	// exec the file
 	IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_ALL);
-	
+
 	char aBuf[256];
 	if(File)
 	{
 		char *pLine;
 		CLineReader lr;
-		
+
 		str_format(aBuf, sizeof(aBuf), "executing '%s'", pFilename);
 		Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", aBuf);
 		lr.Init(File);
@@ -381,7 +381,7 @@ void CConsole::ExecuteFile(const char *pFilename)
 		str_format(aBuf, sizeof(aBuf), "failed to open '%s'", pFilename);
 		Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", aBuf);
 	}
-	
+
 	m_pFirstExec = pPrev;
 }
 
@@ -417,7 +417,7 @@ static void IntVariableCommand(IConsole::IResult *pResult, void *pUserData)
 	if(pResult->NumArguments())
 	{
 		int Val = pResult->GetInteger(0);
-		
+
 		// do clamping
 		if(pData->m_Min != pData->m_Max)
 		{
@@ -483,30 +483,30 @@ CConsole::CConsole(int FlagMask)
 	m_pFirstExec = 0;
 	m_pPrintCallbackUserdata = 0;
 	m_pfnPrintCallback = 0;
-	
+
 	m_pStorage = 0;
-	
+
 	// register some basic commands
 	Register("echo", "r", CFGFLAG_SERVER|CFGFLAG_CLIENT, Con_Echo, this, "Echo the text");
 	Register("exec", "r", CFGFLAG_SERVER|CFGFLAG_CLIENT, Con_Exec, this, "Execute the specified file");
-	
+
 	// TODO: this should disappear
 	#define MACRO_CONFIG_INT(Name,ScriptName,Def,Min,Max,Flags,Desc) \
 	{ \
 		static CIntVariableData Data = { this, &g_Config.m_##Name, Min, Max }; \
 		Register(#ScriptName, "?i", Flags, IntVariableCommand, &Data, Desc); \
 	}
-	
+
 	#define MACRO_CONFIG_STR(Name,ScriptName,Len,Def,Flags,Desc) \
 	{ \
 		static CStrVariableData Data = { this, g_Config.m_##Name, Len }; \
 		Register(#ScriptName, "?r", Flags, StrVariableCommand, &Data, Desc); \
 	}
 
-	#include "config_variables.h" 
+	#include "config_variables.h"
 
-	#undef MACRO_CONFIG_INT 
-	#undef MACRO_CONFIG_STR 	
+	#undef MACRO_CONFIG_INT
+	#undef MACRO_CONFIG_STR
 }
 
 void CConsole::ParseArguments(int NumArgs, const char **ppArguments)
@@ -533,7 +533,7 @@ void CConsole::ParseArguments(int NumArgs, const char **ppArguments)
 	}
 }
 
-void CConsole::Register(const char *pName, const char *pParams, 
+void CConsole::Register(const char *pName, const char *pParams,
 	int Flags, FCommandCallback pfnFunc, void *pUser, const char *pHelp)
 {
 	CCommand *pCommand = (CCommand *)mem_alloc(sizeof(CCommand), sizeof(void*));
@@ -543,8 +543,8 @@ void CConsole::Register(const char *pName, const char *pParams,
 	pCommand->m_pName = pName;
 	pCommand->m_pParams = pParams;
 	pCommand->m_Flags = Flags;
-	
-	
+
+
 	pCommand->m_pNext = m_pFirstCommand;
 	m_pFirstCommand = pCommand;
 }
@@ -558,7 +558,7 @@ void CConsole::Con_Chain(IResult *pResult, void *pUserData)
 void CConsole::Chain(const char *pName, FChainCommandCallback pfnChainFunc, void *pUser)
 {
 	CCommand *pCommand = FindCommand(pName, m_FlagMask);
-	
+
 	if(!pCommand)
 	{
 		char aBuf[256];
@@ -566,7 +566,7 @@ void CConsole::Chain(const char *pName, FChainCommandCallback pfnChainFunc, void
 		Print(IConsole::OUTPUT_LEVEL_DEBUG, "console", aBuf);
 		return;
 	}
-	
+
 	CChain *pChainInfo = (CChain *)mem_alloc(sizeof(CChain), sizeof(void*));
 
 	// store info
@@ -574,7 +574,7 @@ void CConsole::Chain(const char *pName, FChainCommandCallback pfnChainFunc, void
 	pChainInfo->m_pUserData = pUser;
 	pChainInfo->m_pfnCallback = pCommand->m_pfnCallback;
 	pChainInfo->m_pCallbackUserData = pCommand->m_pUserData;
-	
+
 	// chain
 	pCommand->m_pfnCallback = Con_Chain;
 	pCommand->m_pUserData = pChainInfo;

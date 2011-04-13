@@ -21,17 +21,17 @@ class CSnapIDPool
 	};
 
 	CID m_aIDs[MAX_IDS];
-		
+
 	int m_FirstFree;
 	int m_FirstTimed;
 	int m_LastTimed;
 	int m_Usage;
 	int m_InUsage;
-	
-public:	
+
+public:
 
 	CSnapIDPool();
-	
+
 	void Reset();
 	void RemoveFirstTimeout();
 	int NewID();
@@ -52,7 +52,7 @@ public:
 	class CClient
 	{
 	public:
-	
+
 		enum
 		{
 			STATE_EMPTY = 0,
@@ -60,32 +60,32 @@ public:
 			STATE_CONNECTING,
 			STATE_READY,
 			STATE_INGAME,
-			
+
 			SNAPRATE_INIT=0,
 			SNAPRATE_FULL,
 			SNAPRATE_RECOVER
 		};
-	
+
 		class CInput
 		{
 		public:
 			int m_aData[MAX_INPUT_SIZE];
 			int m_GameTick; // the tick that was chosen for the input
 		};
-	
+
 		// connection state info
 		int m_State;
 		int m_Latency;
 		int m_SnapRate;
-		
+
 		int m_LastAckedSnapshot;
 		int m_LastInputTick;
 		CSnapshotStorage m_Snapshots;
-		
+
 		CInput m_LatestInput;
 		CInput m_aInputs[200]; // TODO: handle input better
 		int m_CurrentInput;
-		
+
 		char m_aName[MAX_NAME_LENGTH];
 		char m_aClan[MAX_CLAN_LENGTH];
 		int m_Country;
@@ -96,20 +96,20 @@ public:
 #if defined(CONF_TEERACE)
 		int m_UserID;
 		char m_aUsername[64];
-		
+
 		int m_SaveDemoTick;
 		int m_SaveGhostTick;
 #endif
 		void Reset();
 	};
-	
+
 	CClient m_aClients[MAX_CLIENTS];
 
 	CSnapshotDelta m_SnapshotDelta;
 	CSnapshotBuilder m_SnapshotBuilder;
 	CSnapIDPool m_IDPool;
 	CNetServer m_NetServer;
-	
+
 	IEngineMap *m_pMap;
 
 	int64 m_GameStartTime;
@@ -124,8 +124,8 @@ public:
 	char m_aCurrentMap[64];
 	unsigned m_CurrentMapCrc;
 	unsigned char *m_pCurrentMapData;
-	int m_CurrentMapSize;	
-	
+	int m_CurrentMapSize;
+
 #if defined(CONF_TEERACE)
 	CDemoRecorder m_aDemoRecorder[MAX_CLIENTS+1];
 	CGhostRecorder m_aGhostRecorder[MAX_CLIENTS];
@@ -135,9 +135,9 @@ public:
 
 	CRegister m_Register;
 	CMapChecker m_MapChecker;
-	
+
 	CServer();
-	
+
 	int TrySetClientName(int ClientID, const char *pName);
 
 	virtual void SetClientName(int ClientID, const char *pName);
@@ -175,15 +175,15 @@ public:
 	void SendConnectionReady(int ClientID);
 	void SendRconLine(int ClientID, const char *pLine);
 	static void SendRconLineAuthed(const char *pLine, void *pUser);
-	
+
 	void ProcessClientPacket(CNetChunk *pPacket);
-		
+
 	void SendServerInfo(NETADDR *pAddr, int Token);
 	void UpdateServerInfo();
 
 	int BanAdd(NETADDR Addr, int Seconds, const char *pReason);
 	int BanRemove(NETADDR Addr);
-		
+
 
 	void PumpNetwork();
 
@@ -227,8 +227,8 @@ public:
 	static void ConchainMaxclientsperipUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 	void RegisterCommands();
-	
-	
+
+
 	virtual int SnapNewID();
 	virtual void SnapFreeID(int ID);
 	virtual void *SnapNewItem(int Type, int ID, int Size);

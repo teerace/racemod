@@ -13,7 +13,7 @@ CPickup::CPickup(CGameWorld *pGameWorld, int Type, int SubType)
 	m_ProximityRadius = PickupPhysSize;
 
 	Reset();
-	
+
 	GameWorld()->InsertEntity(this);
 }
 
@@ -100,7 +100,7 @@ void CPickup::Tick()
 						}
 					}
 					break;
-				
+
 				case POWERUP_NINJA:
 					{
 						// activate ninja on target player
@@ -128,7 +128,7 @@ void CPickup::Tick()
 				char aBuf[256];
 				str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d/%d", apChrs[j]->GetPlayer()->GetCID(), Server()->ClientName(apChrs[j]->GetPlayer()->GetCID()), m_Type, m_Subtype);
 				GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
-				
+
 				if(g_Config.m_SvPickupRespawn > -1)
 					m_SpawnTick[apChrs[j]->GetPlayer()->GetCID()] = Server()->Tick() + Server()->TickSpeed() * g_Config.m_SvPickupRespawn;
 				else

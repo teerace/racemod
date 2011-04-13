@@ -28,7 +28,7 @@ public:
 	CMapItemLayerTilemap *TeleLayer() const { return m_pTeleLayer; }
 	CMapItemLayerTilemap *SpeedupLayer() const { return m_pSpeedupLayer; }
 	CMapItemGroup *GetGroup(int Index) const;
-	CMapItemLayer *GetLayer(int Index) const;	
+	CMapItemLayer *GetLayer(int Index) const;
 };
 
 #endif

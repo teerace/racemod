@@ -11,9 +11,9 @@ public:
 	static const int ms_PhysSize = 14;
 	class CCharacter *m_pCarryingCharacter;
 	vec2 m_Vel;
-	
+
 	int m_Team;
-	
+
 	CFlag(CGameWorld *pGameWorld, int Team, vec2 Pos, class CCharacter *pOwner);
 
 	virtual void Reset();
