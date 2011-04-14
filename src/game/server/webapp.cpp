@@ -292,14 +292,12 @@ void CWebapp::Tick()
 				// demo
 				CUpload *pDemo = new CUpload(UPLOAD_DEMO);
 				pDemo->m_ClientID = pData->m_ClientID;
-				pDemo->m_RunID = pData->m_RunID;
 				str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
 				m_lUploads.add(pDemo);
 				
 				// ghost
 				CUpload *pGhost = new CUpload(UPLOAD_GHOST);
 				pGhost->m_ClientID = pData->m_ClientID;
-				pGhost->m_RunID = pData->m_RunID;
 				str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
 				m_lUploads.add(pGhost);
 			}

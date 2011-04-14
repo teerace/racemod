@@ -64,7 +64,6 @@ int CWebRun::Post(void *pUserData)
 	mem_free(pReceived);
 	
 	COut *pOut = new COut(WEB_RUN);
-	pOut->m_RunID = Run["id"].asInt();
 	pOut->m_Tick = Tick;
 	pOut->m_ClientID = ClientID;
 	pWebapp->AddOutput(pOut);
