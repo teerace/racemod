@@ -233,6 +233,7 @@ void CWebapp::Tick()
 					GameServer()->Score()->GetRecord()->Set(pData->m_lMapRecord[i].m_Time, pData->m_lMapRecord[i].m_aCpTime);
 					m_CurrentMap.m_ID = pData->m_lMapID[i];
 					m_CurrentMap.m_RunCount = pData->m_lMapRunCount[i];
+					str_copy(m_CurrentMap.m_aCrc, pData->m_lMapCrc[i].c_str(), sizeof(m_CurrentMap.m_aCrc));
 					str_copy(m_CurrentMap.m_aURL, pData->m_lMapURL[i].c_str(), sizeof(m_CurrentMap.m_aURL));
 					str_copy(m_CurrentMap.m_aAuthor, pData->m_lMapAuthor[i].c_str(), sizeof(m_CurrentMap.m_aAuthor));
 				}

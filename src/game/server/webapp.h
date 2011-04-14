@@ -30,6 +30,7 @@ class CWebapp
 		CMapInfo() { m_ID = -1; }
 		int m_RunCount;
 		int m_ID;
+		char m_aCrc[16];
 		char m_aURL[128];
 		char m_aAuthor[32];
 	};

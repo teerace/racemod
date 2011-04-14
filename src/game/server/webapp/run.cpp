@@ -24,6 +24,7 @@ int CWebRun::Post(void *pUserData)
 	Json::FastWriter Writer;
 	
 	Run["map_id"] = pWebapp->CurrentMap()->m_ID;
+	Run["map_crc"] = pWebapp->CurrentMap()->m_aCrc;
 	Run["user_id"] = pData->m_UserID;
 	// TODO: take this out after 0.6 release
 	str_sanitize_strong(pData->m_aName);
