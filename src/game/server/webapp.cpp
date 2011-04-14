@@ -7,6 +7,7 @@
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
 #include <engine/shared/config.h>
+#include <engine/shared/datafile.h>
 #include <engine/storage.h>
 
 #include "gamecontext.h"
@@ -215,7 +216,9 @@ void CWebapp::Tick()
 			CWebPing::COut *pData = (CWebPing::COut*)pItem;
 			m_Online = pData->m_Online;
 			dbg_msg("webapp", "webapp is%s online", m_Online?"":" not");
-			AddJob(CWebMap::LoadList, new CWebMap::CParam());
+			CWebMap::CParam *pParam = new CWebMap::CParam();
+			pParam->m_CrcCheck = pData->m_CrcCheck;
+			AddJob(CWebMap::LoadList, pParam);
 		}
 		else if(Type == WEB_MAP_LIST)
 		{
@@ -239,6 +242,29 @@ void CWebapp::Tick()
 				{
 					NeededMaps.add(pData->m_lMapName[i]);
 					NeededURL.add(pData->m_lMapURL[i]);
+				}
+				else if(pData->m_CrcCheck)// map found... check crc
+				{
+					char aFilename[256];
+					str_format(aFilename, sizeof(aFilename), "maps/teerace/%s.map", pData->m_lMapName[i].c_str());
+					CDataFileReader DataFile;
+					if(!DataFile.Open(Storage(), aFilename, IStorage::TYPE_SAVE))
+					{
+						NeededMaps.add(pData->m_lMapName[i]);
+						NeededURL.add(pData->m_lMapURL[i]);
+					}
+					else
+					{
+						char aCrc[16];
+						str_format(aCrc, sizeof(aCrc), "%x", DataFile.Crc());
+						if(str_comp(aCrc, pData->m_lMapCrc[i].c_str()))
+						{
+							NeededMaps.add(pData->m_lMapName[i]);
+							NeededURL.add(pData->m_lMapURL[i]);
+						}
+						
+						DataFile.Close();
+					}
 				}
 			}
 			if(NeededMaps.size() > 0)
@@ -442,7 +468,7 @@ int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
 
 bool CWebapp::Download(const char *pFilename, const char *pURL)
 {
-	// TODO: limit transfer rate, crc check
+	// TODO: limit transfer rate
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
 	

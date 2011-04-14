@@ -11,6 +11,7 @@ int CWebMap::LoadList(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;
+	bool CrcCheck = pData->m_CrcCheck;
 	delete pData;
 	
 	if(!pWebapp->Connect())
@@ -39,10 +40,12 @@ int CWebMap::LoadList(void *pUserData)
 	mem_free(pReceived);
 	
 	COut *pOut = new COut(WEB_MAP_LIST);
+	pOut->m_CrcCheck = CrcCheck;
 	for(unsigned int i = 0; i < Maplist.size(); i++)
 	{
 		Json::Value Map = Maplist[i];
 		pOut->m_lMapName.add(Map["name"].asString());
+		pOut->m_lMapCrc.add(Map["crc"].asString());
 		pOut->m_lMapURL.add(Map["get_download_url"].asString());
 		pOut->m_lMapAuthor.add(Map["author"].asString());
 		pOut->m_lMapRunCount.add(Map["run_count"].asInt());

@@ -10,6 +10,7 @@ int CWebPing::Ping(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;
+	bool CrcCheck = pData->m_CrcCheck;
 	
 	if(!pWebapp->Connect())
 	{
@@ -57,7 +58,7 @@ int CWebPing::Ping(void *pUserData)
 	bool Online = str_comp(pReceived, "\"PONG\"") == 0;
 	mem_free(pReceived);
 	
-	pWebapp->AddOutput(new COut(Online));
+	pWebapp->AddOutput(new COut(Online, CrcCheck));
 	return Online;
 }
 

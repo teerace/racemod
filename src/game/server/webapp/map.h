@@ -10,6 +10,7 @@ public:
 	class CParam : public IDataIn
 	{
 	public:
+		bool m_CrcCheck;
 		array<std::string> m_lMapName;
 		array<std::string> m_lMapURL;
 	};
@@ -17,9 +18,11 @@ public:
 	class COut : public IDataOut
 	{
 	public:
+		bool m_CrcCheck;
 		COut(int Type) { m_Type = Type; }
 		array<int> m_lMapRunCount;
 		array<int> m_lMapID;
+		array<std::string> m_lMapCrc;
 		array<std::string> m_lMapName;
 		array<std::string> m_lMapURL;
 		array<std::string> m_lMapAuthor;

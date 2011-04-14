@@ -451,6 +451,8 @@ void CGameContext::OnTick()
 					pParams->m_lUserID.add(Server()->GetUserID(i));
 				}
 			}
+			if(m_LastPing == -1)
+				pParams->m_CrcCheck = true;
 			m_pWebapp->AddJob(CWebPing::Ping, pParams, 0);
 			m_LastPing = Server()->Tick();
 		}
