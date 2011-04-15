@@ -20,6 +20,7 @@ public:
 		char m_aToken[32];
 		// skin
 		int m_UserID; // rank
+		int m_PlayTime;
 		char m_SkinName[64];
 		int m_ColorBody;
 		int m_ColorFeet;
@@ -57,6 +58,8 @@ public:
 	static int UpdateSkin(void *pUserData);
 	
 	static int GetRank(void *pUserData);
+	
+	static int PlayTime(void *pUserData);
 };
 
 #endif

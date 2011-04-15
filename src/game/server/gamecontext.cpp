@@ -645,6 +645,19 @@ void CGameContext::OnClientConnected(int ClientID)
 
 void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 {
+#if defined(CONF_TEERACE)
+	// add job to update play time
+	int UserID = Server()->GetUserID(ClientID);
+	if(UserID > 0)
+	{
+		// calculate time in seconds
+		int Seconds = Server()->GetPlayTicks(ClientID)/Server()->TickSpeed();
+		CWebUser::CParam *pParams = new CWebUser::CParam();
+		pParams->m_UserID = UserID;
+		pParams->m_PlayTime = Seconds;
+		m_pWebapp->AddJob(CWebUser::PlayTime, pParams);
+	}
+#endif
 	AbortVoteKickOnDisconnect(ClientID);
 	m_apPlayers[ClientID]->OnDisconnect(pReason);
 	delete m_apPlayers[ClientID];
@@ -715,13 +728,18 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowTop5(pPlayer->GetCID());
 				
 #if defined(CONF_TEERACE)
-				if(!m_pWebapp->DefaultScoring())
+				if(m_pWebapp->CurrentMap()->m_ID > -1)
 				{
-					CWebTop::CParam *pParams = new CWebTop::CParam();
-					pParams->m_Start = Num;
-					pParams->m_ClientID = ClientID;
-					m_pWebapp->AddJob(CWebTop::GetTop5, pParams);
+					if(!m_pWebapp->DefaultScoring())
+					{
+						CWebTop::CParam *pParams = new CWebTop::CParam();
+						pParams->m_Start = Num;
+						pParams->m_ClientID = ClientID;
+						m_pWebapp->AddJob(CWebTop::GetTop5, pParams);
+					}
 				}
+				else
+					SendChatTarget(ClientID, "This map is not a teerace map.");
 #endif
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/rank", 5))
@@ -733,39 +751,44 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowRank(pPlayer->GetCID(), aName, true);
 					
 #if defined(CONF_TEERACE)
-					int UserID = 0;
-					// search for players on the server
-					for(int i = 0; i < MAX_CLIENTS; i++)
+					if(m_pWebapp->CurrentMap()->m_ID > -1)
 					{
-						// search for 100% match
-						if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (!str_comp(Server()->ClientName(i), aName) || !str_comp(Server()->GetUserName(i), aName)))
-						{
-							UserID = Server()->GetUserID(i);
-							str_copy(aName, Server()->GetUserName(i), sizeof(aName));
-							break;
-						}
-					}
-					
-					if(!UserID)
-					{
+						int UserID = 0;
 						// search for players on the server
 						for(int i = 0; i < MAX_CLIENTS; i++)
 						{
-							// search for part match
-							if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (str_find_nocase(Server()->ClientName(i), aName) || str_find_nocase(Server()->GetUserName(i), aName)))
+							// search for 100% match
+							if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (!str_comp(Server()->ClientName(i), aName) || !str_comp(Server()->GetUserName(i), aName)))
 							{
 								UserID = Server()->GetUserID(i);
 								str_copy(aName, Server()->GetUserName(i), sizeof(aName));
 								break;
 							}
 						}
+						
+						if(!UserID)
+						{
+							// search for players on the server
+							for(int i = 0; i < MAX_CLIENTS; i++)
+							{
+								// search for part match
+								if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (str_find_nocase(Server()->ClientName(i), aName) || str_find_nocase(Server()->GetUserName(i), aName)))
+								{
+									UserID = Server()->GetUserID(i);
+									str_copy(aName, Server()->GetUserName(i), sizeof(aName));
+									break;
+								}
+							}
+						}
+						
+						CWebUser::CParam *pParams = new CWebUser::CParam();
+						str_copy(pParams->m_aName, aName, sizeof(pParams->m_aName));
+						pParams->m_ClientID = ClientID;
+						pParams->m_UserID = UserID;
+						m_pWebapp->AddJob(CWebUser::GetRank, pParams);
 					}
-					
-					CWebUser::CParam *pParams = new CWebUser::CParam();
-					str_copy(pParams->m_aName, aName, sizeof(pParams->m_aName));
-					pParams->m_ClientID = ClientID;
-					pParams->m_UserID = UserID;
-					m_pWebapp->AddJob(CWebUser::GetRank, pParams);
+					else
+						SendChatTarget(ClientID, "This map is not a teerace map.");
 #endif
 				}
 				else
@@ -773,22 +796,33 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
 					
 #if defined(CONF_TEERACE)
-					if(Server()->GetUserID(ClientID) > 0)
+					if(m_pWebapp->CurrentMap()->m_ID > -1)
 					{
-						CWebUser::CParam *pParams = new CWebUser::CParam();
-						str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));
-						pParams->m_ClientID = ClientID;
-						pParams->m_UserID = Server()->GetUserID(ClientID);
-						m_pWebapp->AddJob(CWebUser::GetRank, pParams);
+						if(Server()->GetUserID(ClientID) > 0)
+						{
+							CWebUser::CParam *pParams = new CWebUser::CParam();
+							str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));
+							pParams->m_ClientID = ClientID;
+							pParams->m_UserID = Server()->GetUserID(ClientID);
+							m_pWebapp->AddJob(CWebUser::GetRank, pParams);
+						}
+						else
+							SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
 					}
 					else
-						SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
+						SendChatTarget(ClientID, "This map is not a teerace map.");
 #endif
 				}
 			}
 #if defined(CONF_TEERACE)
 			else if(!str_comp(pMsg->m_pMessage, "/mapinfo"))
 			{
+				if(m_pWebapp->CurrentMap()->m_ID < 0)
+				{
+					SendChatTarget(ClientID, "This map is not a teerace map.");
+					return;
+				}
+
 				char aBuf[256];
 				SendChatTarget(ClientID, "----------- Mapinfo -----------");
 				str_format(aBuf, sizeof(aBuf), "Name: %s", m_pWebapp->MapName());

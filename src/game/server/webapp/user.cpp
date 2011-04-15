@@ -397,4 +397,43 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	return 1;
 }
 
+int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
+{
+	CParam *pData = (CParam*)pUserData;
+	CWebapp *pWebapp = pData->m_pWebapp;
+	int UserID = pData->m_UserID;
+	int Time = pData->m_PlayTime;
+	delete pData;
+	
+	if(!pWebapp->Connect())
+		return 0;
+	
+	char *pReceived = 0;
+	char aBuf[512];
+	char aURL[128];
+	
+	Json::Value Post;
+	Json::FastWriter Writer;
+
+	Post["seconds"] = Time;
+	
+	std::string Json = Writer.write(Post);
+	
+	str_format(aURL, sizeof(aURL), "/api/1/users/playtime/%d/", UserID);
+	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	pWebapp->Disconnect();
+		
+	if(Size < 0)
+	{
+		dbg_msg("webapp", "error: %d (user playtime)", Size);
+		return 0;
+	}
+
+	mem_free(pReceived);
+
+	pWebapp->Disconnect();
+	return 1;
+}
+
 #endif

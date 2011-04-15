@@ -97,6 +97,8 @@ public:
 		int m_UserID;
 		char m_aUsername[64];
 
+		int m_PlayTicks;
+
 		int m_SaveDemoTick;
 		int m_SaveGhostTick;
 #endif
@@ -192,6 +194,8 @@ public:
 	
 	void SetUserID(int ClientID, int UserID) { m_aClients[ClientID].m_UserID = UserID; }
 	int GetUserID(int ClientID) { return m_aClients[ClientID].m_UserID; }
+	int GetPlayTicks(int ClientID) { return m_aClients[ClientID].m_PlayTicks; }
+	void HigherPlayTicks(int ClientID) { m_aClients[ClientID].m_PlayTicks++; }
 	
 	void SetUserName(int ClientID, const char* pUsername) { str_copy(m_aClients[ClientID].m_aUsername, pUsername, sizeof(m_aClients[ClientID].m_aUsername)); }
 	const char* GetUserName(int ClientID) { return m_aClients[ClientID].m_aUsername; }

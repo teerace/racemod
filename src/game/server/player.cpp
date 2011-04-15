@@ -58,6 +58,9 @@ void CPlayer::Tick()
 	Server()->SetClientScore(m_ClientID, m_Score);
 
 #if defined(CONF_TEERACE)
+	// higher playticks
+	Server()->HigherPlayTicks(m_ClientID);
+
 	// getting best time if nessesary
 	if(!m_RequestedBestTime)
 	{

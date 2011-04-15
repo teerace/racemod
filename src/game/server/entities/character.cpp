@@ -4,6 +4,7 @@
 #include <engine/shared/ghost.h>
 #include <engine/shared/config.h>
 #include <game/server/gamecontext.h>
+#include <game/server/webapp.h>
 #include <game/mapitems.h>
 
 #include "../gamemodes/race.h"
@@ -533,7 +534,7 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 	if(g_Config.m_SvAutoRecord && m_LastAction == Server()->Tick())
 	{
 		int ClientID = m_pPlayer->GetCID();
-		if(!Server()->IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
+		if(!Server()->IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
 			Server()->StartRecord(ClientID);
 	}
 #endif

@@ -69,6 +69,8 @@ public:
 	
 	virtual void SetUserID(int ClientID, int UserID) = 0;
 	virtual int GetUserID(int ClientID) = 0;
+	virtual int GetPlayTicks(int ClientID) = 0;
+	virtual void HigherPlayTicks(int ClientID) = 0;
 	
 	virtual void SetUserName(int ClientID, const char* pUsername) = 0;
 	virtual const char* GetUserName(int ClientID) = 0;

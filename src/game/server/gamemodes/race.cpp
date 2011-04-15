@@ -175,7 +175,7 @@ bool CGameControllerRACE::OnRaceStart(int ID, float StartAddTime, bool Check)
 	}
 
 #if defined(CONF_TEERACE)
-	if(Server()->GetUserID(ID) > 0 && !Server()->IsGhostRecording(ID))
+	if(Server()->GetUserID(ID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && !Server()->IsGhostRecording(ID))
 		Server()->StartGhostRecord(ID, pChr->GetPlayer()->m_TeeInfos.m_SkinName, pChr->GetPlayer()->m_TeeInfos.m_UseCustomColor, pChr->GetPlayer()->m_TeeInfos.m_ColorBody, pChr->GetPlayer()->m_TeeInfos.m_ColorFeet);
 #endif
 
@@ -242,7 +242,8 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 			pParams->m_Tick = Server()->Tick();
 		}
 		
-		GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
+		if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)
+			GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
 		
 		// higher run count
 		GameServer()->Webapp()->CurrentMap()->m_RunCount++;

@@ -616,6 +616,7 @@ int CServer::NewClientCallback(int ClientID, void *pUser)
 #if defined(CONF_TEERACE)
 	pThis->m_aClients[ClientID].m_UserID = 0;
 	mem_zero(pThis->m_aClients[ClientID].m_aUsername, sizeof(pThis->m_aClients[ClientID].m_aUsername));
+	pThis->m_aClients[ClientID].m_PlayTicks = 0;
 	pThis->m_aClients[ClientID].m_SaveDemoTick = -1;
 	pThis->m_aClients[ClientID].m_SaveGhostTick = -1;
 #endif
@@ -647,6 +648,7 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 #if defined(CONF_TEERACE)
 	pThis->m_aClients[ClientID].m_UserID = 0;
 	mem_zero(pThis->m_aClients[ClientID].m_aUsername, sizeof(pThis->m_aClients[ClientID].m_aUsername));
+	pThis->m_aClients[ClientID].m_PlayTicks = 0;
 	pThis->m_aClients[ClientID].m_SaveDemoTick = -1;
 	pThis->m_aClients[ClientID].m_SaveGhostTick = -1;
 #endif

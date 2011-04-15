@@ -472,7 +472,6 @@ int CWebapp::Upload(unsigned char *pData, int Size)
 {
 	// send data
 	int Bytes = net_tcp_send(m_Socket, pData, Size);
-	dbg_msg("test", "data: %d", Bytes);
 	thread_sleep(10); // limit upload rate
 	return Bytes;
 }
@@ -482,17 +481,16 @@ int CWebapp::SendUploadHeader(const char *pHeader)
 	net_tcp_connect(m_Socket, &m_Addr);
 	
 	int Bytes = net_tcp_send(m_Socket, pHeader, str_length(pHeader));
-	dbg_msg("test", "%s", pHeader);
 	return Bytes;
 }
 
 int CWebapp::SendUploadEnd()
 {	
-	char aEnd[512];
+	char aEnd[256];
 	str_copy(aEnd, "\r\n--frontier--\r\n", sizeof(aEnd));
 	int Bytes = net_tcp_send(m_Socket, aEnd, str_length(aEnd));
 	net_tcp_recv(m_Socket, aEnd, sizeof(aEnd));
-	dbg_msg("test", "%s", aEnd);
+	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", aEnd);
 	net_tcp_close(m_Socket);
 	return Bytes;
 }
