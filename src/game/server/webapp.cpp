@@ -19,6 +19,7 @@ const char CWebapp::GET[] = "GET %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nConn
 const char CWebapp::POST[] = "POST %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
 const char CWebapp::PUT[] = "PUT %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
 const char CWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
+const char CWebapp::UPLOAD[] = "POST %s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: multipart/form-data; boundary=frontier\r\nContent-Length: %d\r\n\r\n--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"user.demo\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 
 CWebapp::CWebapp(CGameContext *pGameServer)
 : m_pGameServer(pGameServer),
@@ -292,12 +293,14 @@ void CWebapp::Tick()
 				// demo
 				CUpload *pDemo = new CUpload(UPLOAD_DEMO);
 				pDemo->m_ClientID = pData->m_ClientID;
+				pDemo->m_UserID = pData->m_UserID;
 				str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
 				m_lUploads.add(pDemo);
 				
 				// ghost
 				CUpload *pGhost = new CUpload(UPLOAD_GHOST);
 				pGhost->m_ClientID = pData->m_ClientID;
+				pGhost->m_UserID = pData->m_UserID;
 				str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
 				m_lUploads.add(pGhost);
 			}
@@ -316,7 +319,7 @@ void CWebapp::Tick()
 			if(!Server()->IsRecording(pUpload->m_ClientID))
 			{
 				CWebUpload::CParam *pParams = new CWebUpload::CParam();
-				pParams->m_RunID = pUpload->m_RunID;
+				pParams->m_UserID = pUpload->m_UserID;
 				str_copy(pParams->m_aFilename, pUpload->m_aFilename, sizeof(pParams->m_aFilename));
 				AddJob(CWebUpload::UploadDemo, pParams);
 				
@@ -329,7 +332,7 @@ void CWebapp::Tick()
 			if(!Server()->IsGhostRecording(pUpload->m_ClientID))
 			{
 				CWebUpload::CParam *pParams = new CWebUpload::CParam();
-				pParams->m_RunID = pUpload->m_RunID;
+				pParams->m_UserID = pUpload->m_UserID;
 				str_copy(pParams->m_aFilename, pUpload->m_aFilename, sizeof(pParams->m_aFilename));
 				AddJob(CWebUpload::UploadGhost, pParams);
 				
@@ -463,6 +466,35 @@ int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
 	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", *ppOutString);
 	
 	return Header.m_ContentLength;
+}
+
+int CWebapp::Upload(unsigned char *pData, int Size)
+{
+	// send data
+	int Bytes = net_tcp_send(m_Socket, pData, Size);
+	dbg_msg("test", "data: %d", Bytes);
+	thread_sleep(10); // limit upload rate
+	return Bytes;
+}
+
+int CWebapp::SendUploadHeader(const char *pHeader)
+{
+	net_tcp_connect(m_Socket, &m_Addr);
+	
+	int Bytes = net_tcp_send(m_Socket, pHeader, str_length(pHeader));
+	dbg_msg("test", "%s", pHeader);
+	return Bytes;
+}
+
+int CWebapp::SendUploadEnd()
+{	
+	char aEnd[512];
+	str_copy(aEnd, "\r\n--frontier--\r\n", sizeof(aEnd));
+	int Bytes = net_tcp_send(m_Socket, aEnd, str_length(aEnd));
+	net_tcp_recv(m_Socket, aEnd, sizeof(aEnd));
+	dbg_msg("test", "%s", aEnd);
+	net_tcp_close(m_Socket);
+	return Bytes;
 }
 
 bool CWebapp::Download(const char *pFilename, const char *pURL)

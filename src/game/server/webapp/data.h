@@ -36,7 +36,7 @@ public:
 	CUpload(int Type) { m_Type = Type; }
 	int m_Type;
 	int m_ClientID;
-	int m_RunID;
+	int m_UserID;
 	char m_aFilename[256];
 };
 	

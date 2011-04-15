@@ -12,6 +12,7 @@ int CWebRun::Post(void *pUserData)
 	CWebapp *pWebapp = pData->m_pWebapp;
 	int ClientID = pData->m_ClientID;
 	int Tick = pData->m_Tick;
+	int UserID = pData->m_UserID;
 	
 	if(!pWebapp->Connect())
 	{
@@ -25,7 +26,7 @@ int CWebRun::Post(void *pUserData)
 	
 	Run["map_id"] = pWebapp->CurrentMap()->m_ID;
 	Run["map_crc"] = pWebapp->CurrentMap()->m_aCrc;
-	Run["user_id"] = pData->m_UserID;
+	Run["user_id"] = UserID;
 	// TODO: take this out after 0.6 release
 	str_sanitize_strong(pData->m_aName);
 	Run["nickname"] = pData->m_aName;
@@ -66,6 +67,7 @@ int CWebRun::Post(void *pUserData)
 	COut *pOut = new COut(WEB_RUN);
 	pOut->m_Tick = Tick;
 	pOut->m_ClientID = ClientID;
+	pOut->m_UserID = UserID;
 	pWebapp->AddOutput(pOut);
 	
 	return Size >= 0;

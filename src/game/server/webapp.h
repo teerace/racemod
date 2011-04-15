@@ -62,7 +62,6 @@ class CWebapp
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
-	class IStorage *Storage() { return m_pStorage; }
 	
 	void LoadMaps();
 	int UpdateJobs();
@@ -74,10 +73,13 @@ public:
 	static const char POST[];
 	static const char PUT[];
 	static const char DOWNLOAD[];
+	static const char UPLOAD[];
 	
 	CWebapp(CGameContext *pGameServer);
 	~CWebapp();
 	
+	class IStorage *Storage() { return m_pStorage; }
+
 	const char *ApiKey();
 	const char *ServerIP();
 	const char *MapName();
@@ -97,6 +99,9 @@ public:
 	int RecvHeader(char *pBuf, int MaxSize, CHeader *pHeader);
 	
 	int SendAndReceive(const char *pInString, char **ppOutString);
+	int Upload(unsigned char *pData, int Size);
+	int SendUploadHeader(const char *pHeader);
+	int SendUploadEnd();
 	bool Download(const char *pFilename, const char *pURL);
 	
 	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData, bool NeedOnline = 1);

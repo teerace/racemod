@@ -10,7 +10,7 @@ public:
 	class CParam : public IDataIn
 	{
 	public:
-		int m_RunID;
+		int m_UserID;
 		char m_aFilename[256];
 	};
 	
