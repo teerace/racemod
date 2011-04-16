@@ -45,7 +45,7 @@ int CWebPing::Ping(void *pUserData)
 	
 	char aBuf[1024];
 	char *pReceived = 0;
-	str_format(aBuf, sizeof(aBuf), CWebapp::POST, "/api/1/ping/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CWebapp::POST, pWebapp->ApiPath(), "ping/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	

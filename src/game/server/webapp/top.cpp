@@ -27,8 +27,8 @@ int CWebTop::GetTop5(void *pUserData)
 	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
-	str_format(aURL, sizeof(aURL), " /api/1/maps/rank/%d/%d/", pWebapp->CurrentMap()->m_ID, Start);
-	str_format(aBuf, sizeof(aBuf), CWebapp::GET, aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
+	str_format(aURL, sizeof(aURL), "maps/rank/%d/%d/", pWebapp->CurrentMap()->m_ID, Start);
+	str_format(aBuf, sizeof(aBuf), CWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	

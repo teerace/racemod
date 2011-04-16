@@ -82,6 +82,7 @@ public:
 
 	const char *ApiKey();
 	const char *ServerIP();
+	const char *ApiPath();
 	const char *MapName();
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	

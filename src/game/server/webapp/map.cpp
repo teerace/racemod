@@ -19,7 +19,7 @@ int CWebMap::LoadList(void *pUserData)
 	
 	char aBuf[512];
 	char *pReceived = 0;
-	str_format(aBuf, sizeof(aBuf), CWebapp::GET, "/api/1/maps/list/", pWebapp->ServerIP(), pWebapp->ApiKey());
+	str_format(aBuf, sizeof(aBuf), CWebapp::GET, pWebapp->ApiPath(), "maps/list/", pWebapp->ServerIP(), pWebapp->ApiKey());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	

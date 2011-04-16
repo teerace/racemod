@@ -21,7 +21,7 @@ int CWebUpload::UploadDemo(void *pUserData)
 	
 	char aHeader[512];
 	char aURL[128];
-	str_format(aURL, sizeof(aURL), "/api/1/demos/update/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
+	str_format(aURL, sizeof(aURL), "demos/update/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
 	
 	// load file
 	IOHANDLE File = pWebapp->Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL);
@@ -31,7 +31,7 @@ int CWebUpload::UploadDemo(void *pUserData)
 		int FileLength = (int)io_length(File);
 		
 		// send header
-		str_format(aHeader, sizeof(aHeader), CWebapp::UPLOAD, aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+142, "demo_file"); // 142 = stuff around data
+		str_format(aHeader, sizeof(aHeader), CWebapp::UPLOAD, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+142, "demo_file"); // 142 = stuff around data
 		if(pWebapp->SendUploadHeader(aHeader) < 0)
 		{
 			dbg_msg("webapp", "demo upload failed (sending header)");
