@@ -21,7 +21,7 @@ int CWebUpload::UploadDemo(void *pUserData)
 	
 	char aHeader[512];
 	char aURL[128];
-	str_format(aURL, sizeof(aURL), "demos/update/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
+	str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
 	
 	// load file
 	IOHANDLE File = pWebapp->Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL);
@@ -69,16 +69,70 @@ int CWebUpload::UploadDemo(void *pUserData)
 	
 	pWebapp->Disconnect();
 	
-	return 0;
+	return 1;
 }
 
 int CWebUpload::UploadGhost(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
 	CWebapp *pWebapp = pData->m_pWebapp;
+	int UserID = pData->m_UserID;
+	char aFilename[256];
+	str_copy(aFilename, pData->m_aFilename, sizeof(aFilename));
 	delete pData;
 	
-	// upload ghost
+	if(!pWebapp->Connect())
+		return 0;
+	
+	char aHeader[512];
+	char aURL[128];
+	str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
+	
+	// load file
+	IOHANDLE File = pWebapp->Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL);
+	if(File)
+	{
+		// get file length
+		int FileLength = (int)io_length(File);
+		
+		// send header
+		str_format(aHeader, sizeof(aHeader), CWebapp::UPLOAD, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+143, "ghost_file"); // 143 = stuff around data
+		if(pWebapp->SendUploadHeader(aHeader) < 0)
+		{
+			dbg_msg("webapp", "ghost upload failed (sending header)");
+			io_close(File);
+			return 0;
+		}
+
+		unsigned char aData[512];
+		while(1)
+		{
+			unsigned Bytes = io_read(File, aData, 512);
+			if(Bytes <= 0)
+				break;
+			if(pWebapp->Upload(aData, Bytes) < 0)
+			{
+				dbg_msg("webapp", "ghost upload failed (sending data)");
+				io_close(File);
+				return 0;
+			}
+		}
+		
+		io_close(File);
+		
+		if(pWebapp->SendUploadEnd() < 0)
+		{
+			dbg_msg("webapp", "ghost upload failed (sending end)");
+			return 0;
+		}
+		
+		// delete the ghost file
+		pWebapp->Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
+	}
+	else
+		dbg_msg("webapp", "failed to open file %s", aFilename);
+	
+	pWebapp->Disconnect();
 	
 	return 1;
 }
