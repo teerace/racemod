@@ -1746,7 +1746,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	// reset everything here
 	//world = new GAMEWORLD;
 	//players = new CPlayer[MAX_CLIENTS];
-		
+
 	// race one and only gametype
 	/*if(str_comp(g_Config.m_SvGametype, "mod") == 0)
 		m_pController = new CGameControllerMOD(this);
@@ -1755,14 +1755,13 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	else if(str_comp(g_Config.m_SvGametype, "tdm") == 0)
 		m_pController = new CGameControllerTDM(this);
 	else*/
-	
+
 	if(str_find_nocase(g_Config.m_SvGametype, "cap"))
 		m_pController = new CGameControllerFC(this);
 	else
-	{
 		m_pController = new CGameControllerRACE(this);
-		RaceController()->InitTeleporter();
-	}
+
+	RaceController()->InitTeleporter();
 
 	// delete old score object
 	if(m_pScore)
