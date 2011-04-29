@@ -39,6 +39,7 @@ public:
 			m_UserID = 0;
 			m_GlobalRank = 0;
 			m_MatchFound = 1;
+			m_IsStaff = 0;
 		}
 		int m_ClientID;
 		int m_UserID;
@@ -50,6 +51,7 @@ public:
 		bool m_GetBestRun;
 		bool m_PrintRank;
 		bool m_MatchFound;
+		bool m_IsStaff;
 	};
 	
 	//static int Auth(void *pUserData);

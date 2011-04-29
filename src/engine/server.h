@@ -66,23 +66,25 @@ public:
 
 #if defined(CONF_TEERACE)
 	virtual void ReloadMap() = 0;
-	
+
 	virtual void SetUserID(int ClientID, int UserID) = 0;
 	virtual int GetUserID(int ClientID) = 0;
 	virtual int GetPlayTicks(int ClientID) = 0;
 	virtual void HigherPlayTicks(int ClientID) = 0;
-	
+
 	virtual void SetUserName(int ClientID, const char* pUsername) = 0;
 	virtual const char* GetUserName(int ClientID) = 0;
-	
+
 	virtual char *GetMapName() = 0;
-	
+
 	virtual void SaveGhostDemo(int ClientID) = 0;
-	
+
 	virtual void StartRecord(int ClientID) = 0;
 	virtual void StopRecord(int ClientID) = 0;
 	virtual bool IsRecording(int ClientID) = 0;
-	
+
+	virtual void StaffAuth(int ClientID) = 0;
+
 	virtual void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet) = 0;
 	virtual void StopGhostRecord(int ClientID, float Time=0.0f) = 0;
 	virtual bool IsGhostRecording(int ClientID) = 0;

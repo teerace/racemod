@@ -191,21 +191,23 @@ public:
 
 #if defined(CONF_TEERACE)
 	void ReloadMap();
-	
+
 	void SetUserID(int ClientID, int UserID) { m_aClients[ClientID].m_UserID = UserID; }
 	int GetUserID(int ClientID) { return m_aClients[ClientID].m_UserID; }
 	int GetPlayTicks(int ClientID) { return m_aClients[ClientID].m_PlayTicks; }
 	void HigherPlayTicks(int ClientID) { m_aClients[ClientID].m_PlayTicks++; }
-	
+
 	void SetUserName(int ClientID, const char* pUsername) { str_copy(m_aClients[ClientID].m_aUsername, pUsername, sizeof(m_aClients[ClientID].m_aUsername)); }
 	const char* GetUserName(int ClientID) { return m_aClients[ClientID].m_aUsername; }
-	
+
 	void SaveGhostDemo(int ClientID);
-	
+
 	void StartRecord(int ClientID);
 	void StopRecord(int ClientID);
 	bool IsRecording(int ClientID);
-	
+
+	void StaffAuth(int ClientID);
+
 	void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet);
 	void StopGhostRecord(int ClientID, float Time=0.0f);
 	bool IsGhostRecording(int ClientID);

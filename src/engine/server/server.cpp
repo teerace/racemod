@@ -1165,6 +1165,19 @@ void CServer::GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlaye
 {
 	m_aGhostRecorder[ClientID].AddInfos(pPlayer);
 }
+
+void CServer::StaffAuth(int ClientID)
+{
+	CMsgPacker Msg(NETMSG_RCON_AUTH_STATUS);
+	Msg.AddInt(1);
+	SendMsgEx(&Msg, MSGFLAG_VITAL, ClientID, true);
+
+	m_aClients[ClientID].m_Authed = 1;
+	SendRconLine(ClientID, "Teerace staff authentication successful. Remote console access granted.");
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "ClientID=%d authed", ClientID);
+	Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+}
 #endif
 
 char *CServer::GetMapName()

@@ -138,6 +138,10 @@ void CWebapp::Tick()
 					Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
 					Server()->SetUserName(pData->m_ClientID, pData->m_aUsername);
 					
+					// auth staff members
+					if(pData->m_IsStaff)
+						Server()->StaffAuth(pData->m_ClientID);
+					
 					CWebUser::CParam *pParams = new CWebUser::CParam();
 					str_copy(pParams->m_aName, Server()->GetUserName(pData->m_ClientID), sizeof(pParams->m_aName));
 					pParams->m_ClientID = pData->m_ClientID;

@@ -179,17 +179,19 @@ int CWebUser::AuthToken(void *pUserData)
 	
 	Json::Value User;
 	Json::Reader Reader;
-	bool ParsingSuccessful = Reader.parse(pReceived, pReceived+Size, User);
-	mem_free(pReceived);
+	if(!Reader.parse(pReceived, pReceived+Size, User))
+	{
+		mem_free(pReceived);
+		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
+		return 0;
+	}
 	
 	COut *pOut = new COut(WEB_USER_AUTH, ClientID);
-	if(ParsingSuccessful)
-	{
-		pOut->m_UserID = User["id"].asInt();
-		str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
-	}
+	pOut->m_UserID = User["id"].asInt();
+	pOut->m_IsStaff = User["is_staff"].asBool();
+	str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
 	pWebapp->AddOutput(pOut);
-	return ParsingSuccessful;
+	return 1;
 }
 
 // TODO: rework this
@@ -248,14 +250,18 @@ int CWebUser::UpdateSkin(void *pUserData)
 	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
-	mem_free(pReceived);
 	
 	delete pData;
 	
 	if(Size < 0)
+	{
 		dbg_msg("webapp", "error: %d (skin update)", Size);
+		return 0;
+	}
 	
-	return Size >= 0;
+	mem_free(pReceived);
+	
+	return 1;
 }
 
 int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
