@@ -238,8 +238,11 @@ int CWebUser::UpdateSkin(void *pUserData)
 	Json::FastWriter Writer;
 	
 	Userdata["skin_name"] = pData->m_SkinName;
-	Userdata["body_color"] = HslToRgb(pData->m_ColorBody);
-	Userdata["feet_color"] = HslToRgb(pData->m_ColorFeet);
+	if(pData->m_UseCustomColor)
+	{
+		Userdata["body_color"] = HslToRgb(pData->m_ColorBody);
+		Userdata["feet_color"] = HslToRgb(pData->m_ColorFeet);
+	}
 	
 	std::string Json = Writer.write(Userdata);
 	

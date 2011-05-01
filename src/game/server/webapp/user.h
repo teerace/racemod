@@ -22,6 +22,7 @@ public:
 		int m_UserID; // rank
 		int m_PlayTime;
 		char m_SkinName[64];
+		bool m_UseCustomColor;
 		int m_ColorBody;
 		int m_ColorFeet;
 		// rank

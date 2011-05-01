@@ -1217,6 +1217,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			CWebUser::CParam *pParams = new CWebUser::CParam;
 			pParams->m_UserID = Server()->GetUserID(ClientID);
 			str_copy(pParams->m_SkinName, pMsg->m_pSkin, sizeof(pParams->m_SkinName));
+			pParams->m_UseCustomColor = pMsg->m_UseCustomColor;
 			pParams->m_ColorBody = pMsg->m_ColorBody;
 			pParams->m_ColorFeet = pMsg->m_ColorFeet;
 			m_pWebapp->AddJob(CWebUser::UpdateSkin, pParams);
