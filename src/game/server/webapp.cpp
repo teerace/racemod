@@ -122,7 +122,8 @@ void CWebapp::Tick()
 	
 	// TODO: add event listener (server and client)
 	lock_wait(m_OutputLock);
-	for(IDataOut *pItem = m_pFirst; pItem; pItem = pItem->m_pNext, delete pItem)
+	IDataOut *pNext = 0;
+	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
 	{
 		int Type = pItem->m_Type;
 		if(Type == WEB_USER_AUTH)
@@ -177,27 +178,29 @@ void CWebapp::Tick()
 						else
 							str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pData->m_aUsername);
 						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-						continue;
 					}
-					else if(!pData->m_MapRank)
-						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
-							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 					else
 					{
-						if(pData->m_BestRun.m_Time < 60.0f)
-							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
-								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, pData->m_BestRun.m_Time,
-								Server()->ClientName(pData->m_ClientID));
+						if(!pData->m_MapRank)
+							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
+								pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
 						else
-							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
-								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, (int)pData->m_BestRun.m_Time/60,
-								fmod(pData->m_BestRun.m_Time, 60), Server()->ClientName(pData->m_ClientID));
+						{
+							if(pData->m_BestRun.m_Time < 60.0f)
+								str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
+									pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, pData->m_BestRun.m_Time,
+									Server()->ClientName(pData->m_ClientID));
+							else
+								str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
+									pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, (int)pData->m_BestRun.m_Time/60,
+									fmod(pData->m_BestRun.m_Time, 60), Server()->ClientName(pData->m_ClientID));
+						}
+						
+						if(g_Config.m_SvShowTimes)
+							GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+						else
+							GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 					}
-					
-					if(g_Config.m_SvShowTimes)
-						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-					else
-						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				}
 				
 				// saving the best run
@@ -314,6 +317,8 @@ void CWebapp::Tick()
 				m_lUploads.add(pGhost);
 			}
 		}
+		pNext = pItem->m_pNext;
+		delete pItem;
 	}
 	m_pFirst = 0;
 	m_pLast = 0;
