@@ -247,9 +247,7 @@ void CSqlScore::LoadScore(int ClientID)
 	Tmp->m_pSqlData = this;
 	
 	void *LoadThread = thread_create(LoadScoreThread, Tmp);
-#if defined(CONF_FAMILY_UNIX)
-	pthread_detach((pthread_t)LoadThread);
-#endif
+	thread_detach(LoadThread);
 }
 
 void CSqlScore::SaveScoreThread(void *pUser)
@@ -338,9 +336,7 @@ void CSqlScore::SaveScore(int ClientID)
 	Tmp->m_pSqlData = this;
 	
 	void *SaveThread = thread_create(SaveScoreThread, Tmp);
-#if defined(CONF_FAMILY_UNIX)
-	pthread_detach((pthread_t)SaveThread);
-#endif
+	thread_detach(SaveThread);
 }
 
 void CSqlScore::ShowRankThread(void *pUser)
@@ -437,9 +433,7 @@ void CSqlScore::ShowRank(int ClientID, const char* pName, bool Search)
 	Tmp->m_pSqlData = this;
 	
 	void *RankThread = thread_create(ShowRankThread, Tmp);
-#if defined(CONF_FAMILY_UNIX)
-	pthread_detach((pthread_t)RankThread);
-#endif
+	thread_detach(RankThread);
 }
 
 void CSqlScore::ShowTop5Thread(void *pUser)
@@ -505,9 +499,7 @@ void CSqlScore::ShowTop5(int ClientID, int Debut)
 	Tmp->m_pSqlData = this;
 	
 	void *Top5Thread = thread_create(ShowTop5Thread, Tmp);
-#if defined(CONF_FAMILY_UNIX)
-	pthread_detach((pthread_t)Top5Thread);
-#endif
+	thread_detach(Top5Thread);
 }
 
 // anti SQL injection

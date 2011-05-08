@@ -93,9 +93,7 @@ void CFileScore::Save()
 #endif
 
 	void *pSaveThread = thread_create(SaveScoreThread, this);
-#if defined(CONF_FAMILY_UNIX)
-	pthread_detach((pthread_t)pSaveThread);
-#endif
+	thread_detach(pSaveThread);
 }
 
 void CFileScore::Init()
