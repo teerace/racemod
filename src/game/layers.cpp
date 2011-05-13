@@ -53,9 +53,9 @@ void CLayers::Init(class IKernel *pKernel)
 
 					//break;
 				}
-				if(pTilemap->m_Flags&2)
+				else if(pTilemap->m_Flags&2)
 					m_pTeleLayer = pTilemap;
-				if(pTilemap->m_Flags&4)
+				else if(pTilemap->m_Flags&4)
 					m_pSpeedupLayer = pTilemap;
 			}
 		}
