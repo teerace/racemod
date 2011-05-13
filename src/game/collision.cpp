@@ -56,7 +56,7 @@ void CCollision::Init(class CLayers *pLayers)
 		}
 		
 		// race tiles
-		if(Index >= 28 && Index <= 59)
+		if(Index >= 29 && Index <= 59)
 			m_pTiles[i].m_Index = Index;
 	}
 }
