@@ -730,13 +730,19 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 					return;
 				}
 
-				// reserved slot
-				if(ClientID >= m_NetServer.MaxClients() - g_Config.m_SvReservedSlots && g_Config.m_SvReservedSlotsPass[0] != 0 && str_comp(g_Config.m_SvReservedSlotsPass, pPassword) != 0)
+				// count the clients
+				int ClientCount = 0;
+				for(int i = 0; i < MAX_CLIENTS; i++)
+					if(m_aClients[i].m_State > CClient::STATE_AUTH)
+						ClientCount++;
+
+				// reserved slots
+				if(ClientCount >= m_NetServer.MaxClients() - g_Config.m_SvReservedSlots && g_Config.m_SvReservedSlotsPass[0] != 0 && str_comp(g_Config.m_SvReservedSlotsPass, pPassword) != 0)
 				{
 					m_NetServer.Drop(ClientID, "server is full");
 					return;
 				}
-			
+
 				m_aClients[ClientID].m_State = CClient::STATE_CONNECTING;
 				SendMap(ClientID);
 			}
@@ -1000,10 +1006,13 @@ void CServer::SendServerInfo(NETADDR *pAddr, int Token)
 	str_format(aBuf, sizeof(aBuf), "%d", i);
 	p.AddString(aBuf, 2);
 
+	int MaxPlayers = max(PlayerCount, m_NetServer.MaxClients()-g_Config.m_SvSpectatorSlots-g_Config.m_SvReservedSlots);
+	int MaxClients = max(ClientCount, m_NetServer.MaxClients()-g_Config.m_SvReservedSlots);
+
 	str_format(aBuf, sizeof(aBuf), "%d", PlayerCount); p.AddString(aBuf, 3); // num players
-	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-g_Config.m_SvSpectatorSlots); p.AddString(aBuf, 3); // max players
+	str_format(aBuf, sizeof(aBuf), "%d", MaxPlayers); p.AddString(aBuf, 3); // max players
 	str_format(aBuf, sizeof(aBuf), "%d", ClientCount); p.AddString(aBuf, 3); // num clients
-	str_format(aBuf, sizeof(aBuf), "%d", m_NetServer.MaxClients()-g_Config.m_SvReservedSlots); p.AddString(aBuf, 3); // max clients
+	str_format(aBuf, sizeof(aBuf), "%d", MaxClients); p.AddString(aBuf, 3); // max clients
 
 	for(i = 0; i < MAX_CLIENTS; i++)
 	{
