@@ -18,6 +18,7 @@ enum
 class IDataIn
 {
 public:
+	virtual ~IDataIn() {}
 	class CWebapp *m_pWebapp;
 	int m_ClientID;
 };
@@ -25,6 +26,7 @@ public:
 class IDataOut
 {
 public:
+	virtual ~IDataOut() {}
 	IDataOut *m_pNext;
 	int m_Type;
 };
