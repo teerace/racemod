@@ -80,6 +80,8 @@ CWebapp::~CWebapp()
 		pNext = pItem->m_pNext;
 		delete pItem;
 	}
+
+	lock_destroy(m_OutputLock);
 }
 
 const char *CWebapp::ApiKey()
@@ -562,7 +564,11 @@ bool CWebapp::Download(const char *pFilename, const char *pURL)
 CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData, bool NeedOnline)
 {
 	if(NeedOnline && !m_Online)
+	{
+		delete pUserData;
 		return 0;
+	}
+
 	pUserData->m_pWebapp = this;
 	int i = m_Jobs.add(new CJob());
 	m_JobPool.Add(m_Jobs[i], pfnFunc, pUserData);
