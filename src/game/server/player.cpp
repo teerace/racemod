@@ -25,7 +25,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 	m_Team = GameServer()->m_pController->ClampTeam(Team);
 	m_SpectatorID = SPEC_FREEVIEW;
 	m_LastActionTick = Server()->Tick();
-	
+	m_TeamChangeTick = Server()->Tick();
+
 	if(!g_Config.m_SvShowOthers)
 		m_ShowOthers = false;
 	else
