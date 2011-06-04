@@ -362,7 +362,7 @@ void CWebapp::Tick()
 bool CWebapp::Connect()
 {
 	// connect to the server
-	m_Socket = net_tcp_create(&m_Addr);
+	m_Socket = net_tcp_create(m_Addr);
 	if(m_Socket.type == NETTYPE_INVALID)
 		return false;
 	
