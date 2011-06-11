@@ -1,7 +1,7 @@
 #ifndef GAME_SERVER_WEBAPP_TOP_H
 #define GAME_SERVER_WEBAPP_TOP_H
 
-#include "data.h"
+#include <game/data.h>
 
 class CWebTop
 {

@@ -10,7 +10,7 @@
 int CWebUpload::UploadDemo(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	char aFilename[256];
 	str_copy(aFilename, pData->m_aFilename, sizeof(aFilename));
@@ -31,7 +31,7 @@ int CWebUpload::UploadDemo(void *pUserData)
 		int FileLength = (int)io_length(File);
 		
 		// send header
-		str_format(aHeader, sizeof(aHeader), CWebapp::UPLOAD, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+142, "demo_file"); // 142 = stuff around data
+		str_format(aHeader, sizeof(aHeader), CServerWebapp::UPLOAD, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+142, "demo_file"); // 142 = stuff around data
 		if(pWebapp->SendUploadHeader(aHeader) < 0)
 		{
 			dbg_msg("webapp", "demo upload failed (sending header)");
@@ -75,7 +75,7 @@ int CWebUpload::UploadDemo(void *pUserData)
 int CWebUpload::UploadGhost(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	char aFilename[256];
 	str_copy(aFilename, pData->m_aFilename, sizeof(aFilename));
@@ -96,7 +96,7 @@ int CWebUpload::UploadGhost(void *pUserData)
 		int FileLength = (int)io_length(File);
 		
 		// send header
-		str_format(aHeader, sizeof(aHeader), CWebapp::UPLOAD, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+143, "ghost_file"); // 143 = stuff around data
+		str_format(aHeader, sizeof(aHeader), CServerWebapp::UPLOAD, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), FileLength+143, "ghost_file"); // 143 = stuff around data
 		if(pWebapp->SendUploadHeader(aHeader) < 0)
 		{
 			dbg_msg("webapp", "ghost upload failed (sending header)");

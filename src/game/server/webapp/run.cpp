@@ -9,7 +9,7 @@
 int CWebRun::Post(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int ClientID = pData->m_ClientID;
 	int Tick = pData->m_Tick;
 	int UserID = pData->m_UserID;
@@ -45,7 +45,7 @@ int CWebRun::Post(void *pUserData)
 	delete pData;
 	
 	char *pReceived = 0;
-	str_format(aBuf, sizeof(aBuf), CWebapp::POST, pWebapp->ApiPath(), "runs/new/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), "runs/new/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	

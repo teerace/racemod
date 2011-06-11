@@ -64,7 +64,7 @@ class CGameContext : public IGameServer
 	// race
 	class IScore *m_pScore;
 #if defined(CONF_TEERACE)
-	class CWebapp *m_pWebapp;
+	class CServerWebapp *m_pWebapp;
 	int m_LastPing;
 #endif
 	
@@ -89,7 +89,7 @@ public:
 	// race
 	class IScore *Score() { return m_pScore; }
 #if defined(CONF_TEERACE)
-	class CWebapp *Webapp() { return m_pWebapp; }
+	class CServerWebapp *Webapp() { return m_pWebapp; }
 #endif
 	class CGameControllerRACE *RaceController() { return (CGameControllerRACE*)m_pController; }
 	

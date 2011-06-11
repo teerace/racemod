@@ -52,7 +52,7 @@ private:
 int CWebUser::Auth(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int ClientID = pData->m_ClientID;
 	
 	if(!pWebapp->Connect())
@@ -139,7 +139,7 @@ int CWebUser::Auth(void *pUserData)
 int CWebUser::AuthToken(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int ClientID = pData->m_ClientID;
 	
 	if(!pWebapp->Connect())
@@ -159,7 +159,7 @@ int CWebUser::AuthToken(void *pUserData)
 	
 	char *pReceived = 0;
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), CWebapp::POST, pWebapp->ApiPath(), "users/auth_token/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), "users/auth_token/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
@@ -226,7 +226,7 @@ int HslToRgb(int v)
 int CWebUser::UpdateSkin(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	
 	if(!pWebapp->Connect())
 	{
@@ -250,7 +250,7 @@ int CWebUser::UpdateSkin(void *pUserData)
 	char aBuf[512];
 	char aURL[128];
 	str_format(aURL, sizeof(aURL), "users/skin/%d/", pData->m_UserID);
-	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
@@ -270,7 +270,7 @@ int CWebUser::UpdateSkin(void *pUserData)
 int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	int ClientID = pData->m_ClientID;
 	bool PrintRank = pData->m_PrintRank;
@@ -302,7 +302,7 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 		std::string Json = Writer.write(PostUser);
 	
 		str_format(aURL, sizeof(aURL), "users/get_by_name/");
-		str_format(aBuf, sizeof(aBuf), CWebapp::POST, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+		str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 		Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 		pWebapp->Disconnect();
 		
@@ -341,7 +341,7 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	
 	// global rank
 	str_format(aURL, sizeof(aURL), "users/rank/%d/", UserID);
-	str_format(aBuf, sizeof(aBuf), CWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
 	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
@@ -358,7 +358,7 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 		return 0;
 	
 	str_format(aURL, sizeof(aURL), "users/map_rank/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
-	str_format(aBuf, sizeof(aBuf), CWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
 	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
@@ -409,7 +409,7 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	int Time = pData->m_PlayTime;
 	delete pData;
@@ -429,7 +429,7 @@ int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
 	std::string Json = Writer.write(Post);
 	
 	str_format(aURL, sizeof(aURL), "users/playtime/%d/", UserID);
-	str_format(aBuf, sizeof(aBuf), CWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 		

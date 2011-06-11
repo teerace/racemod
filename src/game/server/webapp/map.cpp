@@ -10,7 +10,7 @@
 int CWebMap::LoadList(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	bool CrcCheck = pData->m_CrcCheck;
 	delete pData;
 	
@@ -19,7 +19,7 @@ int CWebMap::LoadList(void *pUserData)
 	
 	char aBuf[512];
 	char *pReceived = 0;
-	str_format(aBuf, sizeof(aBuf), CWebapp::GET, pWebapp->ApiPath(), "maps/list/", pWebapp->ServerIP(), pWebapp->ApiKey());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), "maps/list/", pWebapp->ServerIP(), pWebapp->ApiKey());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	
@@ -74,7 +74,7 @@ int CWebMap::LoadList(void *pUserData)
 int CWebMap::DownloadMaps(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	array<std::string> Maps = pData->m_lMapName;
 	array<std::string> URL = pData->m_lMapURL;
 	delete pData;

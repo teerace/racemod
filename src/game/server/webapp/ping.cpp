@@ -9,7 +9,7 @@
 int CWebPing::Ping(void *pUserData)
 {
 	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = pData->m_pWebapp;
+	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	bool CrcCheck = pData->m_CrcCheck;
 	
 	if(!pWebapp->Connect())
@@ -45,7 +45,7 @@ int CWebPing::Ping(void *pUserData)
 	
 	char aBuf[1024];
 	char *pReceived = 0;
-	str_format(aBuf, sizeof(aBuf), CWebapp::POST, pWebapp->ApiPath(), "ping/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
+	str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), "ping/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
 	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
 	pWebapp->Disconnect();
 	

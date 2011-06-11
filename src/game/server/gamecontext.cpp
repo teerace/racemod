@@ -86,7 +86,7 @@ void CGameContext::Clear()
 	int NumVoteOptions = m_NumVoteOptions;
 	CTuningParams Tuning = m_Tuning;
 #if defined(CONF_TEERACE)
-	CWebapp *pWebapp = m_pWebapp;
+	CServerWebapp *pWebapp = m_pWebapp;
 #endif
 
 	m_Resetting = true;
@@ -1779,7 +1779,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	// create webapp object
 #if defined(CONF_TEERACE)
 	if(g_Config.m_SvUseWebapp && !m_pWebapp)
-		m_pWebapp = new CWebapp(this);
+		m_pWebapp = new CServerWebapp(this);
 #endif
 		
 	// setup core world

@@ -2,7 +2,7 @@
 #define GAME_SERVER_WEBAPP_MAP_H
 
 #include "../score.h"
-#include "data.h"
+#include <game/data.h>
 
 class CWebMap
 {

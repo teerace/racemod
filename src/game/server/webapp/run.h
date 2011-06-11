@@ -3,7 +3,7 @@
 
 #include <game/server/score.h>
 
-#include "data.h"
+#include <game/data.h>
 
 class CWebRun
 {
