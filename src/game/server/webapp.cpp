@@ -191,6 +191,8 @@ void CServerWebapp::Tick()
 					str_copy(m_CurrentMap.m_aCrc, pData->m_lMapCrc[i].c_str(), sizeof(m_CurrentMap.m_aCrc));
 					str_copy(m_CurrentMap.m_aURL, pData->m_lMapURL[i].c_str(), sizeof(m_CurrentMap.m_aURL));
 					str_copy(m_CurrentMap.m_aAuthor, pData->m_lMapAuthor[i].c_str(), sizeof(m_CurrentMap.m_aAuthor));
+
+					continue;
 				}
 				
 				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_lMapName[i]);
