@@ -311,7 +311,8 @@ int CServerWebapp::Upload(unsigned char *pData, int Size)
 
 int CServerWebapp::SendUploadHeader(const char *pHeader)
 {
-	net_tcp_connect(Socket(), &Addr());
+	NETADDR Address = Addr();
+	net_tcp_connect(Socket(), &Address);
 	
 	int Bytes = net_tcp_send(Socket(), pHeader, str_length(pHeader));
 	return Bytes;
@@ -333,8 +334,9 @@ bool CServerWebapp::Download(const char *pFilename, const char *pURL)
 	// TODO: limit transfer rate
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
-	
-	net_tcp_connect(Socket(), &Addr());
+
+	NETADDR Address = Addr();
+	net_tcp_connect(Socket(), &Address);
 	net_tcp_send(Socket(), aStr, str_length(aStr));
 	
 	CHeader Header;

@@ -823,7 +823,6 @@ static int priv_net_close_all_sockets(NETSOCKET sock)
 static int priv_net_create_socket(int domain, int type, struct sockaddr *addr, int sockaddrlen)
 {
 	int sock, e;
-	unsigned long mode = 1;
 
 	/* create socket */
 	sock = socket(domain, type, 0);
