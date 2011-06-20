@@ -12,6 +12,7 @@ public:
 	{
 	public:
 		CParam() { m_Tick = -1; }
+		int m_ClientID;
 		int m_UserID;
 		char m_aName[MAX_NAME_LENGTH];
 		char m_aClan[MAX_CLAN_LENGTH];

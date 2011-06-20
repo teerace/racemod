@@ -1,6 +1,4 @@
 /* CWebapp class by Sushi and Redix*/
-#if defined(CONF_TEERACE)
-
 #include <stdio.h>
 
 #include <base/math.h>
@@ -50,7 +48,7 @@ CWebapp::~CWebapp()
 		UpdateJobs();
 	} while(m_Jobs.size() > 0);
 	m_Jobs.delete_all();
-	
+
 	IDataOut *pNext;
 	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
 	{
@@ -226,5 +224,3 @@ int CWebapp::UpdateJobs()
 	}
 	return Num;
 }
-
-#endif

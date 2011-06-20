@@ -3,6 +3,7 @@
 
 enum
 {
+	// server
 	WEB_USER_AUTH = 0,
 	WEB_USER_RANK,
 	WEB_USER_TOP,
@@ -10,6 +11,9 @@ enum
 	WEB_MAP_LIST,
 	WEB_MAP_DOWNLOADED,
 	WEB_RUN,
+
+	// client
+	WEB_API_TOKEN = 0,
 	
 	UPLOAD_DEMO = 0,
 	UPLOAD_GHOST
@@ -20,7 +24,6 @@ class IDataIn
 public:
 	virtual ~IDataIn() {}
 	class CWebapp *m_pWebapp;
-	int m_ClientID;
 };
 
 class IDataOut
@@ -29,17 +32,6 @@ public:
 	virtual ~IDataOut() {}
 	IDataOut *m_pNext;
 	int m_Type;
-};
-
-
-class CUpload
-{
-public:
-	CUpload(int Type) { m_Type = Type; }
-	int m_Type;
-	int m_ClientID;
-	int m_UserID;
-	char m_aFilename[256];
 };
 	
 #endif

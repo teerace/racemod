@@ -22,6 +22,8 @@
 #include <game/version.h>
 #include "render.h"
 
+#include "webapp.h"
+
 #include "gameclient.h"
 
 #include "components/binds.h"
@@ -294,6 +296,9 @@ void CGameClient::OnInit()
 	m_ShowOthers = -1;
 	for(int i = 0; i < 2; i++)
 		m_aFlagPos[i] = vec2(-1, -1);
+
+	// init webapp
+	m_pWebapp = new CClientWebapp(this);
 }
 
 void CGameClient::DispatchInput()
@@ -482,6 +487,9 @@ void CGameClient::OnRender()
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->OnRender();
 
+	// run webapp tick
+	m_pWebapp->Tick();
+
 	// clear new tick flags
 	m_NewTick = false;
 	m_NewPredictedTick = false;
@@ -657,6 +665,7 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 void CGameClient::OnShutdown()
 {
 	m_pRaceDemo->OnShutdown();
+	m_pGhost->OnShutdown();
 }
 
 void CGameClient::OnEnterGame() {}

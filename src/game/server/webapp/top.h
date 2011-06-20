@@ -26,6 +26,7 @@ public:
 	{
 	public:
 		int m_Start;
+		int m_ClientID;
 	};
 	
 	class COut : public IDataOut

@@ -5,7 +5,6 @@
 #include <string>
 #include <base/tl/array.h>
 #include <base/tl/sorted_array.h>
-#include <engine/shared/jobs.h>
 
 #include <game/webapp.h>
 
@@ -27,6 +26,16 @@ class CServerWebapp : public CWebapp
 		char m_aCrc[16];
 		char m_aURL[128];
 		char m_aAuthor[32];
+	};
+
+	class CUpload
+	{
+	public:
+		CUpload(int Type) { m_Type = Type; }
+		int m_Type;
+		int m_ClientID;
+		int m_UserID;
+		char m_aFilename[256];
 	};
 
 	class CGameContext *m_pGameServer;

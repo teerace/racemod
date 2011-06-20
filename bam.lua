@@ -183,9 +183,7 @@ function build(settings)
 	-- build the small libraries
 	wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
-	if string.find(settings.config_name, "teerace") then
-		json = Compile(settings, Collect("src/engine/external/json/*.cpp"))
-	end
+	json = Compile(settings, Collect("src/engine/external/json/*.cpp"))
 	--encrypt = Compile(settings, Collect("src/engine/external/encrypt/*.c", "src/engine/external/encrypt/*.cpp"))
 	
 	-- build game components

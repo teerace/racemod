@@ -15,6 +15,7 @@ public:
 			m_PrintRank = 1;
 			m_GetBestRun = 0;
 		}
+		int m_ClientID;
 		char m_aName[64];
 		// auth token
 		char m_aToken[32];

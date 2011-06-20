@@ -573,7 +573,6 @@ void CGhost::OnReset()
 
 	char aFilename[512];
 	str_format(aFilename, sizeof(aFilename), "ghosts/%s_%s_%08x_tmp.gho", Client()->GetCurrentMap(), aName, Client()->GetCurrentMapCrc());
-	dbg_msg("test", "%s", aFilename);
 	Storage()->RemoveFile(aFilename, IStorage::TYPE_SAVE);
 }
 
