@@ -674,6 +674,89 @@ Strict gametype filter
 
 ##### old translations #####
 
+##### race #####
+
+Ghost
+== 
+
+Actuvate
+== 
+
+Deactivate
+== 
+
+Time
+== 
+
+Race specific settings
+== 
+
+Auto record
+== 
+
+Save player name
+== 
+
+Show other players
+== 
+
+Show checkpoint difference
+== 
+
+Enable Ghost
+== 
+
+Save Ghost
+== 
+
+Show ghost nameplates
+== 
+
+Always show ghost nameplates
+== 
+
+Show records
+== 
+
+Show best time on server
+== 
+
+Global settings
+== 
+
+Show speedmeter
+== 
+
+Show acceleration
+== 
+
+Api token
+== 
+
+Username
+== 
+
+Password
+== 
+
+Error requesting api token
+== 
+
+None
+== 
+
+Checking...
+== 
+
+Request api token
+== 
+
+Finish time
+== 
+
+Server best
+== 
+
 ﻿##### translated strings #####
 == 
 
