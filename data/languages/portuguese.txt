@@ -514,7 +514,7 @@ Shotgun
 Show chat
 == Mostrar conversa
 
-Show friends
+Show friends only
 == Mostrar amigos
 
 Show ingame HUD
@@ -671,7 +671,6 @@ no limit
 == sem limite
 
 ##### needs translation #####
-
 
 ##### old translations #####
 
