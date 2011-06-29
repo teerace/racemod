@@ -225,7 +225,6 @@ public:
 	virtual void OnStartGame();
 
 	virtual const char *GetItemName(int Type);
-	virtual int GetCountryIndex(int Code);
 	virtual const char *Version();
 	virtual const char *NetVersion();
 
