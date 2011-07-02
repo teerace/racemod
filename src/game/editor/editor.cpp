@@ -3400,6 +3400,7 @@ void CEditor::UpdateAndRender()
 	float rx, ry;
 	{
 		Input()->MouseRelative(&rx, &ry);
+		UI()->ConvertMouseMove(&rx, &ry);
 		m_MouseDeltaX = rx;
 		m_MouseDeltaY = ry;
 
