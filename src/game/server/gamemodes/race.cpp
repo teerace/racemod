@@ -77,10 +77,19 @@ int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlay
 	return 0;
 }
 
+void CGameControllerRACE::DoWincheck()
+{
+	if(m_GameOverTick == -1 && !m_Warmup)
+	{
+		if((g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60))
+			EndRound();
+	}
+}
+
 void CGameControllerRACE::Tick()
 {
 	IGameController::Tick();
-	DoRaceTimeCheck();
+	DoWincheck();
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{

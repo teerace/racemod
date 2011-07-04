@@ -49,7 +49,8 @@ public:
 #endif
 	
 	void InitTeleporter();
-	
+
+	virtual void DoWincheck();
 	virtual void Tick();
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 
