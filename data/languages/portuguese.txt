@@ -759,7 +759,3 @@ Finish time
 
 Server best
 == 
-
-﻿
-== ## translated strings #####
-
