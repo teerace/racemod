@@ -41,7 +41,7 @@ CEditorImage::~CEditorImage()
 
 CLayerGroup::CLayerGroup()
 {
-	m_pName = "";
+	m_aName[0] = 0;
 	m_Visible = true;
 	m_SaveToMap = true;
 	m_GameGroup = false;
@@ -501,12 +501,12 @@ int CEditor::DoButton_Tab(const void *pID, const char *pText, int Checked, const
 	return DoButton_Editor_Common(pID, pText, Checked, pRect, Flags, pToolTip);
 }
 
-int CEditor::DoButton_Ex(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners)
+int CEditor::DoButton_Ex(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize)
 {
 	RenderTools()->DrawUIRect(pRect, GetButtonColor(pID, Checked), Corners, 3.0f);
     CUIRect NewRect = *pRect;
-    NewRect.y += NewRect.h/2.0f-7.0f;
-    UI()->DoLabel(&NewRect, pText, 10, 0, -1);
+    NewRect.HMargin(NewRect.h/2.0f-FontSize/2.0f-1.0f, &NewRect);
+    UI()->DoLabel(&NewRect, pText, FontSize, 0, -1);
 	return DoButton_Editor_Common(pID, pText, Checked, pRect, Flags, pToolTip);
 }
 
@@ -2039,16 +2039,19 @@ void CEditor::RenderLayers(CUIRect ToolBox, CUIRect ToolBar, CUIRect View)
 					if(!m_Map.m_lGroups[g]->m_GameGroup)
 						m_Map.m_lGroups[g]->m_SaveToMap = !m_Map.m_lGroups[g]->m_SaveToMap;
 
-				str_format(aBuf, sizeof(aBuf),"#%d %s", g, m_Map.m_lGroups[g]->m_pName);
+				str_format(aBuf, sizeof(aBuf),"#%d %s", g, m_Map.m_lGroups[g]->m_aName);
+				float FontSize = 10.0f;
+				while(TextRender()->TextWidth(0, FontSize, aBuf, -1) > Slot.w)
+					FontSize--;
 				if(int Result = DoButton_Ex(&m_Map.m_lGroups[g], aBuf, g==m_SelectedGroup, &Slot,
-					BUTTON_CONTEXT, "Select group. Right click for properties.", 0))
+					BUTTON_CONTEXT, "Select group. Right click for properties.", 0, FontSize))
 				{
 					m_SelectedGroup = g;
 					m_SelectedLayer = 0;
 
 					static int s_GroupPopupId = 0;
 					if(Result == 2)
-						UiInvokePopupMenu(&s_GroupPopupId, 0, UI()->MouseX(), UI()->MouseY(), 120, 200, PopupGroup);
+						UiInvokePopupMenu(&s_GroupPopupId, 0, UI()->MouseX(), UI()->MouseY(), 120, 220, PopupGroup);
 				}
 				LayersBox.HSplitTop(2.0f, &Slot, &LayersBox);
 			}
@@ -2077,9 +2080,18 @@ void CEditor::RenderLayers(CUIRect ToolBox, CUIRect ToolBar, CUIRect View)
 					if(m_Map.m_lGroups[g]->m_lLayers[i] != m_Map.m_pGameLayer)
 						m_Map.m_lGroups[g]->m_lLayers[i]->m_SaveToMap = !m_Map.m_lGroups[g]->m_lLayers[i]->m_SaveToMap;
 
-				str_format(aBuf, sizeof(aBuf),"#%d %s ", i, m_Map.m_lGroups[g]->m_lLayers[i]->m_pTypeName);
+				if(m_Map.m_lGroups[g]->m_lLayers[i]->m_aName[0])
+					str_format(aBuf, sizeof(aBuf), "%s", m_Map.m_lGroups[g]->m_lLayers[i]->m_aName);
+				else if(m_Map.m_lGroups[g]->m_lLayers[i]->m_Type == LAYERTYPE_TILES)
+					str_copy(aBuf, "Tiles", sizeof(aBuf));
+				else
+					str_copy(aBuf, "Quads", sizeof(aBuf));
+
+				float FontSize = 10.0f;
+				while(TextRender()->TextWidth(0, FontSize, aBuf, -1) > Button.w)
+					FontSize--;
 				if(int Result = DoButton_Ex(m_Map.m_lGroups[g]->m_lLayers[i], aBuf, g==m_SelectedGroup&&i==m_SelectedLayer, &Button,
-					BUTTON_CONTEXT, "Select layer. Right click for properties.", 0))
+					BUTTON_CONTEXT, "Select layer. Right click for properties.", 0, FontSize))
 				{
 					if(m_Map.m_lGroups[g]->m_lLayers[i] == m_Map.m_pTeleLayer || m_Map.m_lGroups[g]->m_lLayers[i] == m_Map.m_pSpeedupLayer)
 						m_Brush.Clear();
@@ -3640,7 +3652,7 @@ void CEditorMap::MakeGameGroup(CLayerGroup *pGroup)
 {
 	m_pGameGroup = pGroup;
 	m_pGameGroup->m_GameGroup = true;
-	m_pGameGroup->m_pName = "Game";
+	str_copy(m_pGameGroup->m_aName, "Game", sizeof(m_pGameGroup->m_aName));
 }
 
 
