@@ -112,6 +112,15 @@ public:
 	short m_Angle;
 };
 
+struct CMapItemInfo
+{
+	int m_Version;
+	int m_Author;
+	int m_MapVersion;
+	int m_Credits;
+	int m_License;
+} ;
+
 struct CMapItemImage
 {
 	int m_Version;

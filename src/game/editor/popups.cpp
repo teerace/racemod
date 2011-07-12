@@ -570,8 +570,8 @@ int CEditor::PopupNewFolder(CEditor *pEditor, CUIRect View)
 		View.HSplitBottom(40.0f, &View, 0);
 		View.VMargin(40.0f, &View);
 		View.HSplitBottom(20.0f, &View, &Label);
-		static int s_FolderBox = 0;
-		pEditor->DoEditBox(&s_FolderBox, &Label, pEditor->m_FileDialogNewFolderName, sizeof(pEditor->m_FileDialogNewFolderName), 15.0f);
+		static float s_FolderBox = 0;
+		pEditor->DoEditBox(&s_FolderBox, &Label, pEditor->m_FileDialogNewFolderName, sizeof(pEditor->m_FileDialogNewFolderName), 15.0f, &s_FolderBox);
 		View.HSplitBottom(20.0f, &View, &Label);
 		pEditor->UI()->DoLabel(&Label, "Name:", 10.0f, -1);
 
@@ -617,6 +617,74 @@ int CEditor::PopupNewFolder(CEditor *pEditor, CUIRect View)
 		if(pEditor->DoButton_Editor(&s_CreateButton, "Ok", 0, &ButtonBar, 0, 0))
 			return 1;
 	}
+
+	return 0;
+}
+
+int CEditor::PopupMapInfo(CEditor *pEditor, CUIRect View)
+{
+	CUIRect Label, ButtonBar, Button;
+
+	// title
+	View.HSplitTop(10.0f, 0, &View);
+	View.HSplitTop(30.0f, &Label, &View);
+	pEditor->UI()->DoLabel(&Label, "Map details", 20.0f, 0);
+
+	View.HSplitBottom(10.0f, &View, 0);
+	View.HSplitBottom(20.0f, &View, &ButtonBar);
+
+	View.VMargin(40.0f, &View);
+
+	// author box
+	View.HSplitTop(20.0f, &Label, &View);
+	pEditor->UI()->DoLabel(&Label, "Author:", 10.0f, -1);
+	Label.VSplitLeft(40.0f, 0, &Button);
+	Button.HSplitTop(12.0f, &Button, 0);
+	static float s_AuthorBox = 0;
+	pEditor->DoEditBox(&s_AuthorBox, &Button, pEditor->m_Map.m_MapInfo.m_aAuthorTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aAuthorTmp), 10.0f, &s_AuthorBox);
+
+	// version box
+	View.HSplitTop(20.0f, &Label, &View);
+	pEditor->UI()->DoLabel(&Label, "Version:", 10.0f, -1);
+	Label.VSplitLeft(40.0f, 0, &Button);
+	Button.HSplitTop(12.0f, &Button, 0);
+	static float s_VersionBox = 0;
+	pEditor->DoEditBox(&s_VersionBox, &Button, pEditor->m_Map.m_MapInfo.m_aVersionTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aVersionTmp), 10.0f, &s_VersionBox);
+
+	// credits box
+	View.HSplitTop(20.0f, &Label, &View);
+	pEditor->UI()->DoLabel(&Label, "Credits:", 10.0f, -1);
+	Label.VSplitLeft(40.0f, 0, &Button);
+	Button.HSplitTop(12.0f, &Button, 0);
+	static float s_CreditsBox = 0;
+	pEditor->DoEditBox(&s_CreditsBox, &Button, pEditor->m_Map.m_MapInfo.m_aCreditsTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aCreditsTmp), 10.0f, &s_CreditsBox);
+
+	// license box
+	View.HSplitTop(20.0f, &Label, &View);
+	pEditor->UI()->DoLabel(&Label, "License:", 10.0f, -1);
+	Label.VSplitLeft(40.0f, 0, &Button);
+	Button.HSplitTop(12.0f, &Button, 0);
+	static float s_LicenseBox = 0;
+	pEditor->DoEditBox(&s_LicenseBox, &Button, pEditor->m_Map.m_MapInfo.m_aLicenseTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aLicenseTmp), 10.0f, &s_LicenseBox);
+
+	// button bar
+	ButtonBar.VSplitLeft(30.0f, 0, &ButtonBar);
+	ButtonBar.VSplitLeft(110.0f, &Label, &ButtonBar);
+	static int s_CreateButton = 0;
+	if(pEditor->DoButton_Editor(&s_CreateButton, "Save", 0, &Label, 0, 0))
+	{
+		str_copy(pEditor->m_Map.m_MapInfo.m_aAuthor, pEditor->m_Map.m_MapInfo.m_aAuthorTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aAuthor));
+		str_copy(pEditor->m_Map.m_MapInfo.m_aVersion, pEditor->m_Map.m_MapInfo.m_aVersionTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aVersion));
+		str_copy(pEditor->m_Map.m_MapInfo.m_aCredits, pEditor->m_Map.m_MapInfo.m_aCreditsTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aCredits));
+		str_copy(pEditor->m_Map.m_MapInfo.m_aLicense, pEditor->m_Map.m_MapInfo.m_aLicenseTmp, sizeof(pEditor->m_Map.m_MapInfo.m_aLicense));
+		return 1;
+	}
+
+	ButtonBar.VSplitRight(30.0f, &ButtonBar, 0);
+	ButtonBar.VSplitRight(110.0f, &ButtonBar, &Label);
+	static int s_AbortButton = 0;
+	if(pEditor->DoButton_Editor(&s_AbortButton, "Abort", 0, &Label, 0, 0))
+		return 1;
 
 	return 0;
 }

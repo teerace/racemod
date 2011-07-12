@@ -195,31 +195,57 @@ void CEditorImage::AnalyseTileFlags()
 
 // copied from gc_menu.cpp, should be more generalized
 //extern int ui_do_edit_box(void *id, const CUIRect *rect, char *str, int str_size, float font_size, bool hidden=false);
-
-int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned StrSize, float FontSize, bool Hidden)
+int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned StrSize, float FontSize, float *Offset, bool Hidden, int Corners)
 {
-    int Inside = UI()->MouseInside(pRect);
+	int Inside = UI()->MouseInside(pRect);
 	bool ReturnValue = false;
+	bool UpdateOffset = false;
 	static int s_AtIndex = 0;
+	static bool s_DoScroll = false;
+	static float s_ScrollStart = 0.0f;
+
+	FontSize *= UI()->Scale();
 
 	if(UI()->LastActiveItem() == pID)
 	{
 		int Len = str_length(pStr);
+		if(Len == 0)
+			s_AtIndex = 0;
 
 		if(Inside && UI()->MouseButton(0))
 		{
+			s_DoScroll = true;
+			s_ScrollStart = UI()->MouseX();
 			int MxRel = (int)(UI()->MouseX() - pRect->x);
 
-			for (int i = 1; i <= Len; i++)
+			for(int i = 1; i <= Len; i++)
 			{
-				if (TextRender()->TextWidth(0, FontSize, pStr, i) + 10 > MxRel)
+				if(TextRender()->TextWidth(0, FontSize, pStr, i) - *Offset > MxRel)
 				{
 					s_AtIndex = i - 1;
 					break;
 				}
 
-				if (i == Len)
+				if(i == Len)
 					s_AtIndex = Len;
+			}
+		}
+		else if(!UI()->MouseButton(0))
+			s_DoScroll = false;
+		else if(s_DoScroll)
+		{
+			// do scrolling
+			if(UI()->MouseX() < pRect->x && s_ScrollStart-UI()->MouseX() > 10.0f)
+			{
+				s_AtIndex = max(0, s_AtIndex-1);
+				s_ScrollStart = UI()->MouseX();
+				UpdateOffset = true;
+			}
+			else if(UI()->MouseX() > pRect->x+pRect->w && UI()->MouseX()-s_ScrollStart > 10.0f)
+			{
+				s_AtIndex = min(Len, s_AtIndex+1);
+				s_ScrollStart = UI()->MouseX();
+				UpdateOffset = true;
 			}
 		}
 
@@ -235,7 +261,11 @@ int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned Str
 	if(UI()->ActiveItem() == pID)
 	{
 		if(!UI()->MouseButton(0))
+		{
+			s_AtIndex = min(s_AtIndex, str_length(pStr));
+			s_DoScroll = false;
 			UI()->SetActiveItem(0);
+		}
 	}
 	else if(UI()->HotItem() == pID)
 	{
@@ -251,8 +281,8 @@ int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned Str
 		UI()->SetHotItem(pID);
 
 	CUIRect Textbox = *pRect;
-	RenderTools()->DrawUIRect(&Textbox, vec4(1,1,1,0.5f), CUI::CORNER_ALL, 3.0f);
-	Textbox.VMargin(3.0f, &Textbox);
+	RenderTools()->DrawUIRect(&Textbox, vec4(1, 1, 1, 0.5f), Corners, 3.0f);
+	Textbox.VMargin(2.0f, &Textbox);
 
 	const char *pDisplayStr = pStr;
 	char aStars[128];
@@ -268,19 +298,47 @@ int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned Str
 		pDisplayStr = aStars;
 	}
 
+	// check if the text has to be moved
+	if(UI()->LastActiveItem() == pID && !JustGotActive && (UpdateOffset || Input()->NumEvents()))
+	{
+		float w = TextRender()->TextWidth(0, FontSize, pDisplayStr, s_AtIndex);
+		if(w-*Offset > Textbox.w)
+		{
+			// move to the left
+			float wt = TextRender()->TextWidth(0, FontSize, pDisplayStr, -1);
+			do
+			{
+				*Offset += min(wt-*Offset-Textbox.w, Textbox.w/3);
+			}
+			while(w-*Offset > Textbox.w);
+		}
+		else if(w-*Offset < 0.0f)
+		{
+			// move to the right
+			do
+			{
+				*Offset = max(0.0f, *Offset-Textbox.w/3);
+			}
+			while(w-*Offset < 0.0f);
+		}
+	}
+	UI()->ClipEnable(pRect);
+	Textbox.x -= *Offset;
+
 	UI()->DoLabel(&Textbox, pDisplayStr, FontSize, -1);
-	
-	//TODO: make it blink
+
+	// render the cursor
 	if(UI()->LastActiveItem() == pID && !JustGotActive)
 	{
 		float w = TextRender()->TextWidth(0, FontSize, pDisplayStr, s_AtIndex);
 		Textbox = *pRect;
 		Textbox.VSplitLeft(2.0f, 0, &Textbox);
-		Textbox.x += w*UI()->Scale();
-		Textbox.y -= FontSize/10.f;
-		
-		UI()->DoLabel(&Textbox, "|", FontSize*1.1f, -1);
+		Textbox.x += (w-*Offset-TextRender()->TextWidth(0, FontSize, "|", -1)/2);
+
+		if((2*time_get()/time_freq()) % 2)	// make it blink
+			UI()->DoLabel(&Textbox, "|", FontSize, -1);
 	}
+	UI()->ClipDisable();
 
 	return ReturnValue;
 }
@@ -2414,9 +2472,9 @@ void CEditor::RenderFileDialog()
 	// filebox
 	if(m_FileDialogStorageType == IStorage::TYPE_SAVE)
 	{
-		static int s_FileBoxID = 0;
+		static float s_FileBoxID = 0;
 		UI()->DoLabel(&FileBoxLabel, "Filename:", 10.0f, -1, -1);
-		if(DoEditBox(&s_FileBoxID, &FileBox, m_aFileDialogFileName, sizeof(m_aFileDialogFileName), 10.0f))
+		if(DoEditBox(&s_FileBoxID, &FileBox, m_aFileDialogFileName, sizeof(m_aFileDialogFileName), 10.0f, &s_FileBoxID))
 		{
 			// remove '/' and '\'
 			for(int i = 0; m_aFileDialogFileName[i]; ++i)
@@ -2507,6 +2565,7 @@ void CEditor::RenderFileDialog()
 	static int s_OkButton = 0;
 	static int s_CancelButton = 0;
 	static int s_NewFolderButton = 0;
+	static int s_MapInfoButton = 0;
 
 	CUIRect Button;
 	ButtonBar.VSplitRight(50.0f, &ButtonBar, &Button);
@@ -2579,6 +2638,22 @@ void CEditor::RenderFileDialog()
 			m_FileDialogErrString[0] = 0;
 			static int s_NewFolderPopupID = 0;
 			UiInvokePopupMenu(&s_NewFolderPopupID, 0, Width/2.0f-200.0f, Height/2.0f-100.0f, 400.0f, 200.0f, PopupNewFolder);
+			UI()->SetActiveItem(0);
+		}
+	}
+
+	if(m_FileDialogStorageType == IStorage::TYPE_SAVE)
+	{
+		ButtonBar.VSplitLeft(40.0f, 0, &ButtonBar);
+		ButtonBar.VSplitLeft(70.0f, &Button, &ButtonBar);
+		if(DoButton_Editor(&s_MapInfoButton, "Map details", 0, &Button, 0, 0))
+		{
+			str_copy(m_Map.m_MapInfo.m_aAuthorTmp, m_Map.m_MapInfo.m_aAuthor, sizeof(m_Map.m_MapInfo.m_aAuthorTmp));
+			str_copy(m_Map.m_MapInfo.m_aVersionTmp, m_Map.m_MapInfo.m_aVersion, sizeof(m_Map.m_MapInfo.m_aVersionTmp));
+			str_copy(m_Map.m_MapInfo.m_aCreditsTmp, m_Map.m_MapInfo.m_aCredits, sizeof(m_Map.m_MapInfo.m_aCreditsTmp));
+			str_copy(m_Map.m_MapInfo.m_aLicenseTmp, m_Map.m_MapInfo.m_aLicense, sizeof(m_Map.m_MapInfo.m_aLicenseTmp));
+			static int s_MapInfoPopupID = 0;
+			UiInvokePopupMenu(&s_MapInfoPopupID, 0, Width/2.0f-200.0f, Height/2.0f-100.0f, 400.0f, 200.0f, PopupMapInfo);
 			UI()->SetActiveItem(0);
 		}
 	}
@@ -2778,8 +2853,8 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 
 			ToolBar.VSplitLeft(80.0f, &Button, &ToolBar);
 
-			static int s_NameBox = 0;
-			if(DoEditBox(&s_NameBox, &Button, pEnvelope->m_aName, sizeof(pEnvelope->m_aName), 10.0f))
+			static float s_NameBox = 0;
+			if(DoEditBox(&s_NameBox, &Button, pEnvelope->m_aName, sizeof(pEnvelope->m_aName), 10.0f, &s_NameBox))
 				m_Map.m_Modified = true;
 		}
 	}
@@ -3454,6 +3529,8 @@ void CEditorMap::Clean()
 	m_lGroups.delete_all();
 	m_lEnvelopes.delete_all();
 	m_lImages.delete_all();
+
+	m_MapInfo.Reset();
 
 	m_pGameLayer = 0x0;
 	m_pTeleLayer = 0x0;

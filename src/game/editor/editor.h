@@ -273,6 +273,34 @@ public:
 	array<CEditorImage*> m_lImages;
 	array<CEnvelope*> m_lEnvelopes;
 
+	class CMapInfo
+	{
+	public:
+		char m_aAuthorTmp[32];
+		char m_aVersionTmp[16];
+		char m_aCreditsTmp[128];
+		char m_aLicenseTmp[32];
+
+		char m_aAuthor[32];
+		char m_aVersion[16];
+		char m_aCredits[128];
+		char m_aLicense[32];
+
+		void Reset()
+		{
+			m_aAuthorTmp[0] = 0;
+			m_aVersionTmp[0] = 0;
+			m_aCreditsTmp[0] = 0;
+			m_aLicenseTmp[0] = 0;
+
+			m_aAuthor[0] = 0;
+			m_aVersion[0] = 0;
+			m_aCredits[0] = 0;
+			m_aLicense[0] = 0;
+		}
+	};
+	CMapInfo m_MapInfo;
+
 	class CLayerGame *m_pGameLayer;
 	class CLayerTele *m_pTeleLayer;
 	class CLayerSpeedup *m_pSpeedupLayer;
@@ -722,7 +750,7 @@ public:
 	int DoButton_Menu(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip);
 	int DoButton_MenuItem(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags=0, const char *pToolTip=0);
 
-	int DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned StrSize, float FontSize, bool Hidden=false);
+	int DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned StrSize, float FontSize, float *Offset, bool Hidden=false, int Corners=CUI::CORNER_ALL);
 
 	void RenderBackground(CUIRect View, int Texture, float Size, float Brightness);
 
@@ -738,6 +766,7 @@ public:
 	static int PopupQuad(CEditor *pEditor, CUIRect View);
 	static int PopupPoint(CEditor *pEditor, CUIRect View);
 	static int PopupNewFolder(CEditor *pEditor, CUIRect View);
+	static int PopupMapInfo(CEditor *pEditor, CUIRect View);
 	static int PopupEvent(CEditor *pEditor, CUIRect View);
 	static int PopupSelectImage(CEditor *pEditor, CUIRect View);
 	static int PopupSelectGametileOp(CEditor *pEditor, CUIRect View);
