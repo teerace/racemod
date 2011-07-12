@@ -185,6 +185,7 @@ int CEditor::PopupGroup(CEditor *pEditor, CUIRect View)
 		l->m_pEditor = pEditor;
 		pEditor->m_Map.m_lGroups[pEditor->m_SelectedGroup]->AddLayer(l);
 		pEditor->m_SelectedLayer = pEditor->m_Map.m_lGroups[pEditor->m_SelectedGroup]->m_lLayers.size()-1;
+		pEditor->m_Map.m_lGroups[pEditor->m_SelectedGroup]->m_Collapse = false;
 		return 1;
 	}
 
@@ -198,6 +199,7 @@ int CEditor::PopupGroup(CEditor *pEditor, CUIRect View)
 		l->m_pEditor = pEditor;
 		pEditor->m_Map.m_lGroups[pEditor->m_SelectedGroup]->AddLayer(l);
 		pEditor->m_SelectedLayer = pEditor->m_Map.m_lGroups[pEditor->m_SelectedGroup]->m_lLayers.size()-1;
+		pEditor->m_Map.m_lGroups[pEditor->m_SelectedGroup]->m_Collapse = false;
 		return 1;
 	}
 
