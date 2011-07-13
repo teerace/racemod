@@ -301,6 +301,12 @@ public:
 	};
 	CMapInfo m_MapInfo;
 
+	struct CSetting
+	{
+		char m_aCommand[64];
+	};
+	array<CSetting> m_lSettings;
+
 	class CLayerGame *m_pGameLayer;
 	class CLayerTele *m_pTeleLayer;
 	class CLayerSpeedup *m_pSpeedupLayer;
@@ -593,6 +599,10 @@ public:
 		m_AnimateSpeed = 1;
 
 		m_ShowEnvelopeEditor = 0;
+		m_ShowServerSettingsEditor = false;
+
+		m_CommandBox = 0.0f;
+		m_aSettingsCommand[0] = 0;
 
 		ms_CheckerTexture = 0;
 		ms_BackgroundTexture = 0;
@@ -715,6 +725,7 @@ public:
 	float m_AnimateSpeed;
 
 	int m_ShowEnvelopeEditor;
+	bool m_ShowServerSettingsEditor;
 	bool m_ShowPicker;
 
 	int m_SelectedLayer;
@@ -735,6 +746,9 @@ public:
 	static const void *ms_pUiGotContext;
 
 	CEditorMap m_Map;
+
+	float m_CommandBox;
+	char m_aSettingsCommand[64];
 
 	void DoMapBorder();
 	int DoButton_Editor_Common(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip);
@@ -806,6 +820,7 @@ public:
 	void RenderModebar(CUIRect View);
 	void RenderStatusbar(CUIRect View);
 	void RenderEnvelopeEditor(CUIRect View);
+	void RenderServerSettingsEditor(CUIRect View);
 
 	void RenderMenubar(CUIRect Menubar);
 	void RenderFileDialog();
