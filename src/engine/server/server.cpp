@@ -1198,7 +1198,7 @@ void CServer::StaffAuth(int ClientID)
 	Msg.AddInt(1);
 	SendMsgEx(&Msg, MSGFLAG_VITAL, ClientID, true);
 
-	m_aClients[ClientID].m_Authed = 1;
+	m_aClients[ClientID].m_Authed = AUTHED_ADMIN;
 	SendRconLine(ClientID, "Teerace staff authentication successful. Remote console access granted.");
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "ClientID=%d authed", ClientID);
