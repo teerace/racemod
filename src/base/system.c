@@ -844,7 +844,7 @@ static int priv_net_create_socket(int domain, int type, struct sockaddr *addr, i
 	/* bind the socket */
 	errno = 0; // just in case
 	e = bind(sock, addr, sockaddrlen);
-	if(e != 0 && errno != 0) // TODO: find out why e is -1 but no error (TCP only)
+	if(e != 0 && type != SOCK_STREAM) // TODO: find out why e is -1 but no error (TCP only)
 	{
 		dbg_msg("net", "failed to bind socket with domain %d and type %d (%d '%s')", domain, type, errno, strerror(errno));
 		priv_net_close_socket(sock);
