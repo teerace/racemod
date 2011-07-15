@@ -636,11 +636,23 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 						}
 						else if(pTilemapItem->m_Flags&2)
 						{
+							if(pGItem->m_Version < 3) // get the right values for tele layer
+							{
+								int *pTele = (int*)(pTilemapItem)+15;
+								pTilemapItem->m_Tele = *pTele;
+							}
+
 							pTiles = new CLayerTele(pTilemapItem->m_Width, pTilemapItem->m_Height);
 							MakeTeleLayer(pTiles);
 						}
 						else if(pTilemapItem->m_Flags&4)
 						{
+							if(pGItem->m_Version < 3) // get the right values for speedup layer
+							{
+								int *pSpeedup = (int*)(pTilemapItem)+16;
+								pTilemapItem->m_Speedup = *pSpeedup;
+							}
+
 							pTiles = new CLayerSpeedup(pTilemapItem->m_Width, pTilemapItem->m_Height);
 							MakeSpeedupLayer(pTiles);
 						}
