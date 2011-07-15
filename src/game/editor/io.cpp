@@ -636,7 +636,7 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 						}
 						else if(pTilemapItem->m_Flags&2)
 						{
-							if(pGItem->m_Version < 3) // get the right values for tele layer
+							if(pTilemapItem->m_Version < 3) // get the right values for tele layer
 							{
 								int *pTele = (int*)(pTilemapItem)+15;
 								pTilemapItem->m_Tele = *pTele;
@@ -647,7 +647,7 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 						}
 						else if(pTilemapItem->m_Flags&4)
 						{
-							if(pGItem->m_Version < 3) // get the right values for speedup layer
+							if(pTilemapItem->m_Version < 3) // get the right values for speedup layer
 							{
 								int *pSpeedup = (int*)(pTilemapItem)+16;
 								pTilemapItem->m_Speedup = *pSpeedup;
