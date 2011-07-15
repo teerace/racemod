@@ -1738,13 +1738,13 @@ void CGameContext::OnConsoleInit()
 	Console()->Chain("sv_motd", ConchainSpecialMotdupdate, this);
 	
 	// race commands
-	Console()->Register("teleport", "ii", CFGFLAG_SERVER, ConTeleport, this, "");
-	Console()->Register("teleport_to", "iii", CFGFLAG_SERVER, ConTeleportTo, this, "");
-	Console()->Register("get_pos", "i", CFGFLAG_SERVER, ConGetPos, this, "");
-	Console()->Register("kill_pl", "i", CFGFLAG_SERVER, ConKillPl, this, "");
+	Console()->Register("teleport", "ii", CFGFLAG_SERVER, ConTeleport, this, "Teleport ID 1 to ID 2");
+	Console()->Register("teleport_to", "iii", CFGFLAG_SERVER, ConTeleportTo, this, "Teleport ID to (Pos X ; Pos Y)");
+	Console()->Register("get_pos", "i", CFGFLAG_SERVER, ConGetPos, this, "Retrun the position of a player");
+	Console()->Register("kill_pl", "i", CFGFLAG_SERVER, ConKillPl, this, "Kill a character");
 
 #if defined(CONF_TEERACE)
-	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "");
+	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "Checks if the webapp is online");
 #endif
 }
 
