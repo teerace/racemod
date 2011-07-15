@@ -1,5 +1,6 @@
 #if defined(CONF_TEERACE)
 
+#include <engine/shared/packer.h>
 // TODO: replace crypto++ with another lib?
 #include <game/server/webapp.h>
 /*#include <engine/external/encrypt/cryptlib.h>
@@ -141,6 +142,7 @@ int CWebUser::AuthToken(void *pUserData)
 	CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int ClientID = pData->m_ClientID;
+	CUnpacker Unpacker = pData->m_Unpacker;
 	
 	if(!pWebapp->Connect())
 	{
@@ -189,6 +191,7 @@ int CWebUser::AuthToken(void *pUserData)
 	COut *pOut = new COut(WEB_USER_AUTH, ClientID);
 	pOut->m_UserID = User["id"].asInt();
 	pOut->m_IsStaff = User["is_staff"].asBool();
+	pOut->m_Unpacker = Unpacker;
 	str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
 	pWebapp->AddOutput(pOut);
 	return 1;

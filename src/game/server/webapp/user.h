@@ -29,6 +29,8 @@ public:
 		// rank
 		bool m_PrintRank;
 		bool m_GetBestRun;
+		// auth
+		class CUnpacker m_Unpacker;
 	};
 	
 	class COut : public IDataOut
@@ -54,6 +56,8 @@ public:
 		bool m_PrintRank;
 		bool m_MatchFound;
 		bool m_IsStaff;
+		// auth
+		class CUnpacker m_Unpacker;
 	};
 	
 	//static int Auth(void *pUserData);

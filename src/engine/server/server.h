@@ -220,7 +220,7 @@ public:
 	void StopRecord(int ClientID);
 	bool IsRecording(int ClientID);
 
-	void StaffAuth(int ClientID);
+	void StaffAuth(int ClientID, class CUnpacker Unpacker);
 
 	void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet);
 	void StopGhostRecord(int ClientID, float Time=0.0f);

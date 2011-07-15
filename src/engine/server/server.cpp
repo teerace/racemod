@@ -934,7 +934,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				if(str_comp_num(pPw, "teerace:", 8) == 0)
 				{
 #if defined(CONF_TEERACE)
-					GameServer()->OnTeeraceAuth(ClientID, pPw);
+					GameServer()->OnTeeraceAuth(ClientID, pPw, Unpacker);
 #endif
 					return;
 				}
@@ -1233,13 +1233,17 @@ void CServer::GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlaye
 	m_aGhostRecorder[ClientID].AddInfos(pPlayer);
 }
 
-void CServer::StaffAuth(int ClientID)
+void CServer::StaffAuth(int ClientID, class CUnpacker Unpacker)
 {
 	CMsgPacker Msg(NETMSG_RCON_AUTH_STATUS);
-	Msg.AddInt(1);
+	Msg.AddInt(1);	//authed
+	Msg.AddInt(1);	//cmdlist
 	SendMsgEx(&Msg, MSGFLAG_VITAL, ClientID, true);
 
 	m_aClients[ClientID].m_Authed = AUTHED_ADMIN;
+	int SendRconCmds = Unpacker.GetInt();
+	if(Unpacker.Error() == 0 && SendRconCmds)
+		m_aClients[ClientID].m_pRconCmdToSend = Console()->FirstCommandInfo(IConsole::ACCESS_LEVEL_ADMIN, CFGFLAG_SERVER);
 	SendRconLine(ClientID, "Teerace staff authentication successful. Remote console access granted.");
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "ClientID=%d authed", ClientID);

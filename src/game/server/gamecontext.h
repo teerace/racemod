@@ -188,7 +188,7 @@ public:
 	virtual bool IsClientPlayer(int ClientID);
 
 #if defined(CONF_TEERACE)
-	virtual void OnTeeraceAuth(int ClientID, const char *pStr);
+	virtual void OnTeeraceAuth(int ClientID, const char *pStr, class CUnpacker Unpacker);
 #endif
 
 	virtual const char *GameType();

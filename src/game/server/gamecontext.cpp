@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <base/math.h>
 #include <base/tl/sorted_array.h>
+#include <engine/shared/packer.h>
 #include <engine/shared/config.h>
 #include <engine/map.h>
 #include <engine/console.h>
@@ -569,12 +570,13 @@ void CGameContext::OnTick()
 
 // Server hooks
 #if defined(CONF_TEERACE)
-void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr)
+void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, CUnpacker Unpacker)
 {
 	if(str_comp_num(pStr, "teerace:", 8) == 0)
 	{
 		CWebUser::CParam *pParams = new CWebUser::CParam();
 		pParams->m_ClientID = ClientID;
+		pParams->m_Unpacker = Unpacker;
 		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", pParams->m_aToken) == 1)
 			m_pWebapp->AddJob(CWebUser::AuthToken, pParams);
 	}
