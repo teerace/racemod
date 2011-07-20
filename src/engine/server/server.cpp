@@ -938,7 +938,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 #endif
 					return;
 				}
-				else if(g_Config.m_SvRconPassword[0] == 0 && g_Config.m_SvRconModPassword[0])
+				else if(g_Config.m_SvRconPassword[0] == 0 && g_Config.m_SvRconModPassword[0] == 0)
 				{
 					SendRconLine(ClientID, "No rcon password set on server. Set sv_rcon_password and/or sv_rcon_mod_password to enable the remote console.");
 				}
