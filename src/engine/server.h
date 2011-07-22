@@ -63,6 +63,8 @@ public:
 	virtual bool IsAuthed(int ClientID) = 0;
 	virtual void Kick(int ClientID, const char *pReason) = 0;
 
+	virtual void DemoRecorder_HandleAutoStart() = 0;
+
 #if defined(CONF_TEERACE)
 	virtual void ReloadMap() = 0;
 
