@@ -376,15 +376,15 @@ if platform == "macosx"  and arch == "ia32" then
 	debug_sql_settings_ppc.cc.defines:Add("CONF_DEBUG", "CONF_SQL")
 	
 	debug_teerace_settings_ppc = debug_sql_settings:Copy()
-	debug_teerace_settings_ppc.config_name = "sql_debug_ppc"
-	debug_teerace_settings_ppc.config_ext = "_sql_ppc_d"
+	debug_teerace_settings_ppc.config_name = "teerace_debug_ppc"
+	debug_teerace_settings_ppc.config_ext = "_teerace_ppc_d"
 	debug_teerace_settings_ppc.cc.flags:Add("-arch ppc")
 	debug_teerace_settings_ppc.link.flags:Add("-arch ppc")
 	debug_teerace_settings_ppc.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE")
 	
 	debug_teerace_sql_settings_ppc = debug_sql_settings:Copy()
-	debug_teerace_sql_settings_ppc.config_name = "sql_debug_ppc"
-	debug_teerace_sql_settings_ppc.config_ext = "_sql_ppc_d"
+	debug_teerace_sql_settings_ppc.config_name = "teerace_sql_debug_ppc"
+	debug_teerace_sql_settings_ppc.config_ext = "_teerace_sql_ppc_d"
 	debug_teerace_sql_settings_ppc.cc.flags:Add("-arch ppc")
 	debug_teerace_sql_settings_ppc.link.flags:Add("-arch ppc")
 	debug_teerace_sql_settings_ppc.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE", "CONF_SQL")
@@ -404,15 +404,15 @@ if platform == "macosx"  and arch == "ia32" then
 	release_sql_settings_ppc.cc.defines:Add("CONF_RELEASE", "CONF_SQL")
 	
 	release_teerace_settings_ppc = release_sql_settings:Copy()
-	release_teerace_settings_ppc.config_name = "sql_release_ppc"
-	release_teerace_settings_ppc.config_ext = "_sql_ppc"
+	release_teerace_settings_ppc.config_name = "teerace_release_ppc"
+	release_teerace_settings_ppc.config_ext = "_teerace_ppc"
 	release_teerace_settings_ppc.cc.flags:Add("-arch ppc")
 	release_teerace_settings_ppc.link.flags:Add("-arch ppc")
 	release_teerace_settings_ppc.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE")
 	
 	release_teerace_sql_settings_ppc = release_sql_settings:Copy()
-	release_teerace_sql_settings_ppc.config_name = "sql_release_ppc"
-	release_teerace_sql_settings_ppc.config_ext = "_sql_ppc"
+	release_teerace_sql_settings_ppc.config_name = "teerace_sql_release_ppc"
+	release_teerace_sql_settings_ppc.config_ext = "_teerace_sql_ppc"
 	release_teerace_sql_settings_ppc.cc.flags:Add("-arch ppc")
 	release_teerace_sql_settings_ppc.link.flags:Add("-arch ppc")
 	release_teerace_sql_settings_ppc.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE", "CONF_SQL")
@@ -432,15 +432,15 @@ if platform == "macosx"  and arch == "ia32" then
 	debug_sql_settings_x86.cc.defines:Add("CONF_DEBUG", "CONF_SQL")
 	
 	debug_teerace_settings_x86 = debug_sql_settings:Copy()
-	debug_teerace_settings_x86.config_name = "sql_debug_x86"
-	debug_teerace_settings_x86.config_ext = "_sql_x86_d"
+	debug_teerace_settings_x86.config_name = "teerace_debug_x86"
+	debug_teerace_settings_x86.config_ext = "_teerace_x86_d"
 	debug_teerace_settings_x86.cc.flags:Add("-arch i386")
 	debug_teerace_settings_x86.link.flags:Add("-arch i386")
 	debug_teerace_settings_x86.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE")
 	
 	debug_teerace_sql_settings_x86 = debug_sql_settings:Copy()
-	debug_teerace_sql_settings_x86.config_name = "sql_debug_x86"
-	debug_teerace_sql_settings_x86.config_ext = "_sql_x86_d"
+	debug_teerace_sql_settings_x86.config_name = "teerace_sql_debug_x86"
+	debug_teerace_sql_settings_x86.config_ext = "_teerace_sql_x86_d"
 	debug_teerace_sql_settings_x86.cc.flags:Add("-arch i386")
 	debug_teerace_sql_settings_x86.link.flags:Add("-arch i386")
 	debug_teerace_sql_settings_x86.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE", "CONF_SQL")
@@ -460,15 +460,15 @@ if platform == "macosx"  and arch == "ia32" then
 	release_sql_settings_x86.cc.defines:Add("CONF_RELEASE", "CONF_SQL")
 	
 	release_teerace_settings_x86 = release_sql_settings:Copy()
-	release_teerace_settings_x86.config_name = "sql_release_x86"
-	release_teerace_settings_x86.config_ext = "_sql_x86"
+	release_teerace_settings_x86.config_name = "teerace_release_x86"
+	release_teerace_settings_x86.config_ext = "_teerace_x86"
 	release_teerace_settings_x86.cc.flags:Add("-arch i386")
 	release_teerace_settings_x86.link.flags:Add("-arch i386")
 	release_teerace_settings_x86.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE")
 	
 	release_teerace_sql_settings_x86 = release_sql_settings:Copy()
-	release_teerace_sql_settings_x86.config_name = "sql_release_x86"
-	release_teerace_sql_settings_x86.config_ext = "_sql_x86"
+	release_teerace_sql_settings_x86.config_name = "teerace_sql_release_x86"
+	release_teerace_sql_settings_x86.config_ext = "_teerace_sql_x86"
 	release_teerace_sql_settings_x86.cc.flags:Add("-arch i386")
 	release_teerace_sql_settings_x86.link.flags:Add("-arch i386")
 	release_teerace_sql_settings_x86.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE", "CONF_SQL")
