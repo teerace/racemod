@@ -17,6 +17,10 @@ CLayers::CLayers()
 
 void CLayers::Init(class IKernel *pKernel)
 {
+	// reset pointers to race specific layers
+	m_pTeleLayer = 0;
+	m_pSpeedupLayer = 0;
+
 	m_pMap = pKernel->RequestInterface<IMap>();
 	m_pMap->GetType(MAPITEMTYPE_GROUP, &m_GroupsStart, &m_GroupsNum);
 	m_pMap->GetType(MAPITEMTYPE_LAYER, &m_LayersStart, &m_LayersNum);

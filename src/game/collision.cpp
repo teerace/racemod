@@ -24,6 +24,10 @@ CCollision::CCollision()
 
 void CCollision::Init(class CLayers *pLayers)
 {
+	// reset race specific pointers
+	m_pTele = 0;
+	m_pSpeedup = 0;
+
 	m_pLayers = pLayers;
 	m_Width = m_pLayers->GameLayer()->m_Width;
 	m_Height = m_pLayers->GameLayer()->m_Height;
