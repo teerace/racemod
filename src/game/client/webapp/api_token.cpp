@@ -1,3 +1,4 @@
+#include <game/stream.h>
 #include <game/client/webapp.h>
 
 #include "api_token.h"
@@ -15,17 +16,17 @@ int CWebApiToken::GetApiToken(void *pUserData)
 	if(!pWebapp->Connect())
 		return 0;
 	
-	char *pReceived = 0;
 	char aData[128];
 	char aBuf[512];
 	str_format(aData, sizeof(aData), "username=%s&password=%s", aUsername, aPassword);
 	str_format(aBuf, sizeof(aBuf), CClientWebapp::POST, pWebapp->ApiPath(), "anonclient/get_token/", pWebapp->ServerIP(), str_length(aData), aData);
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (api_token)", Size);
+		dbg_msg("webapp", "error (api_token)");
 		COut *pOut = new COut(WEB_API_TOKEN);
 		str_copy(pOut->m_aApiToken, "false", sizeof(pOut->m_aApiToken));
 		pWebapp->AddOutput(pOut);
@@ -33,9 +34,7 @@ int CWebApiToken::GetApiToken(void *pUserData)
 	}
 
 	COut *pOut = new COut(WEB_API_TOKEN);
-	str_copy(pOut->m_aApiToken, pReceived+1, 25);
-
-	mem_free(pReceived);
+	str_copy(pOut->m_aApiToken, Buf.GetData()+1, 25);
 	
 	pWebapp->AddOutput(pOut);
 	return 1;

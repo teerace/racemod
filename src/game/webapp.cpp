@@ -8,7 +8,6 @@
 #include "webapp.h"
 
 // TODO: non-blocking
-// TODO: fix client
 
 CWebapp::CWebapp(IStorage *pStorage, const char* WebappIp)
 : m_pStorage(pStorage)
