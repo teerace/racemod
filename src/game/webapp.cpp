@@ -132,7 +132,7 @@ bool CWebapp::SendRequest(const char *pInString, IStream *pResponse)
 	
 	do
 	{
-		char aBuf[10] = {0};
+		char aBuf[1024] = {0};
 		Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
 		if(Size <= 0 || !HeaderBuf.Write(aBuf, Size))
 			return false;
@@ -146,7 +146,7 @@ bool CWebapp::SendRequest(const char *pInString, IStream *pResponse)
 	
 	do
 	{
-		char aBuf[10] = {0};
+		char aBuf[1024] = {0};
 		Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
 		if(!pResponse->Write(aBuf, Size))
 			return false;
