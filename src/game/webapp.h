@@ -28,6 +28,10 @@ public:
 		int m_Size;
 		int m_StatusCode;
 		long m_ContentLength;
+		bool m_Error;
+		
+		CHeader() : m_Size(-1), m_StatusCode(0), m_ContentLength(-1), m_Error(false) {}
+		bool Parse(char *pStr);
 	};
 
 	LOCK m_OutputLock;
@@ -53,10 +57,7 @@ public:
 
 	int UpdateJobs();
 
-	int GetHeaderInfo(char *pStr, int MaxSize, CHeader *pHeader);
-	int RecvHeader(char *pBuf, int MaxSize, CHeader *pHeader);
-
-	int SendAndReceive(const char *pInString, char **ppOutString);
+	bool SendRequest(const char *pInString, class IStream *pResponse);
 
 	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData, bool NeedOnline = 1);
 };

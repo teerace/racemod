@@ -8,10 +8,10 @@
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
 
+#include <game/stream.h>
+
 #include "gamecontext.h"
 #include "webapp.h"
-
-// TODO: use libcurl?
 
 const char CServerWebapp::GET[] = "GET %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nConnection: close\r\n\r\n";
 const char CServerWebapp::POST[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
@@ -334,50 +334,13 @@ bool CServerWebapp::Download(const char *pFilename, const char *pURL)
 	// TODO: limit transfer rate
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
-
-	NETADDR Address = Addr();
-	net_tcp_connect(Socket(), &Address);
-	net_tcp_send(Socket(), aStr, str_length(aStr));
 	
-	CHeader Header;
-	int Size = 0;
-	int FileSize = 0;
-	IOHANDLE File = 0;
-	do
-	{
-		char aBuf[1024] = {0};
-		char *pData = aBuf;
-		if(!File)
-		{
-			Size = RecvHeader(aBuf, sizeof(aBuf), &Header);
-			if(Header.m_Size < 0 || Header.m_StatusCode != 200)
-				return 0;
-			
-			pData += Header.m_Size;
-			dbg_msg("webapp", "saving file to %s", pFilename);
-			File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-			if(!File)
-				return 0;
-		}
-		else
-			Size = net_tcp_recv(Socket(), aBuf, sizeof(aBuf));
+	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
 		
-		if(Size > 0)
-		{
-			int Write = Size - (pData - aBuf);
-			FileSize += Write;
-			io_write(File, pData, Write);
-		}
-	} while(Size > 0);
-	
-	if(File)
-	{
-		io_close(File);
-		if(FileSize != Header.m_ContentLength)
-			Storage()->RemoveFile(pFilename, IStorage::TYPE_SAVE);
-	}
-	
-	return File != 0 && FileSize == Header.m_ContentLength;
+	CFileStream Out(File);
+	return SendRequest(aStr, &Out);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)

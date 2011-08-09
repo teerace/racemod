@@ -1,5 +1,6 @@
 #if defined(CONF_TEERACE)
 
+#include <game/stream.h>
 #include <game/server/webapp.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -44,25 +45,20 @@ int CWebRun::Post(void *pUserData)
 	std::string Json = Writer.write(Run);
 	delete pData;
 	
-	char *pReceived = 0;
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), "runs/new/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (run)", Size);
+		dbg_msg("webapp", "error (run)");
 		return 0;
 	}
 	
 	Json::Reader Reader;
-	if(!Reader.parse(pReceived, pReceived+Size, Run))
-	{
-		mem_free(pReceived);
+	if(!Reader.parse(Buf.GetData(), Buf.GetData()+Buf.Size(), Run))
 		return 0;
-	}
-	
-	mem_free(pReceived);
 	
 	COut *pOut = new COut(WEB_RUN);
 	pOut->m_Tick = Tick;
@@ -70,7 +66,7 @@ int CWebRun::Post(void *pUserData)
 	pOut->m_UserID = UserID;
 	pWebapp->AddOutput(pOut);
 	
-	return Size >= 0;
+	return Check;
 }
 
 #endif

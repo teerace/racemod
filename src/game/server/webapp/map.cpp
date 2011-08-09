@@ -1,5 +1,6 @@
 #if defined(CONF_TEERACE)
 
+#include <game/stream.h>
 #include <game/server/webapp.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -18,26 +19,21 @@ int CWebMap::LoadList(void *pUserData)
 		return 0;
 	
 	char aBuf[512];
-	char *pReceived = 0;
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), "maps/list/", pWebapp->ServerIP(), pWebapp->ApiKey());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (map list)", Size);
+		dbg_msg("webapp", "error (map list)");
 		return 0;
 	}
 	
 	Json::Value Maplist;
 	Json::Reader Reader;
-	if(!Reader.parse(pReceived, pReceived+Size, Maplist))
-	{
-		mem_free(pReceived);
+	if(!Reader.parse(Buf.GetData(), Buf.GetData()+Buf.Size(), Maplist))
 		return 0;
-	}
-	
-	mem_free(pReceived);
 	
 	COut *pOut = new COut(WEB_MAP_LIST);
 	pOut->m_CrcCheck = CrcCheck;

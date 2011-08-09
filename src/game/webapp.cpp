@@ -1,9 +1,14 @@
 /* CWebapp class by Sushi and Redix*/
 #include <stdio.h>
+#include <string.h>
 
 #include <base/math.h>
 
+#include "stream.h"
 #include "webapp.h"
+
+// TODO: non-blocking
+// TODO: fix client
 
 CWebapp::CWebapp(IStorage *pStorage, const char* WebappIp)
 : m_pStorage(pStorage)
@@ -86,114 +91,68 @@ void CWebapp::Disconnect()
 	net_tcp_close(m_Socket);
 }
 
-int CWebapp::GetHeaderInfo(char *pStr, int MaxSize, CHeader *pHeader)
+bool CWebapp::CHeader::Parse(char *pStr)
 {
-	char aBuf[512] = {0};
+	char *pEnd = strstr(pStr, "\r\n\r\n");
+	if(!pEnd)
+		return false;
+	
+	*(pEnd+2) = 0;
 	char *pData = pStr;
-	while(str_comp_num(pData, "\r\n\r\n", 4) != 0)
+	
+	if(sscanf(pData, "HTTP/%*d.%*d %d %*s\r\n", &this->m_StatusCode) != 1)
 	{
-		pData++;
-		if(pData > pStr+MaxSize)
-			return -1;
+		m_Error = true;
+		return false;
 	}
-	pData += 4;
-	int HeaderSize = pData - pStr;
-	int BufSize = min((int)sizeof(aBuf),HeaderSize);
-	mem_copy(aBuf, pStr, BufSize);
 	
-	pData = aBuf;
-	//dbg_msg("webapp", "\n---header start---\n%s\n---header end---\n", aBuf);
-	
-	if(sscanf(pData, "HTTP/%*d.%*d %d %*s\r\n", &pHeader->m_StatusCode) != 1)
-		return -2;
-	
-	while(sscanf(pData, "Content-Length: %ld\r\n", &pHeader->m_ContentLength) != 1)
+	while(sscanf(pData, "Content-Length: %ld\r\n", &this->m_ContentLength) != 1)
 	{
-		while(str_comp_num(pData, "\r\n", 2) != 0)
+		char *pLineEnd = strstr(pData, "\r\n");
+		if(!pLineEnd)
 		{
-			pData++;
-			if(pData > aBuf+BufSize)
-				return -3;
+			m_Error = true;
+			return false;
 		}
-		pData += 2;
+		pData = pLineEnd + 2;
 	}
 	
-	return HeaderSize;
+	m_Size = (pEnd-pStr)+4;
+	return true;
 }
 
-int CWebapp::RecvHeader(char *pBuf, int MaxSize, CHeader *pHeader)
+bool CWebapp::SendRequest(const char *pInString, IStream *pResponse)
 {
-	int HeaderSize;
-	int AddSize;
-	int Size = 0;
-	do
-	{
-		char *pWrite = pBuf + Size;
-		AddSize = net_tcp_recv(m_Socket, pWrite, MaxSize-Size);
-		Size += AddSize;
-		HeaderSize = GetHeaderInfo(pBuf, Size, pHeader);
-	} while(HeaderSize == -1 && MaxSize-Size > 0 && AddSize > 0);
-	pHeader->m_Size = HeaderSize;
-	return Size;
-}
-
-int CWebapp::SendAndReceive(const char *pInString, char **ppOutString)
-{
-	//dbg_msg("webapp", "\n---send start---\n%s\n---send end---\n", pInString);
-
 	net_tcp_connect(m_Socket, &m_Addr);
 	net_tcp_send(m_Socket, pInString, str_length(pInString));
 
 	CHeader Header;
-	int Size = 0;
-	int MemLeft = 0;
-	char *pWrite = 0;
+	CBufferStream HeaderBuf;
+	int Size;
+	
 	do
 	{
-		char aBuf[512] = {0};
-		char *pData = aBuf;
-		if(!pWrite)
-		{
-			Size = RecvHeader(aBuf, sizeof(aBuf), &Header);
-
-			if(Header.m_Size < 0)
-				return -1;
-
-			if(Header.m_StatusCode != 200)
-				return -Header.m_StatusCode;
-
-			pData += Header.m_Size;
-			MemLeft = Header.m_ContentLength;
-			*ppOutString = (char *)mem_alloc(MemLeft+1, 1);
-			mem_zero(*ppOutString, MemLeft+1);
-			pWrite = *ppOutString;
-		}
-		else
-			Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
-
-		if(Size > 0)
-		{
-			int Write = Size - (pData - aBuf);
-			if(Write > MemLeft)
-			{
-				mem_free(*ppOutString);
-				return -2;
-			}
-			mem_copy(pWrite, pData, Write);
-			pWrite += Write;
-			MemLeft = *ppOutString + Header.m_ContentLength - pWrite;
-		}
-	} while(Size > 0);
-
-	if(MemLeft != 0)
+		char aBuf[10] = {0};
+		Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
+		if(Size <= 0 || !HeaderBuf.Write(aBuf, Size))
+			return false;
+	} while(!Header.Parse(HeaderBuf.GetData()));
+	
+	if(Header.m_Error)
+		return false;
+	
+	if(!pResponse->Write(HeaderBuf.GetData()+Header.m_Size, HeaderBuf.Size()-Header.m_Size))
+		return false;
+	
+	do
 	{
-		mem_free(*ppOutString);
-		return -3;
-	}
-
-	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", *ppOutString);
-
-	return Header.m_ContentLength;
+		char aBuf[10] = {0};
+		Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
+		if(!pResponse->Write(aBuf, Size))
+			return false;
+	} while(Size > 0);
+	
+	return (pResponse->Size() == Header.m_ContentLength);
 }
 
 CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData, bool NeedOnline)

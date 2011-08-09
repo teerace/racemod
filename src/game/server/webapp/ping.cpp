@@ -1,5 +1,6 @@
 #if defined(CONF_TEERACE)
 
+#include <game/stream.h>
 #include <game/server/webapp.h>
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
@@ -44,19 +45,18 @@ int CWebPing::Ping(void *pUserData)
 	delete pData;
 	
 	char aBuf[1024];
-	char *pReceived = 0;
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), "ping/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	int Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (ping)", Size);
+		dbg_msg("webapp", "error (ping)");
 		return 0;
 	}
 	
-	bool Online = str_comp(pReceived, "\"PONG\"") == 0;
-	mem_free(pReceived);
+	bool Online = str_comp(Buf.GetData(), "\"PONG\"") == 0;
 	
 	pWebapp->AddOutput(new COut(Online, CrcCheck));
 	return Online;

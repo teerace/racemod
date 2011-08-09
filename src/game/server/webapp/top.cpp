@@ -1,13 +1,7 @@
 #if defined(CONF_TEERACE)
 
-// TODO: replace crypto++ with another lib?
+#include <game/stream.h>
 #include <game/server/webapp.h>
-/*#include <engine/external/encrypt/cryptlib.h>
-#include <engine/external/encrypt/osrng.h>
-#include <engine/external/encrypt/files.h>
-#include <engine/external/encrypt/base64.h>
-#include <engine/external/encrypt/fltrimpl.h>
-#include <engine/external/encrypt/rsa.h>*/
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
 
@@ -24,29 +18,24 @@ int CWebTop::GetTop5(void *pUserData)
 	if(!pWebapp->Connect())
 		return 0;
 	
-	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
 	str_format(aURL, sizeof(aURL), "maps/rank/%d/%d/", pWebapp->CurrentMap()->m_ID, Start);
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (top5)", Size);
+		dbg_msg("webapp", "error (top5)");
 		return 0;
 	}
 	
 	Json::Value Top;
 	Json::Reader Reader;
-	if(!Reader.parse(pReceived, pReceived+Size, Top))
-	{
-		mem_free(pReceived);
+	if(!Reader.parse(Buf.GetData(), Buf.GetData()+Buf.Size(), Top))
 		return 0;
-	}
-	
-	mem_free(pReceived);
 	
 	COut *pOut = new COut(WEB_USER_TOP);
 	pOut->m_ClientID = ClientID;

@@ -1,141 +1,12 @@
 #if defined(CONF_TEERACE)
 
-#include <engine/shared/packer.h>
-// TODO: replace crypto++ with another lib?
+#include <game/stream.h>
 #include <game/server/webapp.h>
-/*#include <engine/external/encrypt/cryptlib.h>
-#include <engine/external/encrypt/osrng.h>
-#include <engine/external/encrypt/files.h>
-#include <engine/external/encrypt/base64.h>
-#include <engine/external/encrypt/fltrimpl.h>
-#include <engine/external/encrypt/rsa.h>*/
 #include <engine/external/json/reader.h>
 #include <engine/external/json/writer.h>
 
 #include "user.h"
 
-// not needed at the moment
-/*using namespace CryptoPP;
-
-class PEMFilter : public Unflushable<Filter>
-{
-public:
-	PEMFilter(BufferedTransformation *attachment = NULL) : m_Count(0)
-	{
-		Detach(attachment);
-	}
-	
-	size_t Put2(const byte *begin, size_t length, int messageEnd, bool blocking)
-	{
-		FILTER_BEGIN;
-		while(m_inputPosition < length)
-		{
-			if(begin[m_inputPosition++] == '-')
-				m_Count++;
-			if(m_Count)
-			{
-				if(m_Count == 10)
-					m_Count = 0;
-				continue;
-			}
-			else
-				FILTER_OUTPUT(1,begin+m_inputPosition-1,1,0);
-		}
-		if(messageEnd)
-			FILTER_OUTPUT(2,0,0,messageEnd);
-		FILTER_END_NO_MESSAGE_END;
-	}
-	
-private:
-	int m_Count;
-};
-
-int CWebUser::Auth(void *pUserData)
-{
-	CParam *pData = (CParam*)pUserData;
-	CWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
-	int ClientID = pData->m_ClientID;
-	
-	if(!pWebapp->Connect())
-	{
-		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
-		delete pData;
-		return 0;
-	}
-	
-	AutoSeededRandomPool rng;
-	std::string cipher, cipher64;
-	
-	try
-	{
-		// RSA
-		FileSource pubFile("public_key.pem", true, new PEMFilter(new Base64Decoder()));
-		RSAES_OAEP_SHA_Encryptor pub(pubFile);
-		
-		StringSource(pData->m_aPassword, true,
-			new PK_EncryptorFilter(rng, pub,
-				new StringSink(cipher)
-		   )
-		);
-		
-		// Base64
-		StringSource(cipher, true,
-			new Base64Encoder(
-				new StringSink(cipher64),
-			false)
-		);
-	}
-	catch(Exception const& e)
-	{
-		dbg_msg("CryptoPP", "error: %s", e.what());
-		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
-		delete pData;
-		return 0;
-	}
-	
-	Json::Value Userdata;
-	Json::FastWriter Writer;
-	
-	Userdata["username"] = pData->m_aUsername;
-	Userdata["password"] = cipher64;
-	
-	std::string Json = Writer.write(Userdata);
-	delete pData;
-	
-	char *pReceived = 0;
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), CWebapp::POST, pWebapp->ApiPath(), "users/auth/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
-	pWebapp->Disconnect();
-	
-	if(Size < 0)
-	{
-		dbg_msg("webapp", "error: %d (user auth)", Size);
-		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
-		return 0;
-	}
-	
-	if(str_comp(pReceived, "false") == 0)
-	{
-		mem_free(pReceived);
-		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
-		return 0;
-	}
-	
-	Json::Value User;
-	Json::Reader Reader;
-	bool ParsingSuccessful = Reader.parse(pReceived, pReceived+Size, User);
-	mem_free(pReceived);
-	
-	COut *pOut = new COut(WEB_USER_AUTH, ClientID);
-	if(ParsingSuccessful)
-	{
-		str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
-		pOut->m_UserID = User["id"].asInt();
-	}
-	pWebapp->AddOutput(pOut);
-	return ParsingSuccessful;
-}*/
 
 int CWebUser::AuthToken(void *pUserData)
 {
@@ -159,31 +30,29 @@ int CWebUser::AuthToken(void *pUserData)
 	std::string Json = Writer.write(Userdata);
 	delete pData;
 	
-	char *pReceived = 0;
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), "users/auth_token/", pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (user auth token)", Size);
+		dbg_msg("webapp", "error (user auth token)");
 		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
 	
-	if(str_comp(pReceived, "false") == 0)
+	if(str_comp(Buf.GetData(), "false") == 0)
 	{
-		mem_free(pReceived);
 		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
 	
 	Json::Value User;
 	Json::Reader Reader;
-	if(!Reader.parse(pReceived, pReceived+Size, User))
+	if(!Reader.parse(Buf.GetData(), Buf.GetData()+Buf.Size(), User))
 	{
-		mem_free(pReceived);
 		pWebapp->AddOutput(new COut(WEB_USER_AUTH, ClientID));
 		return 0;
 	}
@@ -249,23 +118,21 @@ int CWebUser::UpdateSkin(void *pUserData)
 	
 	std::string Json = Writer.write(Userdata);
 	
-	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
 	str_format(aURL, sizeof(aURL), "users/skin/%d/", pData->m_UserID);
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
 	delete pData;
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (skin update)", Size);
+		dbg_msg("webapp", "error (skin update)");
 		return 0;
 	}
-	
-	mem_free(pReceived);
 	
 	return 1;
 }
@@ -282,7 +149,7 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	str_copy(aName, pData->m_aName, sizeof(aName));
 	delete pData;
 	
-	int Size = 0;
+	bool Check = 0;
 	
 	int GlobalRank = 0;
 	int MapRank = 0;
@@ -290,7 +157,7 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	if(!pWebapp->Connect())
 		return 0;
 	
-	char *pReceived = 0;
+	CBufferStream Buf;
 	char aBuf[512];
 	char aURL[128];
 	
@@ -306,24 +173,19 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	
 		str_format(aURL, sizeof(aURL), "users/get_by_name/");
 		str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-		Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+		Check = pWebapp->SendRequest(aBuf, &Buf);
 		pWebapp->Disconnect();
 		
-		if(Size < 0)
+		if(!Check)
 		{
-			dbg_msg("webapp", "error: %d (user global rank)", Size);
+			dbg_msg("webapp", "error (user global rank)");
 			return 0;
 		}
 		
 		Json::Value User;
 		Json::Reader Reader;
-		if(!Reader.parse(pReceived, pReceived+Size, User))
-		{
-			mem_free(pReceived);
+		if(!Reader.parse(Buf.GetData(), Buf.GetData()+Buf.Size(), User))
 			return 0;
-		}
-		
-		mem_free(pReceived);
 		
 		UserID = User["id"].asInt();
 		// no user found
@@ -345,41 +207,37 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	// global rank
 	str_format(aURL, sizeof(aURL), "users/rank/%d/", UserID);
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
-	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	Buf.Clear();
+	Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (user global rank)", Size);
+		dbg_msg("webapp", "error (user global rank)");
 		return 0;
 	}
 	
-	GlobalRank = str_toint(pReceived);
-	mem_free(pReceived);
+	GlobalRank = str_toint(Buf.GetData());
 	
 	if(!pWebapp->Connect())
 		return 0;
 	
 	str_format(aURL, sizeof(aURL), "users/map_rank/%d/%d/", UserID, pWebapp->CurrentMap()->m_ID);
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey());
-	Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	Buf.Clear();
+	Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 	
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (user map rank)", Size);
+		dbg_msg("webapp", "error (user map rank)");
 		return 0;
 	}
 	
 	Json::Value Rank;
 	Json::Reader Reader;
-	if(!Reader.parse(pReceived, pReceived+Size, Rank))
-	{
-		mem_free(pReceived);
+	if(!Reader.parse(Buf.GetData(), Buf.GetData()+Buf.Size(), Rank))
 		return 0;
-	}
-	
-	mem_free(pReceived);
 		
 	MapRank = Rank["position"].asInt();
 	CPlayerData Run;
@@ -420,7 +278,6 @@ int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
 	if(!pWebapp->Connect())
 		return 0;
 	
-	char *pReceived = 0;
 	char aBuf[512];
 	char aURL[128];
 	
@@ -433,16 +290,15 @@ int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
 	
 	str_format(aURL, sizeof(aURL), "users/playtime/%d/", UserID);
 	str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, pWebapp->ApiPath(), aURL, pWebapp->ServerIP(), pWebapp->ApiKey(), Json.length(), Json.c_str());
-	int Size = pWebapp->SendAndReceive(aBuf, &pReceived);
+	CBufferStream Buf;
+	bool Check = pWebapp->SendRequest(aBuf, &Buf);
 	pWebapp->Disconnect();
 		
-	if(Size < 0)
+	if(!Check)
 	{
-		dbg_msg("webapp", "error: %d (user playtime)", Size);
+		dbg_msg("webapp", "error (user playtime)");
 		return 0;
 	}
-
-	mem_free(pReceived);
 
 	pWebapp->Disconnect();
 	return 1;

@@ -1,6 +1,5 @@
 #if defined(CONF_TEERACE)
 
-// TODO: replace crypto++ with another lib?
 #include <engine/storage.h>
 #include <game/server/webapp.h>
 #include <engine/external/json/writer.h>
