@@ -184,7 +184,6 @@ function build(settings)
 	wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
 	json = Compile(settings, Collect("src/engine/external/json/*.cpp"))
-	--encrypt = Compile(settings, Collect("src/engine/external/encrypt/*.c", "src/engine/external/encrypt/*.cpp"))
 	
 	-- build game components
 	engine_settings = settings:Copy()
@@ -269,7 +268,7 @@ function build(settings)
 
 	if string.find(settings.config_name, "teerace") then
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, server_link_other, json)--, encrypt)
+			game_shared, game_server, zlib, server_link_other, json)
 	else
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
 			game_shared, game_server, zlib, server_link_other)
