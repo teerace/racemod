@@ -753,10 +753,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				{
 					if(!m_pWebapp->DefaultScoring())
 					{
-						/*CWebTop::CParam *pParams = new CWebTop::CParam();
-						pParams->m_Start = Num;
-						pParams->m_ClientID = ClientID;
-						m_pWebapp->AddJob(CWebTop::GetTop5, pParams);*/
+						char aBuf[512];
+						char aURL[128];
+						str_format(aURL, sizeof(aURL), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, Num);
+						str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
+						int *pUserData = (int *)mem_alloc(sizeof(int)*2, 1);
+						pUserData[0] = Num;
+						pUserData[1] = ClientID;
+						m_pWebapp->SendRequest(aBuf, WEB_USER_TOP, new CBufferStream(), pUserData);
 					}
 				}
 				else
