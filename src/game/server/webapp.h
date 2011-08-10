@@ -1,21 +1,15 @@
-/* CWebapp Class by Sushi and Redix*/
+/* Webapp Class by Sushi and Redix */
 #ifndef GAME_SERVER_WEBAPP_H
 #define GAME_SERVER_WEBAPP_H
 
 #include <string>
 #include <base/tl/array.h>
-#include <base/tl/sorted_array.h>
+#include <engine/external/json/writer.h>
 
+#include <game/data.h>
 #include <game/webapp.h>
 
-#include "webapp/user.h"
-#include "webapp/top.h"
-#include "webapp/run.h"
-#include "webapp/ping.h"
-#include "webapp/map.h"
-#include "webapp/upload.h"
-
-class CServerWebapp : public CWebapp
+class CServerWebapp : public IWebapp
 {
 	class CMapInfo
 	{
@@ -42,12 +36,12 @@ class CServerWebapp : public CWebapp
 	class IServer *m_pServer;
 
 	array<std::string> m_lMapList;
-	
 	array<CUpload*> m_lUploads;
 
 	CMapInfo m_CurrentMap;
 	
 	bool m_DefaultScoring;
+	bool m_Online;
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
@@ -69,17 +63,19 @@ public:
 	const char *ApiKey();
 	const char *ServerIP();
 	const char *ApiPath();
-	const char *MapName();
+	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	
+	bool IsOnline() { return m_Online; }
 	bool DefaultScoring() { return m_DefaultScoring; }
 	
-	void Tick();
+	void Update();
+	void OnResponse(int Type, IStream *pData, void *pUserData);
 
-	int Upload(unsigned char *pData, int Size);
+	/*int Upload(unsigned char *pData, int Size);
 	int SendUploadHeader(const char *pHeader);
-	int SendUploadEnd();
-	bool Download(const char *pFilename, const char *pURL);
+	int SendUploadEnd();*/
+	bool Download(const char *pFilename, const char *pURL, int Type = -1, void *pUserData = 0);
 };
 
 #endif

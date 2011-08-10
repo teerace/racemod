@@ -10,7 +10,7 @@
 
 int CWebUser::AuthToken(void *pUserData)
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int ClientID = pData->m_ClientID;
 	CUnpacker Unpacker = pData->m_Unpacker;
@@ -62,7 +62,7 @@ int CWebUser::AuthToken(void *pUserData)
 	pOut->m_IsStaff = User["is_staff"].asBool();
 	pOut->m_Unpacker = Unpacker;
 	str_copy(pOut->m_aUsername, User["username"].asCString(), sizeof(pOut->m_aUsername));
-	pWebapp->AddOutput(pOut);
+	pWebapp->AddOutput(pOut);*/
 	return 1;
 }
 
@@ -97,7 +97,7 @@ int HslToRgb(int v)
 
 int CWebUser::UpdateSkin(void *pUserData)
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	
 	if(!pWebapp->Connect())
@@ -132,14 +132,14 @@ int CWebUser::UpdateSkin(void *pUserData)
 	{
 		dbg_msg("webapp", "error (skin update)");
 		return 0;
-	}
+	}*/
 	
 	return 1;
 }
 
 int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	int ClientID = pData->m_ClientID;
@@ -263,13 +263,13 @@ int CWebUser::GetRank(void *pUserData) // TODO: get clan here too
 	pOut->m_PrintRank = PrintRank;
 	pOut->m_GetBestRun = GetBestRun;
 	str_copy(pOut->m_aUsername, aName, sizeof(pOut->m_aUsername));
-	pWebapp->AddOutput(pOut);
+	pWebapp->AddOutput(pOut);*/
 	return 1;
 }
 
 int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	int Time = pData->m_PlayTime;
@@ -300,7 +300,7 @@ int CWebUser::PlayTime(void *pUserData) // TODO: get clan here too
 		return 0;
 	}
 
-	pWebapp->Disconnect();
+	pWebapp->Disconnect();*/
 	return 1;
 }
 

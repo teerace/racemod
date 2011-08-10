@@ -1,27 +1,12 @@
-/* CWebapp Class by Sushi and Redix*/
+/* Webapp Class by Sushi and Redix */
 #ifndef GAME_WEBAPP_H
 #define GAME_WEBAPP_H
 
+#include "stream.h"
 #include <base/tl/array.h>
-#include <engine/shared/jobs.h>
 
-#include "data.h"
-
-class CWebapp
+class CHttpConnection
 {
-	class IStorage *m_pStorage;
-
-	CJobPool m_JobPool;
-
-	NETADDR m_Addr;
-	NETSOCKET m_Socket;
-
-	array<CJob*> m_Jobs;
-
-	bool m_Online;
-
-public:
-
 	class CHeader
 	{
 	public:
@@ -33,33 +18,40 @@ public:
 		CHeader() : m_Size(-1), m_StatusCode(0), m_ContentLength(-1), m_Error(false) {}
 		bool Parse(char *pStr);
 	};
+	
+	NETSOCKET m_Socket;
+	class CBufferStream m_HeaderBuffer;
+	CHeader m_Header;
+	bool m_Connected;
+	
+public:
+	void *m_pUserData;
+	class IStream *m_pResponse;
+	int m_Type;
+	
+	CHttpConnection() : m_Connected(false), m_pResponse(0), m_Type(-1), m_pUserData(0) {}
+	~CHttpConnection();
+	
+	bool Create(NETADDR Addr, int Type, IStream *pResponse);
+	void Close();
+	
+	bool Send(const char *pData, int Size);
+	int Update();
+};
 
-	LOCK m_OutputLock;
+class IWebapp
+{
+	NETADDR m_Addr;
+	array<CHttpConnection*> m_Connections;
 
-	IDataOut *m_pFirst;
-	IDataOut *m_pLast;
-
-	CWebapp(class IStorage *pStorage, const char* WebappIp);
-	virtual ~CWebapp();
-
-	class IStorage *Storage() { return m_pStorage; }
-
-	NETADDR Addr() { return m_Addr; }
-	NETSOCKET Socket() {return m_Socket; }
-
-	bool IsOnline() { return m_Online; }
-	void SetOnline(bool Online) { m_Online = Online; }
-
-	void AddOutput(class IDataOut *pOut);
-
-	bool Connect();
-	void Disconnect();
-
-	int UpdateJobs();
-
-	bool SendRequest(const char *pInString, class IStream *pResponse);
-
-	CJob *AddJob(JOBFUNC pfnFunc, class IDataIn *pUserData, bool NeedOnline = 1);
+public:
+	IWebapp(const char* WebappIp);
+	virtual ~IWebapp() {};
+	
+	int Update();
+	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, void *pUserData = 0);
+	
+	virtual void OnResponse(int Type, IStream *pData, void *pUserData) = 0;
 };
 
 #endif

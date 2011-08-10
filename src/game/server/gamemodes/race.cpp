@@ -236,23 +236,23 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	// post to webapp
 	if(GameServer()->Webapp())
 	{
-		CWebRun::CParam *pParams = new CWebRun::CParam();
+		/*CWebRun::CParam *pParams = new CWebRun::CParam();
 		pParams->m_UserID = Server()->GetUserID(ID);
 		pParams->m_ClientID = ID;
 		str_copy(pParams->m_aName, Server()->ClientName(ID), MAX_NAME_LENGTH);
 		str_copy(pParams->m_aClan, Server()->ClientClan(ID), MAX_CLAN_LENGTH);
 		pParams->m_Time = FinishTime;
-		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));
+		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));*/
 		
 		if(NewRecord && Server()->GetUserID(ID) > 0)
 		{
 			// set demo and ghost so that it is saved
 			Server()->SaveGhostDemo(ID);
-			pParams->m_Tick = Server()->Tick();
+			//pParams->m_Tick = Server()->Tick();
 		}
 		
-		if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)
-			GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
+		//if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)
+		//	GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
 		
 		// higher run count
 		GameServer()->Webapp()->CurrentMap()->m_RunCount++;

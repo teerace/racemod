@@ -8,7 +8,7 @@
 
 int CWebUpload::UploadDemo(void *pUserData)
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	char aFilename[256];
@@ -66,14 +66,14 @@ int CWebUpload::UploadDemo(void *pUserData)
 	else
 		dbg_msg("webapp", "failed to open file %s", aFilename);
 	
-	pWebapp->Disconnect();
+	pWebapp->Disconnect();*/
 	
 	return 1;
 }
 
 int CWebUpload::UploadGhost(void *pUserData)
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int UserID = pData->m_UserID;
 	char aFilename[256];
@@ -131,7 +131,7 @@ int CWebUpload::UploadGhost(void *pUserData)
 	else
 		dbg_msg("webapp", "failed to open file %s", aFilename);
 	
-	pWebapp->Disconnect();
+	pWebapp->Disconnect();*/
 	
 	return 1;
 }

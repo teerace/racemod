@@ -66,6 +66,7 @@ class CGameContext : public IGameServer
 #if defined(CONF_TEERACE)
 	class CServerWebapp *m_pWebapp;
 	int m_LastPing;
+	bool m_CrcCheck;
 #endif
 	
 	static void ConKillPl(IConsole::IResult *pResult, void *pUserData);
@@ -90,6 +91,8 @@ public:
 	class IScore *Score() { return m_pScore; }
 #if defined(CONF_TEERACE)
 	class CServerWebapp *Webapp() { return m_pWebapp; }
+	bool CrcCheck() { return m_CrcCheck; }
+	void CheckedCrc() { m_CrcCheck = true; }
 #endif
 	class CGameControllerRACE *RaceController() { return (CGameControllerRACE*)m_pController; }
 	

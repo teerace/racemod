@@ -18,20 +18,5 @@ enum
 	UPLOAD_DEMO = 0,
 	UPLOAD_GHOST
 };
-
-class IDataIn
-{
-public:
-	virtual ~IDataIn() {}
-	class CWebapp *m_pWebapp;
-};
-
-class IDataOut
-{
-public:
-	virtual ~IDataOut() {}
-	IDataOut *m_pNext;
-	int m_Type;
-};
 	
 #endif

@@ -9,7 +9,7 @@
 
 int CWebTop::GetTop5(void *pUserData)
 {
-	CParam *pData = (CParam*)pUserData;
+	/*CParam *pData = (CParam*)pUserData;
 	CServerWebapp *pWebapp = (CServerWebapp*)pData->m_pWebapp;
 	int Start = pData->m_Start;
 	int ClientID = pData->m_ClientID;
@@ -48,7 +48,7 @@ int CWebTop::GetTop5(void *pUserData)
 		pOut->m_lUserRanks.add(UserRank);
 	}
 	
-	pWebapp->AddOutput(pOut);
+	pWebapp->AddOutput(pOut);*/
 	return 1;
 }
 

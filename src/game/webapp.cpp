@@ -1,16 +1,14 @@
-/* CWebapp class by Sushi and Redix*/
+/* Webapp class by Sushi and Redix */
+
+#include <base\math.h>
+
 #include <stdio.h>
-#include <string.h>
-
-#include <base/math.h>
-
-#include "stream.h"
 #include "webapp.h"
 
 // TODO: non-blocking
+// TODO: fix client
 
-CWebapp::CWebapp(IStorage *pStorage, const char* WebappIp)
-: m_pStorage(pStorage)
+IWebapp::IWebapp(const char* WebappIp)
 {
 	char aBuf[512];
 	int Port = 80;
@@ -27,72 +25,58 @@ CWebapp::CWebapp(IStorage *pStorage, const char* WebappIp)
 	}
 
 	if(net_host_lookup(aBuf, &m_Addr, NETTYPE_IPV4) != 0)
-	{
 		net_host_lookup("localhost", &m_Addr, NETTYPE_IPV4);
-	}
-	
 	m_Addr.port = Port;
 	
-	// only one at a time
-	m_JobPool.Init(1);
-	m_Jobs.delete_all();
-	
-	m_OutputLock = lock_create();
-	m_pFirst = 0;
-	m_pLast = 0;
-	
-	m_Online = 0;
+	m_Connections.delete_all();
 }
 
-CWebapp::~CWebapp()
+bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, void *pUserData)
 {
-	// wait for the runnig jobs
-	do
-	{
-		UpdateJobs();
-	} while(m_Jobs.size() > 0);
-	m_Jobs.delete_all();
-
-	IDataOut *pNext;
-	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
-	{
-		pNext = pItem->m_pNext;
-		delete pItem;
-	}
-
-	lock_destroy(m_OutputLock);
-}
-
-void CWebapp::AddOutput(IDataOut *pOut)
-{
-	lock_wait(m_OutputLock);
-	pOut->m_pNext = 0;
-	if(m_pLast)
-		m_pLast->m_pNext = pOut;
-	else
-		m_pFirst = pOut;
-	m_pLast = pOut;
-	lock_release(m_OutputLock);
-}
-
-bool CWebapp::Connect()
-{
-	// connect to the server
-	m_Socket = net_tcp_create(m_Addr);
-	if(m_Socket.type == NETTYPE_INVALID)
+	CHttpConnection *pCon = new CHttpConnection();
+	if(!pCon->Create(m_Addr, Type, pResponse))
 		return false;
-	
+	if(!pCon->Send(pData, str_length(pData)))
+	{
+		pCon->Close();
+		return false;
+	}
+	if(pUserData)
+		pCon->m_pUserData = pUserData;
+	m_Connections.add(pCon);
 	return true;
 }
 
-void CWebapp::Disconnect()
+int IWebapp::Update()
 {
-	net_tcp_close(m_Socket);
+	int Size = m_Connections.size();
+	int Max = 3;
+	for(int i = 0; i < min(m_Connections.size(), Max); i++)
+	{
+		int Result = m_Connections[i]->Update();
+		if(Result != 0)
+		{
+			if(Result == 1)
+			{
+				dbg_msg("webapp", "received response");
+				OnResponse(m_Connections[i]->m_Type, m_Connections[i]->m_pResponse, m_Connections[i]->m_pUserData);
+			}
+			else
+				dbg_msg("webapp", "connection error");
+			
+			delete m_Connections[i];
+			m_Connections.remove_index_fast(i);
+		}
+	}
+	return Size - m_Connections.size();
 }
 
-bool CWebapp::CHeader::Parse(char *pStr)
+// TODO: own file
+// TODO: support for chunked transfer-encoding?
+// TODO: error handling
+bool CHttpConnection::CHeader::Parse(char *pStr)
 {
-	char *pEnd = str_find(pStr, "\r\n\r\n");
+	char *pEnd = (char*)str_find(pStr, "\r\n\r\n");
 	if(!pEnd)
 		return false;
 	
@@ -107,7 +91,7 @@ bool CWebapp::CHeader::Parse(char *pStr)
 	
 	while(sscanf(pData, "Content-Length: %ld\r\n", &this->m_ContentLength) != 1)
 	{
-		char *pLineEnd = str_find(pData, "\r\n");
+		char *pLineEnd = (char*)str_find(pData, "\r\n");
 		if(!pLineEnd)
 		{
 			m_Error = true;
@@ -120,65 +104,90 @@ bool CWebapp::CHeader::Parse(char *pStr)
 	return true;
 }
 
-bool CWebapp::SendRequest(const char *pInString, IStream *pResponse)
+CHttpConnection::~CHttpConnection()
 {
-	net_tcp_connect(m_Socket, &m_Addr);
-	net_tcp_send(m_Socket, pInString, str_length(pInString));
-
-	CHeader Header;
-	CBufferStream HeaderBuf;
-	int Size;
-	
-	do
-	{
-		char aBuf[1024] = {0};
-		Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
-		if(Size <= 0 || !HeaderBuf.Write(aBuf, Size))
-			return false;
-	} while(!Header.Parse(HeaderBuf.GetData()));
-	
-	if(Header.m_Error)
-		return false;
-	
-	if(!pResponse->Write(HeaderBuf.GetData()+Header.m_Size, HeaderBuf.Size()-Header.m_Size))
-		return false;
-	
-	do
-	{
-		char aBuf[1024] = {0};
-		Size = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
-		if(!pResponse->Write(aBuf, Size))
-			return false;
-	} while(Size > 0);
-	
-	return (pResponse->Size() == Header.m_ContentLength);
+	if(m_pResponse)
+		delete m_pResponse;
+	Close();
 }
 
-CJob *CWebapp::AddJob(JOBFUNC pfnFunc, IDataIn *pUserData, bool NeedOnline)
+bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse)
 {
-	if(NeedOnline && !m_Online)
+	m_Socket = net_tcp_create(Addr);
+	if(m_Socket.type == NETTYPE_INVALID)
+		return false;
+	if(net_tcp_connect(m_Socket, &Addr) != 0)
 	{
-		delete pUserData;
-		return 0;
+		Close();
+		return false;
 	}
-
-	pUserData->m_pWebapp = this;
-	int i = m_Jobs.add(new CJob());
-	m_JobPool.Add(m_Jobs[i], pfnFunc, pUserData);
-	return m_Jobs[i];
+	m_Connected = true;
+	
+	net_set_non_blocking(m_Socket);
+	
+	m_Type = Type;
+	m_pResponse = pResponse;
+	return true;
 }
 
-int CWebapp::UpdateJobs()
+void CHttpConnection::Close()
 {
-	int Num = 0;
-	for(int i = 0; i < m_Jobs.size(); i++)
+	net_tcp_close(m_Socket);
+	m_Connected = false;
+}
+
+bool CHttpConnection::Send(const char *pData, int Size)
+{
+	while(m_Connected)
 	{
-		if(m_Jobs[i]->Status() == CJob::STATE_DONE)
+		int Send = net_tcp_send(m_Socket, pData, Size);
+		if(Send < 0)
+			return false;
+
+		if(Send >= Size)
+			return true;
+
+		pData += Send;
+		Size -= Send;
+	}
+	return false;
+}
+
+int CHttpConnection::Update()
+{
+	if(!m_Connected)
+		return -1;
+	
+	char aBuf[1024] = {0};
+	int Bytes = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
+	
+	if(Bytes > 0)
+	{
+		if(m_Header.m_Size == -1)
 		{
-			delete m_Jobs[i];
-			m_Jobs.remove_index_fast(i);
-			Num++;
+			m_HeaderBuffer.Write(aBuf, Bytes);
+			if(m_Header.Parse(m_HeaderBuffer.GetData()))
+			{
+				if(m_Header.m_Error)
+					return -1;
+				else
+					m_pResponse->Write(m_HeaderBuffer.GetData()+m_Header.m_Size, m_HeaderBuffer.Size()-m_Header.m_Size);
+			}
+		}
+		else
+		{
+			m_pResponse->Write(aBuf, Bytes);
 		}
 	}
-	return Num;
+	else if(Bytes < 0)
+	{
+		if(net_would_block()) // no data received
+			return 0;
+		
+		return -1;
+	}
+	else
+		return m_pResponse->Size() == m_Header.m_ContentLength ? 1 : -1;
+	
+	return 0;
 }

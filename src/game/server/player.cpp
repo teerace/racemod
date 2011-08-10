@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <engine/shared/config.h>
 
-#include "webapp/user.h"
-
 #include "webapp.h"
 #include "player.h"
 
@@ -70,13 +68,13 @@ void CPlayer::Tick()
 		int UserID = Server()->GetUserID(m_ClientID);
 		if(UserID > 0)
 		{
-			CWebUser::CParam *pParams = new CWebUser::CParam();
+			/*CWebUser::CParam *pParams = new CWebUser::CParam();
 			str_copy(pParams->m_aName, Server()->GetUserName(m_ClientID), sizeof(pParams->m_aName));
 			pParams->m_ClientID = m_ClientID;
 			pParams->m_UserID = UserID;
 			pParams->m_PrintRank = 0;
 			pParams->m_GetBestRun = 1;
-			GameServer()->Webapp()->AddJob(CWebUser::GetRank, pParams);
+			GameServer()->Webapp()->AddJob(CWebUser::GetRank, pParams);*/
 		}
 	}
 #endif

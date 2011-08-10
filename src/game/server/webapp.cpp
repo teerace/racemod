@@ -1,15 +1,13 @@
-/* CWebapp class by Sushi and Redix*/
+/* Webapp class by Sushi and Redix */
 #if defined(CONF_TEERACE)
-
-#include <stdio.h>
 
 #include <base/tl/algorithm.h>
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
+#include <engine/external/json/reader.h>
 
-#include <game/stream.h>
-
+#include "score.h"
 #include "gamecontext.h"
 #include "webapp.h"
 
@@ -20,13 +18,13 @@ const char CServerWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnectio
 const char CServerWebapp::UPLOAD[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: multipart/form-data; boundary=frontier\r\nContent-Length: %d\r\n\r\n--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"file.file\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-: CWebapp(pGameServer->Server()->Storage(), g_Config.m_SvWebappIp),
+: IWebapp(g_Config.m_SvWebappIp),
   m_pGameServer(pGameServer),
   m_pServer(pGameServer->Server()),
   m_DefaultScoring(g_Config.m_SvDefaultScoring)
 {
+	m_Online = 0;
 	m_lUploads.delete_all();
-
 	LoadMaps();
 }
 
@@ -36,240 +34,228 @@ CServerWebapp::~CServerWebapp()
 	m_lUploads.delete_all();
 }
 
-const char *CServerWebapp::ApiKey()
-{
-	return g_Config.m_SvApiKey;
-}
+const char *CServerWebapp::ApiKey() { return g_Config.m_SvApiKey; }
+const char *CServerWebapp::ServerIP() { return g_Config.m_SvWebappIp; }
+const char *CServerWebapp::ApiPath() { return g_Config.m_SvApiPath; }
 
-const char *CServerWebapp::ServerIP()
+void CServerWebapp::Update()
 {
-	return g_Config.m_SvWebappIp;
-}
-
-const char *CServerWebapp::ApiPath()
-{
-	return g_Config.m_SvApiPath;
-}
-
-const char *CServerWebapp::MapName()
-{
-	return g_Config.m_SvMap;
-}
-
-void CServerWebapp::Tick()
-{
-	int Jobs = UpdateJobs();
+	int Jobs = IWebapp::Update();
 	if(Jobs > 0)
-		dbg_msg("webapp", "Removed %d jobs", Jobs);
-	
+		dbg_msg("webapp", "removed %d jobs", Jobs);
+}
+
+void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
+{
+	CBufferStream *pOut = (CBufferStream *)pData;
 	// TODO: add event listener (server and client)
-	lock_wait(m_OutputLock);
-	IDataOut *pNext = 0;
-	for(IDataOut *pItem = m_pFirst; pItem; pItem = pNext)
+	/*if(Type == WEB_USER_AUTH)
 	{
-		int Type = pItem->m_Type;
-		if(Type == WEB_USER_AUTH)
+		CWebUser::COut *pData = (CWebUser::COut*)pItem;
+		if(GameServer()->m_apPlayers[pData->m_ClientID])
 		{
-			CWebUser::COut *pData = (CWebUser::COut*)pItem;
-			if(GameServer()->m_apPlayers[pData->m_ClientID])
+			if(pData->m_UserID > 0)
 			{
-				if(pData->m_UserID > 0)
+				char aBuf[128];
+				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(pData->m_ClientID), pData->m_aUsername);
+				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+				Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
+				Server()->SetUserName(pData->m_ClientID, pData->m_aUsername);
+				
+				// auth staff members
+				if(pData->m_IsStaff)
+					Server()->StaffAuth(pData->m_ClientID, pData->m_Unpacker);
+				
+				CWebUser::CParam *pParams = new CWebUser::CParam();
+				str_copy(pParams->m_aName, Server()->GetUserName(pData->m_ClientID), sizeof(pParams->m_aName));
+				pParams->m_ClientID = pData->m_ClientID;
+				pParams->m_UserID = pData->m_UserID;
+				pParams->m_GetBestRun = 1;
+				AddJob(CWebUser::GetRank, pParams);
+			}
+			else
+			{
+				GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
+			}
+		}
+	}
+	else if(Type == WEB_USER_RANK)
+	{
+		CWebUser::COut *pData = (CWebUser::COut*)pItem;
+		if(GameServer()->m_apPlayers[pData->m_ClientID])
+		{
+			GameServer()->m_apPlayers[pData->m_ClientID]->m_GlobalRank = pData->m_GlobalRank;
+			GameServer()->m_apPlayers[pData->m_ClientID]->m_MapRank = pData->m_MapRank;
+			if(pData->m_PrintRank)
+			{
+				char aBuf[256];
+				if(!pData->m_GlobalRank)
 				{
-					char aBuf[128];
-					str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(pData->m_ClientID), pData->m_aUsername);
-					GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-					Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
-					Server()->SetUserName(pData->m_ClientID, pData->m_aUsername);
-					
-					// auth staff members
-					if(pData->m_IsStaff)
-						Server()->StaffAuth(pData->m_ClientID, pData->m_Unpacker);
-					
-					CWebUser::CParam *pParams = new CWebUser::CParam();
-					str_copy(pParams->m_aName, Server()->GetUserName(pData->m_ClientID), sizeof(pParams->m_aName));
-					pParams->m_ClientID = pData->m_ClientID;
-					pParams->m_UserID = pData->m_UserID;
-					pParams->m_GetBestRun = 1;
-					AddJob(CWebUser::GetRank, pParams);
+					if(pData->m_MatchFound)
+					{
+						if(pData->m_UserID == Server()->GetUserID(pData->m_ClientID))
+							str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
+						else
+							str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pData->m_aUsername);
+					}
+					else
+						str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pData->m_aUsername);
+					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				}
 				else
 				{
-					GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
-				}
-			}
-		}
-		else if(Type == WEB_USER_RANK)
-		{
-			CWebUser::COut *pData = (CWebUser::COut*)pItem;
-			if(GameServer()->m_apPlayers[pData->m_ClientID])
-			{
-				GameServer()->m_apPlayers[pData->m_ClientID]->m_GlobalRank = pData->m_GlobalRank;
-				GameServer()->m_apPlayers[pData->m_ClientID]->m_MapRank = pData->m_MapRank;
-				if(pData->m_PrintRank)
-				{
-					char aBuf[256];
-					if(!pData->m_GlobalRank)
+					if(!pData->m_MapRank)
+						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
+							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
+					else
 					{
-						if(pData->m_MatchFound)
-						{
-							if(pData->m_UserID == Server()->GetUserID(pData->m_ClientID))
-								str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
-							else
-								str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pData->m_aUsername);
-						}
+						if(pData->m_BestRun.m_Time < 60.0f)
+							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
+								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, pData->m_BestRun.m_Time,
+								Server()->ClientName(pData->m_ClientID));
 						else
-							str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pData->m_aUsername);
+							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
+								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, (int)pData->m_BestRun.m_Time/60,
+								fmod(pData->m_BestRun.m_Time, 60), Server()->ClientName(pData->m_ClientID));
+					}
+					
+					if(g_Config.m_SvShowTimes)
+						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+					else
 						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-					}
-					else
-					{
-						if(!pData->m_MapRank)
-							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
-								pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
-						else
-						{
-							if(pData->m_BestRun.m_Time < 60.0f)
-								str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
-									pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, pData->m_BestRun.m_Time,
-									Server()->ClientName(pData->m_ClientID));
-							else
-								str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
-									pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, (int)pData->m_BestRun.m_Time/60,
-									fmod(pData->m_BestRun.m_Time, 60), Server()->ClientName(pData->m_ClientID));
-						}
-						
-						if(g_Config.m_SvShowTimes)
-							GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-						else
-							GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-					}
-				}
-				
-				// saving the best run
-				if(pData->m_GetBestRun && pData->m_MapRank)
-					GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
-			}
-		}
-		else if(Type == WEB_USER_TOP)
-		{
-			CWebTop::COut *pData = (CWebTop::COut*)pItem;
-			if(GameServer()->m_apPlayers[pData->m_ClientID])
-			{
-				char aBuf[256];
-				GameServer()->SendChatTarget(pData->m_ClientID, "----------- Top 5 -----------");
-				for(int i = 0; i < pData->m_lUserRanks.size() && i < 5; i++)
-				{
-					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-						i+pData->m_Start, pData->m_lUserRanks[i].m_aName, (int)pData->m_lUserRanks[i].m_Time/60, fmod(pData->m_lUserRanks[i].m_Time, 60));
-					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-				}
-				GameServer()->SendChatTarget(pData->m_ClientID, "------------------------------");
-			}
-		}
-		else if(Type == WEB_PING_PING)
-		{
-			CWebPing::COut *pData = (CWebPing::COut*)pItem;
-			SetOnline(pData->m_Online);
-			dbg_msg("webapp", "webapp is%s online", IsOnline()?"":" not");
-			CWebMap::CParam *pParam = new CWebMap::CParam();
-			pParam->m_CrcCheck = pData->m_CrcCheck;
-			AddJob(CWebMap::LoadList, pParam);
-		}
-		else if(Type == WEB_MAP_LIST)
-		{
-			CWebMap::COut *pData = (CWebMap::COut*)pItem;
-			array<std::string> NeededMaps;
-			array<std::string> NeededURL;
-			for(int i = 0; i < pData->m_lMapName.size(); i++)
-			{
-				// get current map
-				if(!str_comp(pData->m_lMapName[i].c_str(), MapName()))
-				{
-					GameServer()->Score()->GetRecord()->Set(pData->m_lMapRecord[i].m_Time, pData->m_lMapRecord[i].m_aCpTime);
-					m_CurrentMap.m_ID = pData->m_lMapID[i];
-					m_CurrentMap.m_RunCount = pData->m_lMapRunCount[i];
-					str_copy(m_CurrentMap.m_aCrc, pData->m_lMapCrc[i].c_str(), sizeof(m_CurrentMap.m_aCrc));
-					str_copy(m_CurrentMap.m_aURL, pData->m_lMapURL[i].c_str(), sizeof(m_CurrentMap.m_aURL));
-					str_copy(m_CurrentMap.m_aAuthor, pData->m_lMapAuthor[i].c_str(), sizeof(m_CurrentMap.m_aAuthor));
-
-					continue;
-				}
-				
-				array<std::string>::range r = find_linear(m_lMapList.all(), pData->m_lMapName[i]);
-				if(r.empty())
-				{
-					NeededMaps.add(pData->m_lMapName[i]);
-					NeededURL.add(pData->m_lMapURL[i]);
-				}
-				else if(pData->m_CrcCheck)// map found... check crc
-				{
-					char aFilename[256];
-					str_format(aFilename, sizeof(aFilename), "maps/teerace/%s.map", pData->m_lMapName[i].c_str());
-					CDataFileReader DataFile;
-					if(!DataFile.Open(Storage(), aFilename, IStorage::TYPE_SAVE))
-					{
-						NeededMaps.add(pData->m_lMapName[i]);
-						NeededURL.add(pData->m_lMapURL[i]);
-					}
-					else
-					{
-						char aCrc[16];
-						str_format(aCrc, sizeof(aCrc), "%x", DataFile.Crc());
-						if(str_comp(aCrc, pData->m_lMapCrc[i].c_str()))
-						{
-							NeededMaps.add(pData->m_lMapName[i]);
-							NeededURL.add(pData->m_lMapURL[i]);
-						}
-						
-						DataFile.Close();
-					}
 				}
 			}
-			if(NeededMaps.size() > 0)
-			{
-				CWebMap::CParam *pParam = new CWebMap::CParam();
-				pParam->m_lMapName = NeededMaps;
-				pParam->m_lMapURL = NeededURL;
-				AddJob(CWebMap::DownloadMaps, pParam);
-			}
+			
+			// saving the best run
+			if(pData->m_GetBestRun && pData->m_MapRank)
+				GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
 		}
-		else if(Type == WEB_MAP_DOWNLOADED)
-		{
-			CWebMap::COut *pData = (CWebMap::COut*)pItem;
-			m_lMapList.add(pData->m_lMapName[0]);
-			dbg_msg("webapp", "added map: %s", pData->m_lMapName[0].c_str());
-			if(str_comp(pData->m_lMapName[0].c_str(), MapName()) == 0)
-				Server()->ReloadMap();
-		}
-		else if(Type == WEB_RUN)
-		{
-			CWebRun::COut *pData = (CWebRun::COut*)pItem;
-			if(pData->m_Tick > -1)
-			{
-				// demo
-				CUpload *pDemo = new CUpload(UPLOAD_DEMO);
-				pDemo->m_ClientID = pData->m_ClientID;
-				pDemo->m_UserID = pData->m_UserID;
-				str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
-				m_lUploads.add(pDemo);
-				
-				// ghost
-				CUpload *pGhost = new CUpload(UPLOAD_GHOST);
-				pGhost->m_ClientID = pData->m_ClientID;
-				pGhost->m_UserID = pData->m_UserID;
-				str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
-				m_lUploads.add(pGhost);
-			}
-		}
-		pNext = pItem->m_pNext;
-		delete pItem;
 	}
-	m_pFirst = 0;
-	m_pLast = 0;
-	lock_release(m_OutputLock);
+	else if(Type == WEB_USER_TOP)
+	{
+		CWebTop::COut *pData = (CWebTop::COut*)pItem;
+		if(GameServer()->m_apPlayers[pData->m_ClientID])
+		{
+			char aBuf[256];
+			GameServer()->SendChatTarget(pData->m_ClientID, "----------- Top 5 -----------");
+			for(int i = 0; i < pData->m_lUserRanks.size() && i < 5; i++)
+			{
+				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
+					i+pData->m_Start, pData->m_lUserRanks[i].m_aName, (int)pData->m_lUserRanks[i].m_Time/60, fmod(pData->m_lUserRanks[i].m_Time, 60));
+				GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+			}
+			GameServer()->SendChatTarget(pData->m_ClientID, "------------------------------");
+		}
+	}
+	else */if(Type == WEB_PING_PING)
+	{
+		m_Online = str_comp(pOut->GetData(), "\"PONG\"") == 0;
+		dbg_msg("webapp", "webapp is%s online", IsOnline() ? "" : " not");
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), "maps/list/", ServerIP(), ApiKey());
+		SendRequest(aBuf, WEB_MAP_LIST, new CBufferStream());
+	}
+	else if(Type == WEB_MAP_LIST)
+	{
+		Json::Value Maplist;
+		Json::Reader Reader;
+		if(!Reader.parse(pOut->GetData(), pOut->GetData()+pOut->Size(), Maplist))
+			return;
+		
+		bool DoCrcCheck = !GameServer()->CrcCheck();
+		char aFilename[256];
+		const char *pPath = "maps/teerace/%s.map";
+		
+		GameServer()->CheckedCrc();
+		
+		for(unsigned int i = 0; i < Maplist.size(); i++)
+		{
+			Json::Value Map = Maplist[i];
+			
+			if(!DefaultScoring() && Map["get_best_score"].type() && !str_comp(Map["name"].asCString(), g_Config.m_SvMap))
+			{
+				float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
+				float aCheckpointTimes[25] = {0.0f};
+				Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
+				for(unsigned int j = 0; j < Checkpoint.size(); j++)
+					aCheckpointTimes[j] = str_tofloat(Checkpoint[j].asCString());
+				
+				GameServer()->Score()->GetRecord()->Set(Time, aCheckpointTimes);
+				m_CurrentMap.m_ID = Map["id"].asInt();
+				m_CurrentMap.m_RunCount = Map["run_count"].asInt();
+				str_copy(m_CurrentMap.m_aCrc, Map["crc"].asCString(), sizeof(m_CurrentMap.m_aCrc));
+				str_copy(m_CurrentMap.m_aURL, Map["get_download_url"].asCString(), sizeof(m_CurrentMap.m_aURL));
+				str_copy(m_CurrentMap.m_aAuthor, Map["author"].asCString(), sizeof(m_CurrentMap.m_aAuthor));
+				continue;
+			}
+			
+			array<std::string>::range r = find_linear(m_lMapList.all(), Map["name"].asString());
+			if(r.empty())
+			{
+				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
+				char *pMapName = (char *)mem_alloc(Map["name"].asString().length()+1, 1);
+				str_copy(pMapName, Map["name"].asCString(), Map["name"].asString().length()+1);
+				Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED, pMapName);
+			}
+			else if(DoCrcCheck) // map found... check crc
+			{
+				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
+				CDataFileReader DataFile;
+				if(!DataFile.Open(m_pServer->Storage(), aFilename, IStorage::TYPE_SAVE))
+				{
+					str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
+					char *pMapName = (char *)mem_alloc(Map["name"].asString().length()+1, 1);
+					str_copy(pMapName, Map["name"].asCString(), Map["name"].asString().length()+1);
+					Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED, pMapName);
+				}
+				else
+				{
+					char aCrc[16];
+					str_format(aCrc, sizeof(aCrc), "%x", DataFile.Crc());
+					if(str_comp(aCrc, Map["crc"].asCString()))
+					{
+						str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
+						char *pMapName = (char *)mem_alloc(Map["name"].asString().length()+1, 1);
+						str_copy(pMapName, Map["name"].asCString(), Map["name"].asString().length()+1);
+						Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED, pMapName);
+					}
+					DataFile.Close();
+				}
+			}
+		}
+	}
+	else if(Type == WEB_MAP_DOWNLOADED)
+	{
+		const char *pMap = (const char*)pUserData;
+		m_lMapList.add(pMap);
+		dbg_msg("webapp", "added map: %s", pMap);
+		if(str_comp(pMap, g_Config.m_SvMap) == 0)
+			Server()->ReloadMap();
+		mem_free(pUserData);
+	}
+	/*else if(Type == WEB_RUN)
+	{
+		CWebRun::COut *pData = (CWebRun::COut*)pItem;
+		if(pData->m_Tick > -1)
+		{
+			// demo
+			CUpload *pDemo = new CUpload(UPLOAD_DEMO);
+			pDemo->m_ClientID = pData->m_ClientID;
+			pDemo->m_UserID = pData->m_UserID;
+			str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
+			m_lUploads.add(pDemo);
+			
+			// ghost
+			CUpload *pGhost = new CUpload(UPLOAD_GHOST);
+			pGhost->m_ClientID = pData->m_ClientID;
+			pGhost->m_UserID = pData->m_UserID;
+			str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
+			m_lUploads.add(pGhost);
+		}
+	}*/
 	
 	// uploading stuff to webapp
-	for(int i = 0; i < m_lUploads.size(); i++)
+	/*for(int i = 0; i < m_lUploads.size(); i++)
 	{
 		CUpload *pUpload = m_lUploads[i];
 		if(pUpload->m_Type == UPLOAD_DEMO)
@@ -298,13 +284,13 @@ void CServerWebapp::Tick()
 				m_lUploads.remove_index_fast(i);
 			}
 		}
-	}
+	}*/
 }
 
-int CServerWebapp::Upload(unsigned char *pData, int Size)
+/*int CServerWebapp::Upload(unsigned char *pData, int Size)
 {
 	// send data
-	int Bytes = net_tcp_send(Socket(), pData, Size);
+	/*int Bytes = net_tcp_send(Socket(), pData, Size);
 	thread_sleep(10); // limit upload rate
 	return Bytes;
 }
@@ -327,20 +313,19 @@ int CServerWebapp::SendUploadEnd()
 	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", aEnd);
 	net_tcp_close(Socket());
 	return Bytes;
-}
+}*/
 
-bool CServerWebapp::Download(const char *pFilename, const char *pURL)
+bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, void *pUserData)
 {
 	// TODO: limit transfer rate
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
 	
-	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	IOHANDLE File = m_pServer->Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 		return false;
-		
-	CFileStream Out(File);
-	return SendRequest(aStr, &Out);
+	
+	return SendRequest(aStr, Type, new CFileStream(File), pUserData);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
