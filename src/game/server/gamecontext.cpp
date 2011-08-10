@@ -592,11 +592,22 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, CUnpacker Unpac
 {
 	if(str_comp_num(pStr, "teerace:", 8) == 0)
 	{
-		/*CWebUser::CParam *pParams = new CWebUser::CParam();
-		pParams->m_ClientID = ClientID;
-		pParams->m_Unpacker = Unpacker;
-		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", pParams->m_aToken) == 1)
-			m_pWebapp->AddJob(CWebUser::AuthToken, pParams);*/
+		char m_aToken[32];
+		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", m_aToken) == 1)
+		{
+			char *pUserData = (char*)mem_alloc(sizeof(int)+sizeof(CUnpacker), 1);
+			mem_copy(pUserData, &ClientID, sizeof(int));
+			mem_copy(pUserData+sizeof(int), &Unpacker, sizeof(CUnpacker));
+			
+			Json::Value Data;
+			Json::FastWriter Writer;
+			Data["api_token"] = m_aToken;
+			std::string Json = Writer.write(Data);
+			
+			char aBuf[512];
+			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "users/auth_token/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
+			m_pWebapp->SendRequest(aBuf, WEB_USER_AUTH, new CBufferStream(), pUserData);
+		}
 	}
 }
 #endif

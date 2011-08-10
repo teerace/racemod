@@ -49,37 +49,49 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 {
 	CBufferStream *pOut = (CBufferStream *)pData;
 	// TODO: add event listener (server and client)
-	/*if(Type == WEB_USER_AUTH)
+	if(Type == WEB_USER_AUTH)
 	{
-		CWebUser::COut *pData = (CWebUser::COut*)pItem;
-		if(GameServer()->m_apPlayers[pData->m_ClientID])
+		int ClientID = *(int*)pUserData;
+		if(GameServer()->m_apPlayers[ClientID])
 		{
-			if(pData->m_UserID > 0)
+			CUnpacker Unpacker = *(CUnpacker*)((char*)pUserData+sizeof(int)); // TODO: ugly
+			int UserID = 0;
+			Json::Value User;
+			Json::Reader Reader;
+			
+			if(str_comp(pOut->GetData(), "false") != 0)
+			{
+				if(Reader.parse(pOut->GetData(), pOut->GetData()+pOut->Size(), User))
+					UserID = User["id"].asInt();
+			}
+			
+			if(UserID > 0)
 			{
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(pData->m_ClientID), pData->m_aUsername);
+				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(ClientID), User["username"].asCString());
 				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-				Server()->SetUserID(pData->m_ClientID, pData->m_UserID);
-				Server()->SetUserName(pData->m_ClientID, pData->m_aUsername);
+				Server()->SetUserID(ClientID, UserID);
+				Server()->SetUserName(ClientID, User["username"].asCString());
 				
 				// auth staff members
-				if(pData->m_IsStaff)
-					Server()->StaffAuth(pData->m_ClientID, pData->m_Unpacker);
+				if(User["is_staff"].asBool())
+					Server()->StaffAuth(ClientID, Unpacker);
 				
-				CWebUser::CParam *pParams = new CWebUser::CParam();
-				str_copy(pParams->m_aName, Server()->GetUserName(pData->m_ClientID), sizeof(pParams->m_aName));
-				pParams->m_ClientID = pData->m_ClientID;
-				pParams->m_UserID = pData->m_UserID;
+				/*CWebUser::CParam *pParams = new CWebUser::CParam();
+				str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));
+				pParams->m_ClientID = ClientID;
+				pParams->m_UserID = UserID;
 				pParams->m_GetBestRun = 1;
-				AddJob(CWebUser::GetRank, pParams);
+				AddJob(CWebUser::GetRank, pParams);*/
 			}
 			else
 			{
-				GameServer()->SendChatTarget(pData->m_ClientID, "wrong username and/or password");
+				GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
 			}
 		}
+		mem_free(pUserData);
 	}
-	else if(Type == WEB_USER_RANK)
+	/*else if(Type == WEB_USER_RANK)
 	{
 		CWebUser::COut *pData = (CWebUser::COut*)pItem;
 		if(GameServer()->m_apPlayers[pData->m_ClientID])
@@ -130,8 +142,8 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 			if(pData->m_GetBestRun && pData->m_MapRank)
 				GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
 		}
-	}
-	else */if(Type == WEB_USER_TOP)
+	}*/
+	else if(Type == WEB_USER_TOP)
 	{
 		Json::Value Top;
 		Json::Reader Reader;
