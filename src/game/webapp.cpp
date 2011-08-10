@@ -116,7 +116,7 @@ bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse)
 	m_Socket = net_tcp_create(Addr);
 	if(m_Socket.type == NETTYPE_INVALID)
 		return false;
-	if(net_tcp_connect(m_Socket, &Addr) != 0)
+	if(net_tcp_connect(m_Socket, &Addr) != 0) // TODO: non-blocking
 	{
 		Close();
 		return false;
