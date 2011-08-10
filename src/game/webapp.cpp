@@ -92,7 +92,7 @@ void CWebapp::Disconnect()
 
 bool CWebapp::CHeader::Parse(char *pStr)
 {
-	char *pEnd = strstr(pStr, "\r\n\r\n");
+	char *pEnd = str_find(pStr, "\r\n\r\n");
 	if(!pEnd)
 		return false;
 	
@@ -107,7 +107,7 @@ bool CWebapp::CHeader::Parse(char *pStr)
 	
 	while(sscanf(pData, "Content-Length: %ld\r\n", &this->m_ContentLength) != 1)
 	{
-		char *pLineEnd = strstr(pData, "\r\n");
+		char *pLineEnd = str_find(pData, "\r\n");
 		if(!pLineEnd)
 		{
 			m_Error = true;
