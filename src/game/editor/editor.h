@@ -804,7 +804,7 @@ public:
 
 	void PopupSelectGametileOpInvoke(float x, float y);
 	int PopupSelectGameTileOpResult();
-	
+
 	void PopupSelectConfigAutoMapInvoke(float x, float y);
 	int PopupSelectConfigAutoMapResult();
 

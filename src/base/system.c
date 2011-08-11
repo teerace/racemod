@@ -1120,7 +1120,7 @@ int net_tcp_accept(NETSOCKET sock, NETSOCKET *new_sock, NETADDR *a)
 		sockaddr_len = sizeof(addr);
 
 		s = accept(sock.ipv4sock, (struct sockaddr *)&addr, &sockaddr_len);
-		
+
 		if (s != -1)
 		{
 			sockaddr_to_netaddr((const struct sockaddr *)&addr, a);
@@ -1136,7 +1136,7 @@ int net_tcp_accept(NETSOCKET sock, NETSOCKET *new_sock, NETADDR *a)
 		sockaddr_len = sizeof(addr);
 
 		s = accept(sock.ipv6sock, (struct sockaddr *)&addr, &sockaddr_len);
-		
+
 		if (s != -1)
 		{
 			sockaddr_to_netaddr((const struct sockaddr *)&addr, a);
@@ -1187,7 +1187,7 @@ int net_tcp_send(NETSOCKET sock, const void *data, int size)
 		bytes = send((int)sock.ipv4sock, (const char*)data, size, 0);
 	if(sock.ipv6sock >= 0)
 		bytes = send((int)sock.ipv6sock, (const char*)data, size, 0);
-		
+
 	return bytes;
 }
 
@@ -1199,7 +1199,7 @@ int net_tcp_recv(NETSOCKET sock, void *data, int maxsize)
 		bytes = recv((int)sock.ipv4sock, (char*)data, maxsize, 0);
 	if(sock.ipv6sock >= 0)
 		bytes = recv((int)sock.ipv6sock, (char*)data, maxsize, 0);
-		
+
 	return bytes;
 }
 
