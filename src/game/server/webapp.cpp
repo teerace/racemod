@@ -250,26 +250,26 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 		if(str_comp(pMap, g_Config.m_SvMap) == 0)
 			Server()->ReloadMap();
 	}
-	/*else if(Type == WEB_RUN)
+	else if(Type == WEB_RUN)
 	{
-		CWebRun::COut *pData = (CWebRun::COut*)pItem;
-		if(pData->m_Tick > -1)
+		int *pUser = (int*)pUserData;
+		if(pUser[2] > -1)
 		{
 			// demo
-			CUpload *pDemo = new CUpload(UPLOAD_DEMO);
-			pDemo->m_ClientID = pData->m_ClientID;
-			pDemo->m_UserID = pData->m_UserID;
-			str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
+			/*CUpload *pDemo = new CUpload(UPLOAD_DEMO);
+			pDemo->m_ClientID = pUser[1];
+			pDemo->m_UserID = pUser[0];
+			str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pUser[2], g_Config.m_SvPort, pUser[1]);
 			m_lUploads.add(pDemo);
 			
 			// ghost
 			CUpload *pGhost = new CUpload(UPLOAD_GHOST);
-			pGhost->m_ClientID = pData->m_ClientID;
-			pGhost->m_UserID = pData->m_UserID;
-			str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pData->m_Tick, g_Config.m_SvPort, pData->m_ClientID);
-			m_lUploads.add(pGhost);
+			pGhost->m_ClientID = pUser[1];
+			pGhost->m_UserID = pUser[0];
+			str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser[2], g_Config.m_SvPort, pUser[1]);
+			m_lUploads.add(pGhost);*/
 		}
-	}*/
+	}
 	
 	// uploading stuff to webapp
 	/*for(int i = 0; i < m_lUploads.size(); i++)

@@ -236,23 +236,48 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	// post to webapp
 	if(GameServer()->Webapp())
 	{
-		/*CWebRun::CParam *pParams = new CWebRun::CParam();
-		pParams->m_UserID = Server()->GetUserID(ID);
-		pParams->m_ClientID = ID;
-		str_copy(pParams->m_aName, Server()->ClientName(ID), MAX_NAME_LENGTH);
-		str_copy(pParams->m_aClan, Server()->ClientClan(ID), MAX_CLAN_LENGTH);
-		pParams->m_Time = FinishTime;
-		mem_copy(pParams->m_aCpTime, p->m_aCpCurrent, sizeof(pParams->m_aCpTime));*/
-		
+		int *pUserData = (int*)mem_alloc(sizeof(int)*3, 1);
+		pUserData[0] = Server()->GetUserID(ID);
+		pUserData[1] = ID;
+		pUserData[2] = -1;
+
 		if(NewRecord && Server()->GetUserID(ID) > 0)
 		{
 			// set demo and ghost so that it is saved
 			Server()->SaveGhostDemo(ID);
-			//pParams->m_Tick = Server()->Tick();
+			pUserData[2] = Server()->Tick();
 		}
-		
-		//if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)
-		//	GameServer()->Webapp()->AddJob(CWebRun::Post, pParams);
+
+		if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)
+		{
+			Json::Value Run;
+			Json::FastWriter Writer;
+
+			char aBuf[1024];
+			Run["map_id"] = GameServer()->Webapp()->CurrentMap()->m_ID;
+			Run["map_crc"] = GameServer()->Webapp()->CurrentMap()->m_aCrc;
+			Run["user_id"] = Server()->GetUserID(ID);
+			// TODO: take this out after 0.6 release
+			str_copy(aBuf, Server()->ClientName(ID), MAX_NAME_LENGTH);
+			str_sanitize_strong(aBuf);
+			Run["nickname"] = aBuf;
+			if(Server()->ClientClan(ID)[0])
+				Run["clan"] = Server()->ClientClan(ID);
+			str_format(aBuf, sizeof(aBuf), "%.3f", FinishTime);
+			Run["time"] = aBuf;
+			float *pCpTime = p->m_aCpCurrent;
+			str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
+				pCpTime[0], pCpTime[1], pCpTime[2], pCpTime[3], pCpTime[4], pCpTime[5], pCpTime[6], pCpTime[7], pCpTime[8], pCpTime[9],
+				pCpTime[10], pCpTime[11], pCpTime[12], pCpTime[13], pCpTime[14], pCpTime[15], pCpTime[16], pCpTime[17], pCpTime[18], pCpTime[19],
+				pCpTime[20], pCpTime[21], pCpTime[22], pCpTime[23], pCpTime[24], pCpTime[25]);
+			Run["checkpoints"] = aBuf;
+
+			std::string Json = Writer.write(Run);
+
+			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, GameServer()->Webapp()->ApiPath(), "runs/new/",
+				GameServer()->Webapp()->ServerIP(), GameServer()->Webapp()->ApiKey(), Json.length(), Json.c_str());
+			GameServer()->Webapp()->SendRequest(aBuf, WEB_RUN, new CBufferStream(), pUserData);
+		}
 		
 		// higher run count
 		GameServer()->Webapp()->CurrentMap()->m_RunCount++;
