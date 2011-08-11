@@ -16,6 +16,8 @@ public:
 	virtual ~IStream() {}
 
 	virtual bool Write(char *pData, int Size) = 0;
+	virtual char *GetData() { return ""; };
+	virtual bool Readable() { return false; }
 	int Size() { return m_Size; }
 };
 
@@ -78,6 +80,7 @@ public:
 		m_Size = 0;
 	}
 	char *GetData() { return m_pData; }
+	bool Readable() { return true; }
 };
 
 #endif

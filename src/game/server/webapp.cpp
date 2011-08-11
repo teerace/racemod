@@ -47,7 +47,12 @@ void CServerWebapp::Update()
 
 void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 {
-	CBufferStream *pOut = (CBufferStream *)pData;
+	Json::Value JsonData;
+	Json::Reader Reader;
+	bool Json = false;
+	if(pData->Readable())
+		Json = Reader.parse(pData->GetData(), pData->GetData()+pData->Size(), JsonData);
+
 	// TODO: add event listener (server and client)
 	if(Type == WEB_USER_AUTH)
 	{
@@ -57,25 +62,23 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 		{
 			int SendRconCmds = pUser[1];
 			int UserID = 0;
-			Json::Value User;
-			Json::Reader Reader;
 			
-			if(str_comp(pOut->GetData(), "false") != 0)
+			if(str_comp(pData->GetData(), "false") != 0)
 			{
-				if(Reader.parse(pOut->GetData(), pOut->GetData()+pOut->Size(), User))
-					UserID = User["id"].asInt();
+				if(Json)
+					UserID = JsonData["id"].asInt();
 			}
 			
 			if(UserID > 0)
 			{
 				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(ClientID), User["username"].asCString());
+				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(ClientID), JsonData["username"].asCString());
 				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 				Server()->SetUserID(ClientID, UserID);
-				Server()->SetUserName(ClientID, User["username"].asCString());
+				Server()->SetUserName(ClientID, JsonData["username"].asCString());
 				
 				// auth staff members
-				if(User["is_staff"].asBool())
+				if(JsonData["is_staff"].asBool())
 					Server()->StaffAuth(ClientID, SendRconCmds);
 				
 				/*CWebUser::CParam *pParams = new CWebUser::CParam();
@@ -90,7 +93,6 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 				GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
 			}
 		}
-		mem_free(pUserData);
 	}
 	/*else if(Type == WEB_USER_RANK)
 	{
@@ -146,9 +148,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 	}*/
 	else if(Type == WEB_USER_TOP)
 	{
-		Json::Value Top;
-		Json::Reader Reader;
-		if(!Reader.parse(pOut->GetData(), pOut->GetData()+pOut->Size(), Top))
+		if(!Json)
 			return;
 		
 		int *pUser = (int*)pUserData;
@@ -156,9 +156,9 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 		{
 			char aBuf[256];
 			GameServer()->SendChatTarget(pUser[1], "----------- Top 5 -----------");
-			for(int i = 0; i < Top.size() && i < 5; i++)
+			for(int i = 0; i < JsonData.size() && i < 5; i++)
 			{
-				Json::Value Run = Top[i];
+				Json::Value Run = JsonData[i];
 				float Time = str_tofloat(Run["run"]["time"].asCString());
 				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
 					i+pUser[0], Run["run"]["user"]["username"].asCString(), (int)Time/60, fmod(Time, 60));
@@ -166,11 +166,10 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 			}
 			GameServer()->SendChatTarget(pUser[1], "------------------------------");
 		}
-		mem_free(pUserData);
 	}
 	else if(Type == WEB_PING_PING)
 	{
-		m_Online = str_comp(pOut->GetData(), "\"PONG\"") == 0;
+		m_Online = str_comp(pData->GetData(), "\"PONG\"") == 0;
 		dbg_msg("webapp", "webapp is%s online", IsOnline() ? "" : " not");
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), "maps/list/", ServerIP(), ApiKey());
@@ -178,9 +177,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 	}
 	else if(Type == WEB_MAP_LIST)
 	{
-		Json::Value Maplist;
-		Json::Reader Reader;
-		if(!Reader.parse(pOut->GetData(), pOut->GetData()+pOut->Size(), Maplist))
+		if(!Json)
 			return;
 		
 		bool DoCrcCheck = !GameServer()->CrcCheck();
@@ -189,9 +186,9 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 		
 		GameServer()->CheckedCrc();
 		
-		for(unsigned int i = 0; i < Maplist.size(); i++)
+		for(unsigned int i = 0; i < JsonData.size(); i++)
 		{
-			Json::Value Map = Maplist[i];
+			Json::Value Map = JsonData[i];
 			
 			if(!DefaultScoring() && Map["get_best_score"].type() && !str_comp(Map["name"].asCString(), g_Config.m_SvMap))
 			{
@@ -252,7 +249,6 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 		dbg_msg("webapp", "added map: %s", pMap);
 		if(str_comp(pMap, g_Config.m_SvMap) == 0)
 			Server()->ReloadMap();
-		mem_free(pUserData);
 	}
 	/*else if(Type == WEB_RUN)
 	{

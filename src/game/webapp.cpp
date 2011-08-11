@@ -27,6 +27,7 @@ IWebapp::IWebapp(const char* WebappIp)
 	if(net_host_lookup(aBuf, &m_Addr, NETTYPE_IPV4) != 0)
 		net_host_lookup("localhost", &m_Addr, NETTYPE_IPV4);
 	m_Addr.port = Port;
+
 	m_Connections.delete_all();
 }
 
@@ -48,8 +49,7 @@ bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, void 
 
 int IWebapp::Update()
 {
-	int Size = m_Connections.size();
-	int Max = 3;
+	int Num = 0, Max = 3;
 	for(int i = 0; i < min(m_Connections.size(), Max); i++)
 	{
 		int Result = m_Connections[i]->Update();
@@ -65,9 +65,10 @@ int IWebapp::Update()
 			
 			delete m_Connections[i];
 			m_Connections.remove_index_fast(i);
+			Num++;
 		}
 	}
-	return Size - m_Connections.size();
+	return Num;
 }
 
 // TODO: own file
@@ -107,6 +108,8 @@ CHttpConnection::~CHttpConnection()
 {
 	if(m_pResponse)
 		delete m_pResponse;
+	if(m_pUserData)
+		mem_free(m_pUserData);
 	Close();
 }
 
