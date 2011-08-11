@@ -683,11 +683,16 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 	if(UserID > 0)
 	{
 		// calculate time in seconds
-		int Seconds = Server()->GetPlayTicks(ClientID)/Server()->TickSpeed();
-		/*CWebUser::CParam *pParams = new CWebUser::CParam();
-		pParams->m_UserID = UserID;
-		pParams->m_PlayTime = Seconds;
-		m_pWebapp->AddJob(CWebUser::PlayTime, pParams);*/
+		Json::Value Post;
+		Json::FastWriter Writer;
+		Post["seconds"] = Server()->GetPlayTicks(ClientID)/Server()->TickSpeed();
+		std::string Json = Writer.write(Post);
+
+		char aBuf[512];
+		char aURL[128];
+		str_format(aURL, sizeof(aURL), "users/playtime/%d/", UserID);
+		str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
+		m_pWebapp->SendRequest(aBuf, WEB_USER_PLAYTIME, new CBufferStream());
 	}
 #endif
 	AbortVoteKickOnDisconnect(ClientID);
