@@ -711,6 +711,37 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 	}
 }
 
+#if defined(CONF_TEERACE)
+// TODO: rework this / move this somewhere else
+float HueToRgb(float v1, float v2, float h)
+{
+   if(h < 0.0f) h += 1;
+   if(h > 1.0f) h -= 1;
+   if((6.0f * h) < 1.0f) return v1 + (v2 - v1) * 6.0f * h;
+   if((2.0f * h) < 1.0f) return v2;
+   if((3.0f * h) < 2.0f) return v1 + (v2 - v1) * ((2.0f/3.0f) - h) * 6.0f;
+   return v1;
+}
+
+int HslToRgb(int v)
+{
+	vec3 HSL = vec3(((v>>16)&0xff)/255.0f, ((v>>8)&0xff)/255.0f, 0.5f+(v&0xff)/255.0f*0.5f);
+	vec3 RGB;
+	if(HSL.s == 0.0f)
+		RGB = vec3(HSL.l, HSL.l, HSL.l);
+	else
+	{
+		float v2 = HSL.l < 0.5f ? HSL.l * (1.0f + HSL.s) : (HSL.l+HSL.s) - (HSL.s*HSL.l);
+		float v1 = 2.0f * HSL.l - v2;
+
+		RGB = vec3(HueToRgb(v1, v2, HSL.h + (1.0f/3.0f)), HueToRgb(v1, v2, HSL.h), HueToRgb(v1, v2, HSL.h - (1.0f/3.0f)));
+	}
+	
+	RGB = RGB*255;
+	return (((int)RGB.r)<<16)|(((int)RGB.g)<<8)|(int)RGB.b;
+}
+#endif
+
 void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 {
 	void *pRawMsg = m_NetObjHandler.SecureUnpackMsg(MsgID, pUnpacker);
@@ -1266,13 +1297,21 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 #if defined(CONF_TEERACE)
 		if(Server()->GetUserID(ClientID) > 0)
 		{
-			/*CWebUser::CParam *pParams = new CWebUser::CParam;
-			pParams->m_UserID = Server()->GetUserID(ClientID);
-			str_copy(pParams->m_SkinName, pMsg->m_pSkin, sizeof(pParams->m_SkinName));
-			pParams->m_UseCustomColor = pMsg->m_UseCustomColor;
-			pParams->m_ColorBody = pMsg->m_ColorBody;
-			pParams->m_ColorFeet = pMsg->m_ColorFeet;
-			m_pWebapp->AddJob(CWebUser::UpdateSkin, pParams);*/
+			Json::Value Userdata;
+			Json::FastWriter Writer;
+			Userdata["skin_name"] = pMsg->m_pSkin;
+			if(pMsg->m_UseCustomColor)
+			{
+				Userdata["body_color"] = HslToRgb(pMsg->m_ColorBody);
+				Userdata["feet_color"] = HslToRgb(pMsg->m_ColorFeet);
+			}
+			std::string Json = Writer.write(Userdata);
+	
+			char aBuf[512];
+			char aURL[128];
+			str_format(aURL, sizeof(aURL), "users/skin/%d/", Server()->GetUserID(ClientID));
+			str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
+			m_pWebapp->SendRequest(aBuf, WEB_USER_UPDATESKIN, new CBufferStream());
 		}
 #endif
 	}
