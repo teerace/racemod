@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include "webapp.h"
 
-// TODO: non-blocking
-// TODO: fix client
+// TODO: upload
+// TODO: rank
 
 IWebapp::IWebapp(const char* WebappIp)
 {
@@ -55,13 +55,22 @@ int IWebapp::Update()
 		int Result = m_Connections[i]->Update();
 		if(Result != 0)
 		{
+			int StatusCode = 200;
 			if(Result == 1)
+				dbg_msg("webapp", "received response (type: %d)", m_Connections[i]->m_Type);
+			else if(Result == -1)
 			{
-				dbg_msg("webapp", "received response");
-				OnResponse(m_Connections[i]->m_Type, m_Connections[i]->m_pResponse, m_Connections[i]->m_pUserData);
+				dbg_msg("webapp", "connection error (type: %d)", m_Connections[i]->m_Type);
+				m_Connections[i]->m_pResponse->Clear();
+				StatusCode = -1;
 			}
 			else
-				dbg_msg("webapp", "connection error");
+			{
+				dbg_msg("webapp", "error (status code: %d, type: %d)", -Result, m_Connections[i]->m_Type);
+				StatusCode = -Result;
+			}
+
+			OnResponse(m_Connections[i]->m_Type, m_Connections[i]->m_pResponse, m_Connections[i]->m_pUserData, StatusCode);
 			
 			delete m_Connections[i];
 			m_Connections.remove_index_fast(i);
@@ -162,7 +171,7 @@ int CHttpConnection::Update()
 	
 	char aBuf[1024] = {0};
 	int Bytes = net_tcp_recv(m_Socket, aBuf, sizeof(aBuf));
-	
+
 	if(Bytes > 0)
 	{
 		if(m_Header.m_Size == -1)
@@ -189,7 +198,12 @@ int CHttpConnection::Update()
 		return -1;
 	}
 	else
-		return m_pResponse->Size() == m_Header.m_ContentLength ? 1 : -1;
+	{
+		if(m_Header.m_StatusCode != -1)
+			return (m_Header.m_StatusCode == 200) ? 1 : -m_Header.m_StatusCode;
+		if(m_pResponse->Size() != m_Header.m_ContentLength)
+			return -1;
+	}
 	
 	return 0;
 }

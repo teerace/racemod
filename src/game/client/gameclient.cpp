@@ -480,7 +480,7 @@ void CGameClient::OnRender()
 		m_All.m_paComponents[i]->OnRender();
 
 	// run webapp tick
-	m_pWebapp->Tick();
+	m_pWebapp->Update();
 
 	// clear new tick flags
 	m_NewTick = false;

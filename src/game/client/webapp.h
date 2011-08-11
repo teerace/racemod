@@ -2,11 +2,10 @@
 #ifndef GAME_CLIENT_WEBAPP_H
 #define GAME_CLIENT_WEBAPP_H
 
+#include <game/data.h>
 #include <game/webapp.h>
 
-#include "webapp/api_token.h"
-
-class CClientWebapp : public CWebapp
+class CClientWebapp : public IWebapp
 {
 private:
 	class CGameClient *m_pClient;
@@ -15,9 +14,10 @@ public:
 	static const char POST[];
 
 	CClientWebapp(class CGameClient *pGameClient);
-	virtual ~CClientWebapp();
+	virtual ~CClientWebapp() {};
 
-	void Tick();
+	void Update();
+	void OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode);
 
 	const char *ServerIP();
 	const char *ApiPath();

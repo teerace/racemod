@@ -45,12 +45,13 @@ void CServerWebapp::Update()
 		dbg_msg("webapp", "removed %d jobs", Jobs);
 }
 
-void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
+void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode)
 {
+	bool Error = StatusCode != 200;
 	Json::Value JsonData;
 	Json::Reader Reader;
 	bool Json = false;
-	if(pData->Readable())
+	if(StatusCode != -1 && pData->Readable())
 		Json = Reader.parse(pData->GetData(), pData->GetData()+pData->Size(), JsonData);
 
 	// TODO: add event listener (server and client)
@@ -60,6 +61,12 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 		int ClientID = pUser[0];
 		if(GameServer()->m_apPlayers[ClientID])
 		{
+			if(Error)
+			{
+				GameServer()->SendChatTarget(ClientID, "unknown error");
+				return;
+			}
+
 			int SendRconCmds = pUser[1];
 			int UserID = 0;
 			
@@ -146,11 +153,8 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 				GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
 		}
 	}*/
-	else if(Type == WEB_USER_TOP)
+	else if(Type == WEB_USER_TOP && Json && !Error)
 	{
-		if(!Json)
-			return;
-		
 		int *pUser = (int*)pUserData;
 		if(GameServer()->m_apPlayers[pUser[1]])
 		{
@@ -169,17 +173,14 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 	}
 	else if(Type == WEB_PING_PING)
 	{
-		m_Online = str_comp(pData->GetData(), "\"PONG\"") == 0;
-		dbg_msg("webapp", "webapp is%s online", IsOnline() ? "" : " not");
+		m_Online = !Error && str_comp(pData->GetData(), "\"PONG\"") == 0;
+		dbg_msg("webapp", "webapp is%s online", m_Online ? "" : " not");
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), "maps/list/", ServerIP(), ApiKey());
 		SendRequest(aBuf, WEB_MAP_LIST, new CBufferStream());
 	}
-	else if(Type == WEB_MAP_LIST)
+	else if(Type == WEB_MAP_LIST && Json && !Error)
 	{
-		if(!Json)
-			return;
-		
 		bool DoCrcCheck = !GameServer()->CrcCheck();
 		char aFilename[256];
 		const char *pPath = "maps/teerace/%s.map";
@@ -245,10 +246,15 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 	else if(Type == WEB_MAP_DOWNLOADED)
 	{
 		const char *pMap = (const char*)pUserData;
-		m_lMapList.add(pMap);
-		dbg_msg("webapp", "added map: %s", pMap);
-		if(str_comp(pMap, g_Config.m_SvMap) == 0)
-			Server()->ReloadMap();
+		if(!Error)
+		{
+			m_lMapList.add(pMap);
+			dbg_msg("webapp", "added map: %s", pMap);
+			if(str_comp(pMap, g_Config.m_SvMap) == 0)
+				Server()->ReloadMap();
+		}
+		else
+			dbg_msg("webapp", "couldn't download map: %s", pMap);
 	}
 	else if(Type == WEB_RUN)
 	{

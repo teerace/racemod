@@ -66,16 +66,22 @@ public:
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	
-	bool IsOnline() { return m_Online; }
 	bool DefaultScoring() { return m_DefaultScoring; }
 	
 	void Update();
-	void OnResponse(int Type, IStream *pData, void *pUserData);
+	void OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode);
 
 	/*int Upload(unsigned char *pData, int Size);
 	int SendUploadHeader(const char *pHeader);
 	int SendUploadEnd();*/
 	bool Download(const char *pFilename, const char *pURL, int Type = -1, void *pUserData = 0);
+
+	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, void *pUserData = 0, bool NeedOnline = true)
+	{
+		if(NeedOnline && !m_Online)
+			return false;
+		return IWebapp::SendRequest(pInString, Type, pResponse, pUserData);
+	}
 };
 
 #endif

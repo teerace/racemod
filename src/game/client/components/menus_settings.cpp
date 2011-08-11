@@ -915,11 +915,11 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 	static int s_ApiTokenButton = 0;
 	if(DoButton_Menu((void*)&s_ApiTokenButton, m_pClient->Webapp()->m_ApiTokenRequested ? Localize("Checking...") : Localize("Request api token"), m_pClient->Webapp()->m_ApiTokenRequested ? -1 : 0, &ApiButton))
 	{
-		m_pClient->Webapp()->m_ApiTokenRequested = true;
-		CWebApiToken::CParam *pParams = new CWebApiToken::CParam();
-		str_copy(pParams->m_aUsername, g_Config.m_ClUsername, sizeof(pParams->m_aUsername));
-		str_copy(pParams->m_aPassword, g_Config.m_ClPassword, sizeof(pParams->m_aPassword));
-		m_pClient->Webapp()->AddJob(CWebApiToken::GetApiToken, pParams, 0);
+		char aData[128];
+		char aBuf[512];
+		str_format(aData, sizeof(aData), "username=%s&password=%s", g_Config.m_ClUsername, g_Config.m_ClPassword);
+		str_format(aBuf, sizeof(aBuf), CClientWebapp::POST, m_pClient->Webapp()->ApiPath(), "anonclient/get_token/", m_pClient->Webapp()->ServerIP(), str_length(aData), aData);
+		m_pClient->Webapp()->SendRequest(aBuf, WEB_API_TOKEN, new CBufferStream());
 	}
 
 	// Right

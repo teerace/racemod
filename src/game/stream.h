@@ -18,6 +18,7 @@ public:
 	virtual bool Write(char *pData, int Size) = 0;
 	virtual char *GetData() { return ""; };
 	virtual bool Readable() { return false; }
+	virtual void Clear() = 0;
 	int Size() { return m_Size; }
 };
 
@@ -27,11 +28,7 @@ class CFileStream : public IStream
 
 public:
 	CFileStream(IOHANDLE File) : m_File(File) {}
-	~CFileStream()
-	{
-		if(m_File)
-			io_close(m_File);
-	}
+	~CFileStream() { Clear(); }
 
 	bool Write(char *pData, int Size)
 	{
@@ -40,6 +37,13 @@ public:
 		io_write(m_File, pData, Size);
 		m_Size += Size;
 		return true;
+	}
+
+	void Clear()
+	{
+		if(m_File)
+			io_close(m_File);
+		m_Size = 0;
 	}
 };
 
@@ -72,6 +76,7 @@ public:
 		}
 		return true;
 	}
+
 	void Clear()
 	{
 		if(m_pData)
@@ -79,6 +84,7 @@ public:
 		m_pData = 0;
 		m_Size = 0;
 	}
+
 	char *GetData() { return m_pData; }
 	bool Readable() { return true; }
 };

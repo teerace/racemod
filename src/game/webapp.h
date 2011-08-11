@@ -49,9 +49,9 @@ public:
 	virtual ~IWebapp() {};
 	
 	int Update();
-	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, void *pUserData = 0);
+	virtual bool SendRequest(const char *pInString, int Type, class IStream *pResponse, void *pUserData = 0);
 	
-	virtual void OnResponse(int Type, IStream *pData, void *pUserData) = 0;
+	virtual void OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode) = 0;
 };
 
 #endif
