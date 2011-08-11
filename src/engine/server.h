@@ -84,7 +84,7 @@ public:
 	virtual void StopRecord(int ClientID) = 0;
 	virtual bool IsRecording(int ClientID) = 0;
 
-	virtual void StaffAuth(int ClientID, class CUnpacker Unpacker) = 0;
+	virtual void StaffAuth(int ClientID, int SendRconCmds) = 0;
 
 	virtual void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet) = 0;
 	virtual void StopGhostRecord(int ClientID, float Time=0.0f) = 0;
@@ -119,7 +119,7 @@ public:
 	virtual bool IsClientPlayer(int ClientID) = 0;
 
 #if defined(CONF_TEERACE)
-	virtual void OnTeeraceAuth(int ClientID, const char *pStr, class CUnpacker Unpacker) = 0;
+	virtual void OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmds) = 0;
 #endif
 
 	virtual const char *GameType() = 0;

@@ -27,7 +27,6 @@ IWebapp::IWebapp(const char* WebappIp)
 	if(net_host_lookup(aBuf, &m_Addr, NETTYPE_IPV4) != 0)
 		net_host_lookup("localhost", &m_Addr, NETTYPE_IPV4);
 	m_Addr.port = Port;
-	
 	m_Connections.delete_all();
 }
 

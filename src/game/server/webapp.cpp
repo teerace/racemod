@@ -51,10 +51,11 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 	// TODO: add event listener (server and client)
 	if(Type == WEB_USER_AUTH)
 	{
-		int ClientID = *(int*)pUserData;
+		int *pUser = (int*)pUserData;
+		int ClientID = pUser[0];
 		if(GameServer()->m_apPlayers[ClientID])
 		{
-			CUnpacker Unpacker = *(CUnpacker*)((char*)pUserData+sizeof(int)); // TODO: ugly
+			int SendRconCmds = pUser[1];
 			int UserID = 0;
 			Json::Value User;
 			Json::Reader Reader;
@@ -75,7 +76,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData)
 				
 				// auth staff members
 				if(User["is_staff"].asBool())
-					Server()->StaffAuth(ClientID, Unpacker);
+					Server()->StaffAuth(ClientID, SendRconCmds);
 				
 				/*CWebUser::CParam *pParams = new CWebUser::CParam();
 				str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));

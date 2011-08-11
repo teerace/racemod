@@ -588,22 +588,22 @@ void CGameContext::OnTick()
 
 // Server hooks
 #if defined(CONF_TEERACE)
-void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, CUnpacker Unpacker)
+void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmds)
 {
 	if(str_comp_num(pStr, "teerace:", 8) == 0)
 	{
 		char m_aToken[32];
 		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", m_aToken) == 1)
 		{
-			char *pUserData = (char*)mem_alloc(sizeof(int)+sizeof(CUnpacker), 1);
-			mem_copy(pUserData, &ClientID, sizeof(int));
-			mem_copy(pUserData+sizeof(int), &Unpacker, sizeof(CUnpacker));
-			
 			Json::Value Data;
 			Json::FastWriter Writer;
 			Data["api_token"] = m_aToken;
 			std::string Json = Writer.write(Data);
-			
+
+			int *pUserData = (int*)mem_alloc(sizeof(int)*2, 1);
+			pUserData[0] = ClientID;
+			pUserData[1] = SendRconCmds;
+
 			char aBuf[512];
 			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "users/auth_token/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
 			m_pWebapp->SendRequest(aBuf, WEB_USER_AUTH, new CBufferStream(), pUserData);

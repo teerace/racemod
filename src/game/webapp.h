@@ -2,8 +2,8 @@
 #ifndef GAME_WEBAPP_H
 #define GAME_WEBAPP_H
 
-#include "stream.h"
 #include <base/tl/array.h>
+#include "stream.h"
 
 class CHttpConnection
 {
@@ -20,7 +20,7 @@ class CHttpConnection
 	};
 	
 	NETSOCKET m_Socket;
-	class CBufferStream m_HeaderBuffer;
+	CBufferStream m_HeaderBuffer;
 	CHeader m_Header;
 	bool m_Connected;
 	
