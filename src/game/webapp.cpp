@@ -58,16 +58,21 @@ int IWebapp::Update()
 			int StatusCode = 200;
 			if(Result == 1)
 				dbg_msg("webapp", "received response (type: %d)", m_Connections[i]->m_Type);
-			else if(Result == -1)
-			{
-				dbg_msg("webapp", "connection error (type: %d)", m_Connections[i]->m_Type);
-				m_Connections[i]->m_pResponse->Clear();
-				StatusCode = -1;
-			}
 			else
 			{
-				dbg_msg("webapp", "error (status code: %d, type: %d)", -Result, m_Connections[i]->m_Type);
-				StatusCode = -Result;
+				if(m_Connections[i]->m_pResponse->IsFile())
+					((CFileStream*)m_Connections[i]->m_pResponse)->RemoveFile();
+				if(Result == -1)
+				{
+					dbg_msg("webapp", "connection error (type: %d)", m_Connections[i]->m_Type);
+					m_Connections[i]->m_pResponse->Clear();
+					StatusCode = -1;
+				}
+				else
+				{
+					dbg_msg("webapp", "error (status code: %d, type: %d)", -Result, m_Connections[i]->m_Type);
+					StatusCode = -Result;
+				}
 			}
 
 			OnResponse(m_Connections[i]->m_Type, m_Connections[i]->m_pResponse, m_Connections[i]->m_pUserData, StatusCode);
@@ -187,7 +192,8 @@ int CHttpConnection::Update()
 		}
 		else
 		{
-			m_pResponse->Write(aBuf, Bytes);
+			if(!m_pResponse->Write(aBuf, Bytes))
+				return -1;
 		}
 	}
 	else if(Bytes < 0)

@@ -2,7 +2,7 @@
 #define GAME_STREAM_H
 
 #include <base/system.h>
-#include <stdlib.h>
+#include <engine/storage.h>
 
 // TODO: optimize this
 
@@ -17,7 +17,7 @@ public:
 
 	virtual bool Write(char *pData, int Size) = 0;
 	virtual char *GetData() { return ""; };
-	virtual bool Readable() { return false; }
+	virtual bool IsFile() { return false; }
 	virtual void Clear() = 0;
 	int Size() { return m_Size; }
 };
@@ -25,10 +25,29 @@ public:
 class CFileStream : public IStream
 {
 	IOHANDLE m_File;
+	IStorage *m_pStorage;
+	char m_aFilename[512];
 
 public:
-	CFileStream(IOHANDLE File) : m_File(File) {}
+	CFileStream(const char *pFilename, IStorage *pStorage) : m_pStorage(pStorage), m_File(0)
+	{
+		str_copy(m_aFilename, pFilename, sizeof(m_aFilename));
+		m_File = m_pStorage->OpenFile(m_aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	}
 	~CFileStream() { Clear(); }
+
+	bool IsFile() { return true; }
+	const char *GetPath() { return m_aFilename; }
+	const char *GetFilename()
+	{
+		char *pMapShort = m_aFilename;
+		for(char *pMap = pMapShort; *pMap; pMap++)
+		{
+			if(*pMap == '/' || *pMap == '\\')
+				pMapShort = pMap+1;
+		}
+		return pMapShort;
+	}
 
 	bool Write(char *pData, int Size)
 	{
@@ -43,7 +62,14 @@ public:
 	{
 		if(m_File)
 			io_close(m_File);
+		m_File = 0;
 		m_Size = 0;
+	}
+
+	void RemoveFile()
+	{
+		Clear();
+		m_pStorage->RemoveFile(m_aFilename, IStorage::TYPE_SAVE);
 	}
 };
 
@@ -86,7 +112,6 @@ public:
 	}
 
 	char *GetData() { return m_pData; }
-	bool Readable() { return true; }
 };
 
 #endif

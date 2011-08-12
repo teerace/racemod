@@ -51,7 +51,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	Json::Value JsonData;
 	Json::Reader Reader;
 	bool Json = false;
-	if(StatusCode != -1 && pData->Readable())
+	if(StatusCode != -1 && !pData->IsFile())
 		Json = Reader.parse(pData->GetData(), pData->GetData()+pData->Size(), JsonData);
 
 	// TODO: add event listener (server and client)
@@ -212,9 +212,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 			if(r.empty())
 			{
 				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-				char *pMapName = (char *)mem_alloc(Map["name"].asString().length()+1, 1);
-				str_copy(pMapName, Map["name"].asCString(), Map["name"].asString().length()+1);
-				Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED, pMapName);
+				Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED);
 			}
 			else if(DoCrcCheck) // map found... check crc
 			{
@@ -223,9 +221,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 				if(!DataFile.Open(m_pServer->Storage(), aFilename, IStorage::TYPE_SAVE))
 				{
 					str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-					char *pMapName = (char *)mem_alloc(Map["name"].asString().length()+1, 1);
-					str_copy(pMapName, Map["name"].asCString(), Map["name"].asString().length()+1);
-					Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED, pMapName);
+					Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED);
 				}
 				else
 				{
@@ -234,9 +230,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 					if(str_comp(aCrc, Map["crc"].asCString()))
 					{
 						str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-						char *pMapName = (char *)mem_alloc(Map["name"].asString().length()+1, 1);
-						str_copy(pMapName, Map["name"].asCString(), Map["name"].asString().length()+1);
-						Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED, pMapName);
+						Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED);
 					}
 					DataFile.Close();
 				}
@@ -245,16 +239,19 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	}
 	else if(Type == WEB_MAP_DOWNLOADED)
 	{
-		const char *pMap = (const char*)pUserData;
+		const char *pMap = ((CFileStream*)pData)->GetFilename();
+		char aMap[256];
+		str_copy(aMap, pMap, min((int)sizeof(aMap),str_length(pMap)-3));
+
 		if(!Error)
 		{
-			m_lMapList.add(pMap);
-			dbg_msg("webapp", "added map: %s", pMap);
+			m_lMapList.add(aMap);
+			dbg_msg("webapp", "added map: %s", aMap);
 			if(str_comp(pMap, g_Config.m_SvMap) == 0)
 				Server()->ReloadMap();
 		}
 		else
-			dbg_msg("webapp", "couldn't download map: %s", pMap);
+			dbg_msg("webapp", "couldn't download map: %s", aMap);
 	}
 	else if(Type == WEB_RUN)
 	{
@@ -340,15 +337,9 @@ int CServerWebapp::SendUploadEnd()
 
 bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, void *pUserData)
 {
-	// TODO: limit transfer rate
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
-	
-	IOHANDLE File = m_pServer->Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	
-	return SendRequest(aStr, Type, new CFileStream(File), pUserData);
+	return SendRequest(aStr, Type, new CFileStream(pFilename, m_pServer->Storage()), pUserData);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
