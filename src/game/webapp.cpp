@@ -199,10 +199,9 @@ int CHttpConnection::Update()
 	}
 	else
 	{
-		if(m_Header.m_StatusCode != -1)
-			return (m_Header.m_StatusCode == 200) ? 1 : -m_Header.m_StatusCode;
-		if(m_pResponse->Size() != m_Header.m_ContentLength)
-			return -1;
+		if(m_Header.m_StatusCode != 0 && m_Header.m_StatusCode != 200)
+			return -m_Header.m_StatusCode;
+		return m_pResponse->Size() == m_Header.m_ContentLength ? 1 : -1;
 	}
 	
 	return 0;
