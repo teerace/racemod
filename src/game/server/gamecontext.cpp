@@ -853,11 +853,28 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 							}
 						}
 						
-						/*CWebUser::CParam *pParams = new CWebUser::CParam();
-						str_copy(pParams->m_aName, aName, sizeof(pParams->m_aName));
-						pParams->m_ClientID = ClientID;
-						pParams->m_UserID = UserID;
-						m_pWebapp->AddJob(CWebUser::GetRank, pParams);*/
+						CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+						str_copy(pUserData->m_aName, aName, sizeof(pUserData->m_aName));
+						pUserData->m_ClientID = ClientID;
+						pUserData->m_UserID = UserID;
+
+						char aBuf[512];
+						if(UserID)
+						{
+							char aURL[128];
+							str_format(aURL, sizeof(aURL), "users/rank/%d/", Server()->GetUserID(ClientID));
+							str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
+							m_pWebapp->SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
+						}
+						else
+						{
+							Json::Value Data;
+							Json::FastWriter Writer;
+							Data["username"] = aName;
+							std::string Json = Writer.write(Data);
+							str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "users/get_by_name/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
+							m_pWebapp->SendRequest(aBuf, WEB_USER_FIND, new CBufferStream(), pUserData);
+						}
 					}
 					else
 						SendChatTarget(ClientID, "This map is not a teerace map.");
@@ -872,11 +889,16 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					{
 						if(Server()->GetUserID(ClientID) > 0)
 						{
-							/*CWebUser::CParam *pParams = new CWebUser::CParam();
-							str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));
-							pParams->m_ClientID = ClientID;
-							pParams->m_UserID = Server()->GetUserID(ClientID);
-							m_pWebapp->AddJob(CWebUser::GetRank, pParams);*/
+							CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+							str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
+							pUserData->m_ClientID = ClientID;
+							pUserData->m_UserID = Server()->GetUserID(ClientID);
+
+							char aBuf[512];
+							char aURL[128];
+							str_format(aURL, sizeof(aURL), "users/rank/%d/", Server()->GetUserID(ClientID));
+							str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
+							m_pWebapp->SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
 						}
 						else
 							SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");

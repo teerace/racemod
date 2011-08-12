@@ -276,7 +276,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 
 			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, GameServer()->Webapp()->ApiPath(), "runs/new/",
 				GameServer()->Webapp()->ServerIP(), GameServer()->Webapp()->ApiKey(), Json.length(), Json.c_str());
-			GameServer()->Webapp()->SendRequest(aBuf, WEB_RUN, new CBufferStream(), pUserData);
+			GameServer()->Webapp()->SendRequest(aBuf, WEB_RUN_POST, new CBufferStream(), pUserData);
 		}
 		
 		// higher run count

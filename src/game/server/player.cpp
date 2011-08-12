@@ -68,13 +68,17 @@ void CPlayer::Tick()
 		int UserID = Server()->GetUserID(m_ClientID);
 		if(UserID > 0)
 		{
-			/*CWebUser::CParam *pParams = new CWebUser::CParam();
-			str_copy(pParams->m_aName, Server()->GetUserName(m_ClientID), sizeof(pParams->m_aName));
-			pParams->m_ClientID = m_ClientID;
-			pParams->m_UserID = UserID;
-			pParams->m_PrintRank = 0;
-			pParams->m_GetBestRun = 1;
-			GameServer()->Webapp()->AddJob(CWebUser::GetRank, pParams);*/
+			CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+			str_copy(pUserData->m_aName, Server()->GetUserName(m_ClientID), sizeof(pUserData->m_aName));
+			pUserData->m_ClientID = m_ClientID;
+			pUserData->m_UserID = UserID;
+			pUserData->m_PrintRank = 0;
+
+			char aBuf[512];
+			char aURL[128];
+			str_format(aURL, sizeof(aURL), "users/rank/%d/", UserID);
+			str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, GameServer()->Webapp()->ApiPath(), aURL, GameServer()->Webapp()->ServerIP(), GameServer()->Webapp()->ApiKey());
+			GameServer()->Webapp()->SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
 		}
 	}
 #endif

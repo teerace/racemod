@@ -9,6 +9,17 @@
 #include <game/data.h>
 #include <game/webapp.h>
 
+// TODO: move this somewhere else?
+struct CRankUserData
+{
+	CRankUserData() : m_PrintRank(true) {}
+	int m_ClientID;
+	int m_UserID;
+	bool m_PrintRank;
+	int m_GlobalRank;
+	char m_aName[32];
+};
+
 class CServerWebapp : public IWebapp
 {
 	class CMapInfo

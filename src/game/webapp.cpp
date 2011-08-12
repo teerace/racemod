@@ -6,7 +6,6 @@
 #include "webapp.h"
 
 // TODO: upload
-// TODO: rank
 
 IWebapp::IWebapp(const char* WebappIp)
 {

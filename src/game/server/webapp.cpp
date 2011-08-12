@@ -70,15 +70,12 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 			int SendRconCmds = pUser[1];
 			int UserID = 0;
 			
-			if(str_comp(pData->GetData(), "false") != 0)
-			{
-				if(Json)
-					UserID = JsonData["id"].asInt();
-			}
+			if(str_comp(pData->GetData(), "false") != 0 && Json)
+				UserID = JsonData["id"].asInt();
 			
 			if(UserID > 0)
 			{
-				char aBuf[128];
+				char aBuf[512];
 				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(ClientID), JsonData["username"].asCString());
 				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 				Server()->SetUserID(ClientID, UserID);
@@ -87,13 +84,18 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 				// auth staff members
 				if(JsonData["is_staff"].asBool())
 					Server()->StaffAuth(ClientID, SendRconCmds);
-				
-				/*CWebUser::CParam *pParams = new CWebUser::CParam();
-				str_copy(pParams->m_aName, Server()->GetUserName(ClientID), sizeof(pParams->m_aName));
-				pParams->m_ClientID = ClientID;
-				pParams->m_UserID = UserID;
-				pParams->m_GetBestRun = 1;
-				AddJob(CWebUser::GetRank, pParams);*/
+
+				GameServer()->m_apPlayers[ClientID]->m_RequestedBestTime = true;
+
+				CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+				str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
+				pUserData->m_ClientID = ClientID;
+				pUserData->m_UserID = UserID;
+
+				char aURL[128];
+				str_format(aURL, sizeof(aURL), "users/rank/%d/", UserID);
+				str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), aURL, ServerIP(), ApiKey());
+				SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
 			}
 			else
 			{
@@ -101,58 +103,122 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 			}
 		}
 	}
-	/*else if(Type == WEB_USER_RANK)
+	else if(Type == WEB_USER_FIND)
 	{
-		CWebUser::COut *pData = (CWebUser::COut*)pItem;
-		if(GameServer()->m_apPlayers[pData->m_ClientID])
+		CRankUserData *pUser = (CRankUserData*)pUserData;
+		pUser->m_UserID = 0;
+		
+		if(!Error && Json)
+			pUser->m_UserID = JsonData["id"].asInt();
+
+		if(pUser->m_UserID)
 		{
-			GameServer()->m_apPlayers[pData->m_ClientID]->m_GlobalRank = pData->m_GlobalRank;
-			GameServer()->m_apPlayers[pData->m_ClientID]->m_MapRank = pData->m_MapRank;
-			if(pData->m_PrintRank)
+			str_copy(pUser->m_aName, JsonData["username"].asCString(), sizeof(pUser->m_aName));
+			CRankUserData *pNewData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+			mem_copy(pNewData, pUser, sizeof(CRankUserData));
+
+			char aBuf[512];
+			char aURL[128];
+			str_format(aURL, sizeof(aURL), "users/rank/%d/", pUser->m_UserID);
+			str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), aURL, ServerIP(), ApiKey());
+			SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pNewData);
+		}
+		else if(pUser->m_PrintRank)
+		{
+			if(GameServer()->m_apPlayers[pUser->m_ClientID])
 			{
 				char aBuf[256];
-				if(!pData->m_GlobalRank)
-				{
-					if(pData->m_MatchFound)
-					{
-						if(pData->m_UserID == Server()->GetUserID(pData->m_ClientID))
-							str_copy(aBuf, "You are not globally ranked yet.", sizeof(aBuf));
-						else
-							str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pData->m_aUsername);
-					}
-					else
-						str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pData->m_aUsername);
-					GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
-				}
+				str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pUser->m_aName);
+				GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
+			}
+		}
+	}
+	else if(Type == WEB_USER_RANK_GLOBAL)
+	{
+		CRankUserData *pUser = (CRankUserData*)pUserData;
+		pUser->m_GlobalRank = 0;
+
+		if(!Error)
+			pUser->m_GlobalRank = str_toint(pData->GetData());
+
+		if(pUser->m_GlobalRank)
+		{
+			CRankUserData *pNewData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+			mem_copy(pNewData, pUser, sizeof(CRankUserData));
+
+			char aBuf[512];
+			char aURL[128];
+			str_format(aURL, sizeof(aURL), "users/map_rank/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
+			str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), aURL, ServerIP(), ApiKey());
+			SendRequest(aBuf, WEB_USER_RANK_MAP, new CBufferStream(), pNewData);
+		}
+		else if(pUser->m_PrintRank)
+		{
+			if(pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID))
+				GameServer()->SendChatTarget(pUser->m_ClientID, "You are not globally ranked yet.");
+			else
+			{
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pUser->m_aName);
+				GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
+			}
+		}
+	}
+	else if(Type == WEB_USER_RANK_MAP)
+	{
+		CRankUserData *pUser = (CRankUserData*)pUserData;
+		int GlobalRank = pUser->m_GlobalRank;
+		int MapRank = 0;
+		CPlayerData Run;
+
+		if(!Error && Json)
+		{
+			MapRank = JsonData["position"].asInt();
+			if(MapRank && !DefaultScoring())
+			{
+				float Time = str_tofloat(JsonData["bestrun"]["time"].asCString());
+				float aCheckpointTimes[25] = {0.0f};
+				Json::Value Checkpoint = JsonData["bestrun"]["checkpoints_list"];
+				for(unsigned int i = 0; i < Checkpoint.size(); i++)
+					aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
+				Run.Set(Time, aCheckpointTimes);
+			}
+		}
+
+		if(GameServer()->m_apPlayers[pUser->m_ClientID])
+		{
+			bool Own = pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID);
+			if(Own && GlobalRank && MapRank && !DefaultScoring())
+			{
+				GameServer()->m_apPlayers[pUser->m_ClientID]->m_GlobalRank = GlobalRank;
+				GameServer()->m_apPlayers[pUser->m_ClientID]->m_MapRank = MapRank;
+				GameServer()->Score()->PlayerData(pUser->m_ClientID)->Set(Run.m_Time, Run.m_aCpTime);
+			}
+
+			if(pUser->m_PrintRank)
+			{
+				char aBuf[256];
+				if(!MapRank)
+					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
+						pUser->m_aName, GlobalRank, Server()->ClientName(pUser->m_ClientID));
 				else
 				{
-					if(!pData->m_MapRank)
-						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
-							pData->m_aUsername, pData->m_GlobalRank, Server()->ClientName(pData->m_ClientID));
+					if(Run.m_Time < 60.0f)
+						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
+							pUser->m_aName, GlobalRank, MapRank, Run.m_Time, Server()->ClientName(pUser->m_ClientID));
 					else
-					{
-						if(pData->m_BestRun.m_Time < 60.0f)
-							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
-								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, pData->m_BestRun.m_Time,
-								Server()->ClientName(pData->m_ClientID));
-						else
-							str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
-								pData->m_aUsername, pData->m_GlobalRank, pData->m_MapRank, (int)pData->m_BestRun.m_Time/60,
-								fmod(pData->m_BestRun.m_Time, 60), Server()->ClientName(pData->m_ClientID));
-					}
-					
-					if(g_Config.m_SvShowTimes)
-						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-					else
-						GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
+							pUser->m_aName, GlobalRank, MapRank, (int)Run.m_Time/60,
+							fmod(Run.m_Time, 60), Server()->ClientName(pUser->m_ClientID));
 				}
+				
+				if(g_Config.m_SvShowTimes)
+					GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+				else
+					GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
 			}
-			
-			// saving the best run
-			if(pData->m_GetBestRun && pData->m_MapRank)
-				GameServer()->Score()->PlayerData(pData->m_ClientID)->Set(pData->m_BestRun.m_Time, pData->m_BestRun.m_aCpTime);
 		}
-	}*/
+	}
 	else if(Type == WEB_USER_TOP && Json && !Error)
 	{
 		int *pUser = (int*)pUserData;
@@ -253,7 +319,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 		else
 			dbg_msg("webapp", "couldn't download map: %s", aMap);
 	}
-	else if(Type == WEB_RUN)
+	else if(Type == WEB_RUN_POST)
 	{
 		int *pUser = (int*)pUserData;
 		if(pUser[2] > -1)
