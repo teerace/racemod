@@ -18,24 +18,37 @@ class CHttpConnection
 		CHeader() : m_Size(-1), m_StatusCode(0), m_ContentLength(-1), m_Error(false) {}
 		bool Parse(char *pStr);
 	};
+
+	enum
+	{
+		STATE_NONE = 0,
+		STATE_CONNECT,
+		STATE_WAIT,
+		STATE_SEND,
+		STATE_RECV
+	};
 	
 	NETSOCKET m_Socket;
+	NETADDR m_Addr;
+	int m_State;
 	CBufferStream m_HeaderBuffer;
 	CHeader m_Header;
-	bool m_Connected;
+	char *m_pRequest;
+	int m_RequestSize;
+	int m_RequestOffset;
 	
 public:
 	void *m_pUserData;
 	class IStream *m_pResponse;
 	int m_Type;
 	
-	CHttpConnection() : m_Connected(false), m_pResponse(0), m_Type(-1), m_pUserData(0) {}
+	CHttpConnection() : m_State(STATE_NONE), m_pResponse(0), m_Type(-1), m_pUserData(0), m_pRequest(0), m_RequestSize(0), m_RequestOffset(0)  {}
 	~CHttpConnection();
 	
 	bool Create(NETADDR Addr, int Type, IStream *pResponse);
 	void Close();
 	
-	bool Send(const char *pData, int Size);
+	void SetRequest(const char *pData, int Size);
 	int Update();
 };
 

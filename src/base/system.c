@@ -1478,6 +1478,54 @@ int net_socket_read_wait(NETSOCKET sock, int time)
 	return 0;
 }
 
+int net_socket_write_wait(NETSOCKET sock, int time)
+{
+	struct timeval tv;
+	fd_set writefds;
+	fd_set exceptfds;
+	int sockid;
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 1000*time;
+	sockid = 0;
+
+	FD_ZERO(&writefds);
+	FD_ZERO(&exceptfds);
+	if(sock.ipv4sock >= 0)
+	{
+		FD_SET(sock.ipv4sock, &writefds);
+		FD_SET(sock.ipv4sock, &exceptfds);
+		sockid = sock.ipv4sock;
+	}
+	if(sock.ipv6sock >= 0)
+	{
+		FD_SET(sock.ipv6sock, &writefds);
+		FD_SET(sock.ipv6sock, &exceptfds);
+		if(sock.ipv6sock > sockid)
+			sockid = sock.ipv6sock;
+	}
+
+	select(sockid+1, NULL, &writefds, &exceptfds, &tv);
+
+	if(sock.ipv4sock >= 0)
+	{
+		if(FD_ISSET(sock.ipv4sock, &writefds))
+			return 1;
+		if(FD_ISSET(sock.ipv4sock, &exceptfds))
+			return -1;
+	}
+
+	if(sock.ipv6sock >= 0)
+	{
+		if(FD_ISSET(sock.ipv6sock, &writefds))
+			return 1;
+		if(FD_ISSET(sock.ipv6sock, &exceptfds))
+			return -1;
+	}
+
+	return 0;
+}
+
 unsigned time_timestamp()
 {
 	return time(0);
