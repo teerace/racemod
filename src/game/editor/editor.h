@@ -561,6 +561,7 @@ public:
 		m_ValidSaveFilename = false;
 
 		m_PopupEventActivated = false;
+		m_PopupEventWasActivated = false;
 
 		m_FileDialogStorageType = 0;
 		m_pFileDialogTitle = 0;
@@ -663,6 +664,7 @@ public:
 
 	int m_PopupEventType;
 	int m_PopupEventActivated;
+	int m_PopupEventWasActivated;
 
 	enum
 	{
