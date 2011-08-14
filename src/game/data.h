@@ -1,5 +1,5 @@
-#ifndef GAME_SERVER_WEBAPP_DATA_H
-#define GAME_SERVER_WEBAPP_DATA_H
+#ifndef GAME_WEBAPP_DATA_H
+#define GAME_WEBAPP_DATA_H
 
 enum
 {
@@ -22,5 +22,38 @@ enum
 	UPLOAD_DEMO = 0,
 	UPLOAD_GHOST
 };
-	
+
+class CWebUserRankData
+{
+public:
+	CWebUserRankData() : m_PrintRank(true) {}
+	int m_ClientID;
+	int m_UserID;
+	bool m_PrintRank;
+	int m_GlobalRank;
+	char m_aName[32];
+};
+
+class CWebUserAuthData
+{
+public:
+	int m_ClientID;
+	int m_SendRconCmds;
+};
+
+class CWebUserTopData
+{
+public:
+	int m_StartRank;
+	int m_ClientID;
+};
+
+class CWebRunData
+{
+public:
+	int m_UserID;
+	int m_ClientID;
+	int m_Tick;
+};
+
 #endif

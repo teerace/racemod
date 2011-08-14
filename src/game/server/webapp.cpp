@@ -57,8 +57,8 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	// TODO: add event listener (server and client)
 	if(Type == WEB_USER_AUTH)
 	{
-		int *pUser = (int*)pUserData;
-		int ClientID = pUser[0];
+		CWebUserAuthData *pUser = (CWebUserAuthData*)pUserData;
+		int ClientID = pUser->m_ClientID;
 		if(GameServer()->m_apPlayers[ClientID])
 		{
 			if(Error)
@@ -67,7 +67,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 				return;
 			}
 
-			int SendRconCmds = pUser[1];
+			int SendRconCmds = pUser->m_SendRconCmds;
 			int UserID = 0;
 			
 			if(str_comp(pData->GetData(), "false") != 0 && Json)
@@ -87,7 +87,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 
 				GameServer()->m_apPlayers[ClientID]->m_RequestedBestTime = true;
 
-				CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+				CWebUserRankData *pUserData = new CWebUserRankData();
 				str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
 				pUserData->m_ClientID = ClientID;
 				pUserData->m_UserID = UserID;
@@ -105,7 +105,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	}
 	else if(Type == WEB_USER_FIND)
 	{
-		CRankUserData *pUser = (CRankUserData*)pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
 		pUser->m_UserID = 0;
 		
 		if(!Error && Json)
@@ -114,8 +114,8 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 		if(pUser->m_UserID)
 		{
 			str_copy(pUser->m_aName, JsonData["username"].asCString(), sizeof(pUser->m_aName));
-			CRankUserData *pNewData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
-			mem_copy(pNewData, pUser, sizeof(CRankUserData));
+			CWebUserRankData *pNewData = new CWebUserRankData();
+			mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
 
 			char aBuf[512];
 			char aURL[128];
@@ -135,7 +135,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	}
 	else if(Type == WEB_USER_RANK_GLOBAL)
 	{
-		CRankUserData *pUser = (CRankUserData*)pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
 		pUser->m_GlobalRank = 0;
 
 		if(!Error)
@@ -143,8 +143,8 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 
 		if(pUser->m_GlobalRank)
 		{
-			CRankUserData *pNewData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
-			mem_copy(pNewData, pUser, sizeof(CRankUserData));
+			CWebUserRankData *pNewData = new CWebUserRankData();
+			mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
 
 			char aBuf[512];
 			char aURL[128];
@@ -166,7 +166,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	}
 	else if(Type == WEB_USER_RANK_MAP)
 	{
-		CRankUserData *pUser = (CRankUserData*)pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
 		int GlobalRank = pUser->m_GlobalRank;
 		int MapRank = 0;
 		CPlayerData Run;
@@ -221,20 +221,21 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	}
 	else if(Type == WEB_USER_TOP && Json && !Error)
 	{
-		int *pUser = (int*)pUserData;
-		if(GameServer()->m_apPlayers[pUser[1]])
+		CWebUserTopData *pUser = (CWebUserTopData*)pUserData;
+		int ClientID = pUser->m_ClientID;
+		if(GameServer()->m_apPlayers[ClientID])
 		{
 			char aBuf[256];
-			GameServer()->SendChatTarget(pUser[1], "----------- Top 5 -----------");
+			GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 			for(int i = 0; i < JsonData.size() && i < 5; i++)
 			{
 				Json::Value Run = JsonData[i];
 				float Time = str_tofloat(Run["run"]["time"].asCString());
 				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-					i+pUser[0], Run["run"]["user"]["username"].asCString(), (int)Time/60, fmod(Time, 60));
-				GameServer()->SendChatTarget(pUser[1], aBuf);
+					i+pUser->m_StartRank, Run["run"]["user"]["username"].asCString(), (int)Time/60, fmod(Time, 60));
+				GameServer()->SendChatTarget(ClientID, aBuf);
 			}
-			GameServer()->SendChatTarget(pUser[1], "------------------------------");
+			GameServer()->SendChatTarget(ClientID, "------------------------------");
 		}
 	}
 	else if(Type == WEB_PING_PING)
@@ -321,8 +322,8 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 	}
 	else if(Type == WEB_RUN_POST)
 	{
-		int *pUser = (int*)pUserData;
-		if(pUser[2] > -1)
+		CWebRunData *pUser = (CWebRunData*)pUserData;
+		if(pUser->m_Tick > -1)
 		{
 			// demo
 			/*CUpload *pDemo = new CUpload(UPLOAD_DEMO);

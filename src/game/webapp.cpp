@@ -120,7 +120,7 @@ CHttpConnection::~CHttpConnection()
 	if(m_pRequest)
 		mem_free(m_pRequest);
 	if(m_pUserData)
-		mem_free(m_pUserData);
+		delete m_pUserData;
 	Close();
 }
 

@@ -236,16 +236,16 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	// post to webapp
 	if(GameServer()->Webapp())
 	{
-		int *pUserData = (int*)mem_alloc(sizeof(int)*3, 1);
-		pUserData[0] = Server()->GetUserID(ID);
-		pUserData[1] = ID;
-		pUserData[2] = -1;
+		CWebRunData *pUserData = new CWebRunData();
+		pUserData->m_UserID = Server()->GetUserID(ID);
+		pUserData->m_ClientID = ID;
+		pUserData->m_Tick = -1;
 
 		if(NewRecord && Server()->GetUserID(ID) > 0)
 		{
 			// set demo and ghost so that it is saved
 			Server()->SaveGhostDemo(ID);
-			pUserData[2] = Server()->Tick();
+			pUserData->m_Tick = Server()->Tick();
 		}
 
 		if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)

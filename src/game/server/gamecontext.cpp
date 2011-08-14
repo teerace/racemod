@@ -600,9 +600,9 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmd
 			Data["api_token"] = m_aToken;
 			std::string Json = Writer.write(Data);
 
-			int *pUserData = (int*)mem_alloc(sizeof(int)*2, 1);
-			pUserData[0] = ClientID;
-			pUserData[1] = SendRconCmds;
+			CWebUserAuthData *pUserData = new CWebUserAuthData();
+			pUserData->m_ClientID = ClientID;
+			pUserData->m_SendRconCmds = SendRconCmds;
 
 			char aBuf[512];
 			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "users/auth_token/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
@@ -788,10 +788,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					return;
 				}
 				
-				int Num = 1;
+				int StartRank = 1;
 				
-				if(sscanf(pMsg->m_pMessage, "/top5 %d", &Num) == 1)
-					Score()->ShowTop5(pPlayer->GetCID(), Num);
+				if(sscanf(pMsg->m_pMessage, "/top5 %d", &StartRank) == 1)
+					Score()->ShowTop5(pPlayer->GetCID(), StartRank);
 				else
 					Score()->ShowTop5(pPlayer->GetCID());
 				
@@ -802,11 +802,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					{
 						char aBuf[512];
 						char aURL[128];
-						str_format(aURL, sizeof(aURL), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, Num);
+						str_format(aURL, sizeof(aURL), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, StartRank);
 						str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
-						int *pUserData = (int *)mem_alloc(sizeof(int)*2, 1);
-						pUserData[0] = Num;
-						pUserData[1] = ClientID;
+						CWebUserTopData *pUserData = new CWebUserTopData();
+						pUserData->m_StartRank = StartRank;
+						pUserData->m_ClientID = ClientID;
 						m_pWebapp->SendRequest(aBuf, WEB_USER_TOP, new CBufferStream(), pUserData);
 					}
 				}
@@ -853,7 +853,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 							}
 						}
 						
-						CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+						CWebUserRankData *pUserData = new CWebUserRankData();
 						str_copy(pUserData->m_aName, aName, sizeof(pUserData->m_aName));
 						pUserData->m_ClientID = ClientID;
 						pUserData->m_UserID = UserID;
@@ -889,7 +889,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					{
 						if(Server()->GetUserID(ClientID) > 0)
 						{
-							CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+							CWebUserRankData *pUserData = new CWebUserRankData();
 							str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
 							pUserData->m_ClientID = ClientID;
 							pUserData->m_UserID = Server()->GetUserID(ClientID);

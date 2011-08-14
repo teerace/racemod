@@ -68,7 +68,7 @@ void CPlayer::Tick()
 		int UserID = Server()->GetUserID(m_ClientID);
 		if(UserID > 0)
 		{
-			CRankUserData *pUserData = (CRankUserData*)mem_alloc(sizeof(CRankUserData), 1);
+			CWebUserRankData *pUserData = new CWebUserRankData();
 			str_copy(pUserData->m_aName, Server()->GetUserName(m_ClientID), sizeof(pUserData->m_aName));
 			pUserData->m_ClientID = m_ClientID;
 			pUserData->m_UserID = UserID;
