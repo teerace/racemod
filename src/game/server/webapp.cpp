@@ -227,7 +227,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 		{
 			char aBuf[256];
 			GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
-			for(int i = 0; i < JsonData.size() && i < 5; i++)
+			for(unsigned int i = 0; i < JsonData.size() && i < 5; i++)
 			{
 				Json::Value Run = JsonData[i];
 				float Time = str_tofloat(Run["run"]["time"].asCString());
@@ -377,7 +377,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int St
 /*int CServerWebapp::Upload(unsigned char *pData, int Size)
 {
 	// send data
-	/*int Bytes = net_tcp_send(Socket(), pData, Size);
+	int Bytes = net_tcp_send(Socket(), pData, Size);
 	thread_sleep(10); // limit upload rate
 	return Bytes;
 }

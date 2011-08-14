@@ -16,7 +16,7 @@ public:
 	virtual ~IStream() {}
 
 	virtual bool Write(char *pData, int Size) = 0;
-	virtual char *GetData() { return ""; };
+	virtual char *GetData() { return (char*)""; };
 	virtual bool IsFile() { return false; }
 	virtual void Clear() = 0;
 	int Size() { return m_Size; }
@@ -29,7 +29,7 @@ class CFileStream : public IStream
 	char m_aFilename[512];
 
 public:
-	CFileStream(const char *pFilename, IStorage *pStorage) : m_pStorage(pStorage), m_File(0)
+	CFileStream(const char *pFilename, IStorage *pStorage) : m_File(0), m_pStorage(pStorage)
 	{
 		str_copy(m_aFilename, pFilename, sizeof(m_aFilename));
 		m_File = m_pStorage->OpenFile(m_aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
