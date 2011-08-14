@@ -160,13 +160,22 @@ int CHttpConnection::Update()
 		{
 			m_State = STATE_WAIT;
 			if(net_tcp_connect(m_Socket, &m_Addr) != 0)
+			{
+				if(net_in_progress())
+					m_ConnectStartTime = time_get();
 				return net_in_progress() ? 0 : -1;
+			}
 			return 0;
 		}
 
 		case STATE_WAIT:
 		{
-			int Result = net_socket_write_wait(m_Socket, 0); // TODO: timeout
+			if(time_get() - m_ConnectStartTime > time_freq() * 5 || m_ConnectStartTime == -1)
+			{
+				dbg_msg("webapp", "timeout (type: %d)", m_Type);
+				return -1;
+			}
+			int Result = net_socket_write_wait(m_Socket, 0);
 			if(Result == 1)
 			{
 				dbg_msg("webapp", "connected (type: %d)", m_Type);

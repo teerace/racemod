@@ -36,13 +36,14 @@ class CHttpConnection
 	char *m_pRequest;
 	int m_RequestSize;
 	int m_RequestOffset;
+	int64 m_ConnectStartTime;
 	
 public:
 	class CWebData *m_pUserData;
 	class IStream *m_pResponse;
 	int m_Type;
 	
-	CHttpConnection() : m_State(STATE_NONE), m_pRequest(0), m_RequestSize(0), m_RequestOffset(0), m_pUserData(0), m_pResponse(0), m_Type(-1)  {}
+	CHttpConnection() : m_State(STATE_NONE), m_pRequest(0), m_RequestSize(0), m_RequestOffset(0), m_ConnectStartTime(-1), m_pUserData(0), m_pResponse(0), m_Type(-1)  {}
 	~CHttpConnection();
 	
 	bool Create(NETADDR Addr, int Type, IStream *pResponse);

@@ -4,7 +4,6 @@
 
 #include <string>
 #include <base/tl/array.h>
-#include <engine/external/json/writer.h>
 
 #include <game/data.h>
 #include <game/webapp.h>

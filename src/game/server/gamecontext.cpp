@@ -28,6 +28,7 @@
 #endif
 #include "score/file_score.h"
 #if defined(CONF_TEERACE)
+#include <engine/external/json/writer.h>
 #include "webapp.h"
 #endif
 
