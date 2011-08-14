@@ -20,6 +20,7 @@
 #include <game/client/animstate.h>
 #include <game/client/webapp.h>
 #include <game/localization.h>
+#include <game/data.h>
 
 #include "binds.h"
 #include "countryflags.h"

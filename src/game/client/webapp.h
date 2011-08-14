@@ -2,7 +2,6 @@
 #ifndef GAME_CLIENT_WEBAPP_H
 #define GAME_CLIENT_WEBAPP_H
 
-#include <game/data.h>
 #include <game/webapp.h>
 
 class CClientWebapp : public IWebapp
@@ -17,7 +16,7 @@ public:
 	virtual ~CClientWebapp() {};
 
 	void Update();
-	void OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode);
+	void OnResponse(int Type, IStream *pData, class CWebData *pUserData, int StatusCode);
 
 	const char *ServerIP();
 	const char *ApiPath();

@@ -1,6 +1,8 @@
 /* CClientWebapp Class by Sushi and Redix*/
 #include <engine/shared/config.h>
 
+#include <game/data.h>
+
 #include "gameclient.h"
 #include "webapp.h"
 
