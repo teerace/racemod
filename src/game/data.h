@@ -23,36 +23,40 @@ enum
 	UPLOAD_GHOST
 };
 
-class CWebUserRankData
+class CWebData
+{
+public:
+	int m_ClientID;
+
+	virtual ~CWebData() {}
+};
+
+class CWebUserRankData : public CWebData
 {
 public:
 	CWebUserRankData() : m_PrintRank(true) {}
-	int m_ClientID;
 	int m_UserID;
 	bool m_PrintRank;
 	int m_GlobalRank;
 	char m_aName[32];
 };
 
-class CWebUserAuthData
+class CWebUserAuthData : public CWebData
 {
 public:
-	int m_ClientID;
 	int m_SendRconCmds;
 };
 
-class CWebUserTopData
+class CWebUserTopData : public CWebData
 {
 public:
 	int m_StartRank;
-	int m_ClientID;
 };
 
-class CWebRunData
+class CWebRunData : public CWebData
 {
 public:
 	int m_UserID;
-	int m_ClientID;
 	int m_Tick;
 };
 

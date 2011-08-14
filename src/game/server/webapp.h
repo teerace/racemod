@@ -69,14 +69,14 @@ public:
 	bool DefaultScoring() { return m_DefaultScoring; }
 	
 	void Update();
-	void OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode);
+	void OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode);
 
 	/*int Upload(unsigned char *pData, int Size);
 	int SendUploadHeader(const char *pHeader);
 	int SendUploadEnd();*/
-	bool Download(const char *pFilename, const char *pURL, int Type = -1, void *pUserData = 0);
+	bool Download(const char *pFilename, const char *pURL, int Type = -1, CWebData *pUserData = 0);
 
-	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, void *pUserData = 0, bool NeedOnline = true)
+	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, CWebData *pUserData = 0, bool NeedOnline = true)
 	{
 		if(NeedOnline && !m_Online)
 			return false;

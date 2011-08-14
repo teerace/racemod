@@ -21,7 +21,7 @@ void CClientWebapp::Update()
 		dbg_msg("webapp", "removed %d jobs", Jobs);
 }
 	
-void CClientWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode)
+void CClientWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode)
 {
 	bool Error = StatusCode != 200;
 	// TODO: add event listener (server and client)

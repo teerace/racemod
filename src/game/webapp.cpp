@@ -3,6 +3,7 @@
 #include <base/math.h>
 
 #include <stdio.h>
+#include "data.h"
 #include "webapp.h"
 
 // TODO: upload
@@ -30,7 +31,7 @@ IWebapp::IWebapp(const char* WebappIp)
 	m_Connections.delete_all();
 }
 
-bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, void *pUserData)
+bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, CWebData *pUserData)
 {
 	CHttpConnection *pCon = new CHttpConnection();
 	if(!pCon->Create(m_Addr, Type, pResponse))

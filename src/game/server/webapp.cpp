@@ -45,7 +45,7 @@ void CServerWebapp::Update()
 		dbg_msg("webapp", "removed %d jobs", Jobs);
 }
 
-void CServerWebapp::OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode)
+void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode)
 {
 	bool Error = StatusCode != 200;
 	Json::Value JsonData;
@@ -402,7 +402,7 @@ int CServerWebapp::SendUploadEnd()
 	return Bytes;
 }*/
 
-bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, void *pUserData)
+bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData)
 {
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());

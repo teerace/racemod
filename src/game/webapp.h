@@ -38,7 +38,7 @@ class CHttpConnection
 	int m_RequestOffset;
 	
 public:
-	void *m_pUserData;
+	class CWebData *m_pUserData;
 	class IStream *m_pResponse;
 	int m_Type;
 	
@@ -62,9 +62,9 @@ public:
 	virtual ~IWebapp() {};
 	
 	int Update();
-	virtual bool SendRequest(const char *pInString, int Type, class IStream *pResponse, void *pUserData = 0);
+	virtual bool SendRequest(const char *pInString, int Type, class IStream *pResponse, class CWebData *pUserData = 0);
 	
-	virtual void OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode) = 0;
+	virtual void OnResponse(int Type, IStream *pData, class CWebData *pUserData, int StatusCode) = 0;
 };
 
 #endif

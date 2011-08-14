@@ -17,7 +17,7 @@ public:
 	virtual ~CClientWebapp() {};
 
 	void Update();
-	void OnResponse(int Type, IStream *pData, void *pUserData, int StatusCode);
+	void OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode);
 
 	const char *ServerIP();
 	const char *ApiPath();
