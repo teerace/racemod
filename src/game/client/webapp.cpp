@@ -2,6 +2,7 @@
 #include <engine/shared/config.h>
 
 #include <game/data.h>
+#include <game/stream.h>
 
 #include "gameclient.h"
 #include "webapp.h"

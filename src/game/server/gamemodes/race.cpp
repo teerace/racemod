@@ -6,6 +6,7 @@
 #include <game/server/gamecontext.h>
 #include <game/server/score.h>
 #if defined(CONF_TEERACE)
+#include <game/stream.h>
 #include <game/server/webapp.h>
 #include <engine/external/json/writer.h>
 #endif

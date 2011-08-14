@@ -29,6 +29,7 @@
 #include "score/file_score.h"
 #if defined(CONF_TEERACE)
 #include <engine/external/json/writer.h>
+#include <game/stream.h>
 #include "webapp.h"
 #endif
 

@@ -7,6 +7,8 @@
 #include <engine/storage.h>
 #include <engine/external/json/reader.h>
 
+#include <game/stream.h>
+
 #include "score.h"
 #include "gamecontext.h"
 #include "webapp.h"

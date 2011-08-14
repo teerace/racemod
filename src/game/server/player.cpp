@@ -4,7 +4,11 @@
 #include <stdio.h>
 #include <engine/shared/config.h>
 
+#if defined(CONF_TEERACE)
+#include <game/stream.h>
 #include "webapp.h"
+#endif
+
 #include "player.h"
 
 
