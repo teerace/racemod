@@ -1,6 +1,6 @@
 /* Webapp class by Sushi and Redix */
 
-#include <base\math.h>
+#include <base/math.h>
 
 #include <stdio.h>
 #include "webapp.h"
