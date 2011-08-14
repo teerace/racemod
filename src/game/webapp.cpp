@@ -159,7 +159,7 @@ int CHttpConnection::Update()
 		{
 			m_State = STATE_WAIT;
 			if(net_tcp_connect(m_Socket, &m_Addr) != 0)
-				return net_would_block() ? 0 : -1;
+				return net_in_progress() ? 0 : -1;
 			return 0;
 		}
 
