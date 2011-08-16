@@ -1525,6 +1525,7 @@ void CEditor::DoQuadEnvPoint(CQuad *pQuad, int QIndex, int PIndex)
 	float wy = UI()->MouseWorldY();
 	CEnvelope *pEnvelope = m_Map.m_lEnvelopes[pQuad->m_PosEnv];
 	void *pID = &pEnvelope->m_lPoints[PIndex];
+	static int s_ActQIndex = -1;
 
 	// get pivot
 	float CenterX = fx2f(pQuad->m_aPoints[4].x)+fx2f(pEnvelope->m_lPoints[PIndex].m_aValues[0]);
@@ -1532,10 +1533,13 @@ void CEditor::DoQuadEnvPoint(CQuad *pQuad, int QIndex, int PIndex)
 
 	float dx = (CenterX - wx)/m_WorldZoom;
 	float dy = (CenterY - wy)/m_WorldZoom;
-	if(dx*dx+dy*dy < 50)
+	if(dx*dx+dy*dy < 50.0f && UI()->ActiveItem() == 0)
+	{
 		UI()->SetHotItem(pID);
+		s_ActQIndex = QIndex;
+	}
 
-	if(UI()->ActiveItem() == pID)
+	if(UI()->ActiveItem() == pID && s_ActQIndex == QIndex)
 	{
 		if(s_Operation == OP_MOVE)
 		{
@@ -1578,7 +1582,7 @@ void CEditor::DoQuadEnvPoint(CQuad *pQuad, int QIndex, int PIndex)
 
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
-	else if(UI()->HotItem() == pID)
+	else if(UI()->HotItem() == pID && s_ActQIndex == QIndex)
 	{
 		ms_pUiGotContext = pID;
 
