@@ -690,8 +690,6 @@ void CCharacter::Tick()
 				
 		m_Core.m_HookedPlayer = -1;
 		m_Core.m_HookState = HOOK_RETRACTED;
-		m_Core.m_TriggeredEvents |= COREEVENT_HOOK_RETRACT;
-		m_Core.m_HookState = HOOK_RETRACTED;
 		m_Core.m_Pos = pRace->m_pTeleporter[z-1];
 		m_Core.m_HookPos = m_Core.m_Pos;
 		//Resetting velocity to prevent exploit
