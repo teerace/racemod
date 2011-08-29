@@ -20,20 +20,13 @@ const char CServerWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnectio
 const char CServerWebapp::UPLOAD[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: multipart/form-data; boundary=frontier\r\nContent-Length: %d\r\n\r\n--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"file.file\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-: IWebapp(g_Config.m_SvWebappIp),
+	: IWebapp(g_Config.m_SvWebappIp, pGameServer->Server()->Storage()),
   m_pGameServer(pGameServer),
   m_pServer(pGameServer->Server()),
   m_DefaultScoring(g_Config.m_SvDefaultScoring)
 {
 	m_Online = 0;
-	m_lUploads.delete_all();
 	LoadMaps();
-}
-
-CServerWebapp::~CServerWebapp()
-{
-	m_lMapList.clear();
-	m_lUploads.delete_all();
 }
 
 const char *CServerWebapp::ApiKey() { return g_Config.m_SvApiKey; }
@@ -281,7 +274,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 			if(r.empty())
 			{
 				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-				Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED);
+				Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
 			}
 			else if(DoCrcCheck) // map found... check crc
 			{
@@ -290,7 +283,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 				if(!DataFile.Open(m_pServer->Storage(), aFilename, IStorage::TYPE_SAVE))
 				{
 					str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-					Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED);
+					Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
 				}
 				else
 				{
@@ -299,14 +292,14 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 					if(str_comp(aCrc, Map["crc"].asCString()))
 					{
 						str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-						Download(aFilename, Map["get_download_url"].asCString(), WEB_MAP_DOWNLOADED);
+						Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
 					}
 					DataFile.Close();
 				}
 			}
 		}
 	}
-	else if(Type == WEB_MAP_DOWNLOADED)
+	else if(Type == WEB_DOWNLOAD_MAP)
 	{
 		const char *pMap = ((CFileStream*)pData)->GetFilename();
 		char aMap[256];
@@ -320,95 +313,59 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 				Server()->ReloadMap();
 		}
 		else
+		{
+			Storage()->RemoveFile(((CFileStream*)pData)->GetPath(), IStorage::TYPE_SAVE);
 			dbg_msg("webapp", "couldn't download map: %s", aMap);
+		}
 	}
 	else if(Type == WEB_RUN_POST)
 	{
 		CWebRunData *pUser = (CWebRunData*)pUserData;
 		if(pUser->m_Tick > -1)
 		{
+			char aFilename[256];
+			char aURL[128];
+
 			// demo
-			/*CUpload *pDemo = new CUpload(UPLOAD_DEMO);
-			pDemo->m_ClientID = pUser[1];
-			pDemo->m_UserID = pUser[0];
-			str_format(pDemo->m_aFilename, sizeof(pDemo->m_aFilename), "demos/teerace/%d_%d_%d.demo", pUser[2], g_Config.m_SvPort, pUser[1]);
-			m_lUploads.add(pDemo);
-			
+			str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+			str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
+			IOHANDLE File = Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL); // TODO: delete this later
+			if(File)
+				Upload(File, aURL, WEB_UPLOAD_DEMO, "demo_file", 0, time_get()+time_freq()*2);
+
 			// ghost
-			CUpload *pGhost = new CUpload(UPLOAD_GHOST);
-			pGhost->m_ClientID = pUser[1];
-			pGhost->m_UserID = pUser[0];
-			str_format(pGhost->m_aFilename, sizeof(pGhost->m_aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser[2], g_Config.m_SvPort, pUser[1]);
-			m_lUploads.add(pGhost);*/
+			str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+			str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
+			File = Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL); // TODO: delete this later
+			if(File)
+				Upload(File, aURL, WEB_UPLOAD_GHOST, "ghost_file", 0, time_get()+time_freq()*2);
 		}
 	}
-	
-	// uploading stuff to webapp
-	/*for(int i = 0; i < m_lUploads.size(); i++)
+	else if(Type == WEB_UPLOAD_DEMO || Type == WEB_UPLOAD_GHOST)
 	{
-		CUpload *pUpload = m_lUploads[i];
-		if(pUpload->m_Type == UPLOAD_DEMO)
-		{
-			if(!Server()->IsRecording(pUpload->m_ClientID))
-			{
-				CWebUpload::CParam *pParams = new CWebUpload::CParam();
-				pParams->m_UserID = pUpload->m_UserID;
-				str_copy(pParams->m_aFilename, pUpload->m_aFilename, sizeof(pParams->m_aFilename));
-				AddJob(CWebUpload::UploadDemo, pParams);
-				
-				delete pUpload;
-				m_lUploads.remove_index_fast(i);
-			}
-		}
-		else if(pUpload->m_Type == UPLOAD_GHOST)
-		{
-			if(!Server()->IsGhostRecording(pUpload->m_ClientID))
-			{
-				CWebUpload::CParam *pParams = new CWebUpload::CParam();
-				pParams->m_UserID = pUpload->m_UserID;
-				str_copy(pParams->m_aFilename, pUpload->m_aFilename, sizeof(pParams->m_aFilename));
-				AddJob(CWebUpload::UploadGhost, pParams);
-				
-				delete pUpload;
-				m_lUploads.remove_index_fast(i);
-			}
-		}
-	}*/
+		if(!Error)
+			dbg_msg("webapp", "uploaded file: TODO");
+		else
+			dbg_msg("webapp", "couldn't upload file: TODO");
+	}
 }
-
-/*int CServerWebapp::Upload(unsigned char *pData, int Size)
-{
-	// send data
-	int Bytes = net_tcp_send(Socket(), pData, Size);
-	thread_sleep(10); // limit upload rate
-	return Bytes;
-}
-
-int CServerWebapp::SendUploadHeader(const char *pHeader)
-{
-	NETADDR Address = Addr();
-	net_tcp_connect(Socket(), &Address);
-	
-	int Bytes = net_tcp_send(Socket(), pHeader, str_length(pHeader));
-	return Bytes;
-}
-
-int CServerWebapp::SendUploadEnd()
-{	
-	char aEnd[256];
-	str_copy(aEnd, "\r\n--frontier--\r\n", sizeof(aEnd));
-	int Bytes = net_tcp_send(Socket(), aEnd, str_length(aEnd));
-	net_tcp_recv(Socket(), aEnd, sizeof(aEnd));
-	//dbg_msg("webapp", "\n---recv start---\n%s\n---recv end---\n", aEnd);
-	net_tcp_close(Socket());
-	return Bytes;
-}*/
 
 bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData)
 {
 	char aStr[256];
 	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
-	return SendRequest(aStr, Type, new CFileStream(pFilename, m_pServer->Storage()), pUserData);
+	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+	return SendRequest(aStr, Type, new CFileStream(pFilename, File), pUserData);
+}
+
+bool CServerWebapp::Upload(IOHANDLE File, const char *pURL, int Type, const char *pName, CWebData *pUserData, int64 StartTime)
+{
+	int FileLength = (int)io_length(File);
+	char aStr[512];
+	str_format(aStr, sizeof(aStr), UPLOAD, ApiPath(), pURL, ServerIP(), ApiKey(), FileLength+str_length(pName)+133, pName);
+	return SendRequest(aStr, Type, new CBufferStream(), pUserData, File, true, StartTime);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)

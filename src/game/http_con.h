@@ -24,7 +24,7 @@ class CHttpConnection
 		STATE_CONNECT,
 		STATE_WAIT,
 		STATE_SEND,
-		STATE_RECV
+		STATE_RECV,
 	};
 	
 	NETSOCKET m_Socket;
@@ -32,23 +32,29 @@ class CHttpConnection
 	int m_State;
 	CBufferStream m_HeaderBuffer;
 	CHeader m_Header;
+
 	char *m_pRequest;
 	int m_RequestSize;
-	int m_RequestOffset;
+	IOHANDLE m_RequestFile;
+	char *m_pRequestCur;
+	char *m_pRequestEnd;
+
 	int64 m_ConnectStartTime;
 	
 public:
 	class CWebData *m_pUserData;
 	class IStream *m_pResponse;
 	int m_Type;
+	int64 m_StartTime;
 	
-	CHttpConnection() : m_State(STATE_NONE), m_pRequest(0), m_RequestSize(0), m_RequestOffset(0), m_ConnectStartTime(-1), m_pUserData(0), m_pResponse(0), m_Type(-1)  {}
+	CHttpConnection() : m_State(STATE_NONE), m_pRequest(0), m_RequestSize(0), m_RequestFile(0), m_pRequestCur(0),
+		m_pRequestEnd(0), m_ConnectStartTime(-1), m_pUserData(0), m_pResponse(0), m_Type(-1), m_StartTime(-1)  {}
 	~CHttpConnection();
 	
 	bool Create(NETADDR Addr, int Type, IStream *pResponse);
 	void Close();
 	
-	void SetRequest(const char *pData, int Size);
+	void SetRequest(const char *pData, int Size, IOHANDLE RequestFile = 0);
 	int Update();
 };
 

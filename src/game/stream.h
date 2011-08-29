@@ -2,7 +2,6 @@
 #define GAME_STREAM_H
 
 #include <base/system.h>
-#include <engine/storage.h>
 
 // TODO: optimize this
 
@@ -25,15 +24,10 @@ public:
 class CFileStream : public IStream
 {
 	IOHANDLE m_File;
-	IStorage *m_pStorage;
 	char m_aFilename[512];
 
 public:
-	CFileStream(const char *pFilename, IStorage *pStorage) : m_File(0), m_pStorage(pStorage)
-	{
-		str_copy(m_aFilename, pFilename, sizeof(m_aFilename));
-		m_File = m_pStorage->OpenFile(m_aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	}
+	CFileStream(const char *pFilename, IOHANDLE File) : m_File(File) { str_copy(m_aFilename, pFilename, sizeof(m_aFilename)); }
 	~CFileStream() { Clear(); }
 
 	bool IsFile() { return true; }
@@ -64,12 +58,6 @@ public:
 			io_close(m_File);
 		m_File = 0;
 		m_Size = 0;
-	}
-
-	void RemoveFile()
-	{
-		Clear();
-		m_pStorage->RemoveFile(m_aFilename, IStorage::TYPE_SAVE);
 	}
 };
 

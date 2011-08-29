@@ -44,6 +44,8 @@ CHttpConnection::~CHttpConnection()
 		delete m_pResponse;
 	if(m_pRequest)
 		mem_free(m_pRequest);
+	if(m_RequestFile)
+		io_close(m_RequestFile);
 	if(m_pUserData)
 		delete m_pUserData;
 	Close();
@@ -69,15 +71,21 @@ void CHttpConnection::Close()
 	m_State = STATE_NONE;
 }
 
-void CHttpConnection::SetRequest(const char *pData, int Size)
+void CHttpConnection::SetRequest(const char *pData, int Size, IOHANDLE RequestFile)
 {
 	m_RequestSize = Size;
 	m_pRequest = (char *)mem_alloc(m_RequestSize, 1);
 	mem_copy(m_pRequest, pData, m_RequestSize);
+	m_pRequestCur = m_pRequest;
+	m_pRequestEnd = m_pRequest + m_RequestSize;
+	m_RequestFile = RequestFile;
 }
 
 int CHttpConnection::Update()
 {
+	if(time_get() < m_StartTime)
+		return 0;
+
 	switch(m_State)
 	{
 		case STATE_CONNECT:
@@ -96,7 +104,7 @@ int CHttpConnection::Update()
 		{
 			if(time_get() - m_ConnectStartTime > time_freq() * 5 || m_ConnectStartTime == -1)
 			{
-				dbg_msg("webapp", "timeout (type: %d)", m_Type);
+				dbg_msg("webapp", "timeout (type: %d)", m_Type); // TODO: timeout for send and recv
 				return -1;
 			}
 			int Result = net_socket_write_wait(m_Socket, 0);
@@ -111,14 +119,36 @@ int CHttpConnection::Update()
 
 		case STATE_SEND:
 		{
-			int Send = net_tcp_send(m_Socket, m_pRequest+m_RequestOffset, min(1024, m_RequestSize-m_RequestOffset));
-			if(Send < 0)
-				return -1;
-
-			if(m_RequestOffset+Send >= m_RequestSize)
+			if(m_pRequestCur >= m_pRequestEnd)
 			{
+				if(m_RequestFile)
+				{
+					char aData[1024];
+					unsigned Bytes = io_read(m_RequestFile, aData, sizeof(aData));
+					if(Bytes > 0)
+					{
+						int Send = net_tcp_send(m_Socket, aData, Bytes);
+						if(Send != Bytes)
+							return -1;
+						return 0;
+					}
+					else // not nice but it works...
+					{
+						const char *pFooter = "\r\n--frontier--\r\n";
+						int Send = net_tcp_send(m_Socket, pFooter, str_length(pFooter));
+						if(Send != str_length(pFooter))
+							return -1;
+					}
+				}
 				dbg_msg("webapp", "sent request (type: %d)", m_Type);
 				m_State = STATE_RECV;
+			}
+			else
+			{
+				int Send = net_tcp_send(m_Socket, m_pRequestCur, min(1024, m_pRequestEnd-m_pRequestCur));
+				if(Send < 0)
+					return -1;
+				m_pRequestCur += Send;
 			}
 			return 0;
 		}

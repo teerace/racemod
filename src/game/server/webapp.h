@@ -21,21 +21,10 @@ class CServerWebapp : public IWebapp
 		char m_aAuthor[32];
 	};
 
-	class CUpload
-	{
-	public:
-		CUpload(int Type) { m_Type = Type; }
-		int m_Type;
-		int m_ClientID;
-		int m_UserID;
-		char m_aFilename[256];
-	};
-
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
 
 	array<std::string> m_lMapList;
-	array<CUpload*> m_lUploads;
 
 	CMapInfo m_CurrentMap;
 	
@@ -57,7 +46,7 @@ public:
 	static const char UPLOAD[];
 	
 	CServerWebapp(CGameContext *pGameServer);
-	virtual ~CServerWebapp();
+	virtual ~CServerWebapp() { }
 
 	const char *ApiKey();
 	const char *ServerIP();
@@ -70,16 +59,14 @@ public:
 	void Update();
 	void OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode);
 
-	/*int Upload(unsigned char *pData, int Size);
-	int SendUploadHeader(const char *pHeader);
-	int SendUploadEnd();*/
-	bool Download(const char *pFilename, const char *pURL, int Type = -1, CWebData *pUserData = 0);
+	bool Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData = 0);
+	bool Upload(IOHANDLE File, const char *pURL, int Type, const char *pName, CWebData *pUserData = 0, int64 StartTime = -1);
 
-	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, CWebData *pUserData = 0, bool NeedOnline = true)
+	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, CWebData *pUserData = 0, IOHANDLE File = 0, bool NeedOnline = true, int64 StartTime = -1)
 	{
 		if(NeedOnline && !m_Online)
 			return false;
-		return IWebapp::SendRequest(pInString, Type, pResponse, pUserData);
+		return IWebapp::SendRequest(pInString, Type, pResponse, pUserData, File, StartTime);
 	}
 };
 

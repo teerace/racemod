@@ -10,7 +10,7 @@
 const char CClientWebapp::POST[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
 
 CClientWebapp::CClientWebapp(CGameClient *pGameClient)
-: IWebapp(g_Config.m_ClWebappIp),
+: IWebapp(g_Config.m_ClWebappIp, pGameClient->Storage()),
   m_pClient(pGameClient)
 {
 	m_ApiTokenError = false;
