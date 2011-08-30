@@ -2,7 +2,7 @@
 #include <engine/shared/config.h>
 
 #include <game/data.h>
-#include <game/stream.h>
+#include <game/http_con.h>
 
 #include "gameclient.h"
 #include "webapp.h"
@@ -17,16 +17,12 @@ CClientWebapp::CClientWebapp(CGameClient *pGameClient)
 	m_ApiTokenRequested = false;
 }
 
-void CClientWebapp::Update()
+void CClientWebapp::OnResponse(CHttpConnection *pCon)
 {
-	int Jobs = IWebapp::Update();
-	if(Jobs > 0)
-		dbg_msg("webapp", "removed %d jobs", Jobs);
-}
-	
-void CClientWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode)
-{
-	bool Error = StatusCode != 200;
+	int Type = pCon->m_Type;
+	IStream *pData = pCon->m_pResponse;
+	bool Error = pCon->State() == CHttpConnection::STATE_ERROR || pCon->StatusCode() != 200;
+
 	// TODO: add event listener (server and client)
 	if(Type == WEB_API_TOKEN)
 	{

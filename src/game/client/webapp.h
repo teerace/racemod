@@ -15,8 +15,7 @@ public:
 	CClientWebapp(class CGameClient *pGameClient);
 	virtual ~CClientWebapp() {};
 
-	void Update();
-	void OnResponse(int Type, IStream *pData, class CWebData *pUserData, int StatusCode);
+	void OnResponse(CHttpConnection *pCon);
 
 	const char *ServerIP();
 	const char *ApiPath();

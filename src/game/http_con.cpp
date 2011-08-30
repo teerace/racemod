@@ -44,14 +44,13 @@ CHttpConnection::~CHttpConnection()
 		delete m_pResponse;
 	if(m_pRequest)
 		mem_free(m_pRequest);
-	if(m_RequestFile)
-		io_close(m_RequestFile);
 	if(m_pUserData)
 		delete m_pUserData;
+	Clear();
 	Close();
 }
 
-bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse)
+bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse, int64 StartTime)
 {
 	m_Addr = Addr;
 	m_Socket = net_tcp_create(m_Addr);
@@ -62,7 +61,14 @@ bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse)
 	m_State = STATE_CONNECT;
 	m_Type = Type;
 	m_pResponse = pResponse;
+	m_StartTime = StartTime;
 	return true;
+}
+
+void CHttpConnection::Clear()
+{
+	if(m_RequestFile)
+		io_close(m_RequestFile);
 }
 
 void CHttpConnection::Close()
@@ -71,7 +77,7 @@ void CHttpConnection::Close()
 	m_State = STATE_NONE;
 }
 
-void CHttpConnection::SetRequest(const char *pData, int Size, IOHANDLE RequestFile)
+void CHttpConnection::SetRequest(const char *pData, int Size, IOHANDLE RequestFile, const char *pFilename)
 {
 	m_RequestSize = Size;
 	m_pRequest = (char *)mem_alloc(m_RequestSize, 1);
@@ -79,15 +85,26 @@ void CHttpConnection::SetRequest(const char *pData, int Size, IOHANDLE RequestFi
 	m_pRequestCur = m_pRequest;
 	m_pRequestEnd = m_pRequest + m_RequestSize;
 	m_RequestFile = RequestFile;
+	if(pFilename)
+		str_copy(m_aRequestFilename, pFilename, sizeof(m_aRequestFilename));
+}
+
+int CHttpConnection::SetState(int State, const char *pMsg)
+{
+	m_State = State;
+	if(pMsg)
+		dbg_msg("http", "%s (type: %d)", pMsg, m_Type);
+	if(m_State == STATE_DONE)
+		return 1;
+	if(m_State == STATE_ERROR)
+		return -1;
+	return 0;
 }
 
 int CHttpConnection::Update()
 {
 	if(time_get() - m_LastActionTime > time_freq() * 5 && m_LastActionTime != -1)
-	{
-		dbg_msg("webapp", "timeout (type: %d)", m_Type);
-		return -1;
-	}
+		return SetState(STATE_ERROR, "error: timeout");
 
 	switch(m_State)
 	{
@@ -100,8 +117,11 @@ int CHttpConnection::Update()
 			if(net_tcp_connect(m_Socket, &m_Addr) != 0)
 			{
 				if(net_in_progress())
+				{
 					m_LastActionTime = time_get();
-				return net_in_progress() ? 0 : -1;
+					return 0;
+				}
+				return SetState(STATE_ERROR, "error: could not connect");
 			}
 			return 0;
 		}
@@ -111,12 +131,14 @@ int CHttpConnection::Update()
 			int Result = net_socket_write_wait(m_Socket, 0);
 			if(Result == 1)
 			{
-				dbg_msg("webapp", "connected (type: %d)", m_Type);
 				m_LastActionTime = time_get();
-				m_State = STATE_SEND;
-				return 0;
+				return SetState(STATE_SEND, "connected");
 			}
-			return Result;
+			if(Result == -1)
+			{
+				return SetState(STATE_ERROR, "error: could not connect");
+			}
+			return 0;
 		}
 
 		case STATE_SEND:
@@ -131,7 +153,7 @@ int CHttpConnection::Update()
 					{
 						int Send = net_tcp_send(m_Socket, aData, Bytes);
 						if(Send != Bytes)
-							return -1;
+							return SetState(STATE_ERROR, "error: sending file");
 						m_LastActionTime = time_get();
 						return 0;
 					}
@@ -140,22 +162,21 @@ int CHttpConnection::Update()
 						const char *pFooter = "\r\n--frontier--\r\n";
 						int Send = net_tcp_send(m_Socket, pFooter, str_length(pFooter));
 						if(Send != str_length(pFooter))
-							return -1;
+							return SetState(STATE_ERROR, "error: sending footer");
 						m_LastActionTime = time_get();
 					}
 				}
-				dbg_msg("webapp", "sent request (type: %d)", m_Type);
-				m_State = STATE_RECV;
+				return SetState(STATE_RECV, "sent request");
 			}
 			else
 			{
 				int Send = net_tcp_send(m_Socket, m_pRequestCur, min(1024, m_pRequestEnd-m_pRequestCur));
 				if(Send < 0)
-					return -1;
+					return SetState(STATE_ERROR, "error: sending data");
 				m_LastActionTime = time_get();
 				m_pRequestCur += Send;
+				return 0;
 			}
-			return 0;
 		}
 
 		case STATE_RECV:
@@ -172,7 +193,7 @@ int CHttpConnection::Update()
 					if(m_Header.Parse(m_HeaderBuffer.GetData()))
 					{
 						if(m_Header.m_Error)
-							return -1;
+							return SetState(STATE_ERROR, "error: could not read the header");
 						else
 							m_pResponse->Write(m_HeaderBuffer.GetData()+m_Header.m_Size, m_HeaderBuffer.Size()-m_Header.m_Size);
 					}
@@ -180,23 +201,25 @@ int CHttpConnection::Update()
 				else
 				{
 					if(!m_pResponse->Write(aBuf, Bytes))
-						return -1;
+						return SetState(STATE_ERROR, "error: buffer/file");
 				}
 			}
 			else if(Bytes < 0)
 			{
-				return net_would_block() ? 0 : -1;
+				if(net_would_block())
+					return 0;
+				return SetState(STATE_ERROR, "connection error");
 			}
 			else
 			{
-				if(m_Header.m_StatusCode != 0 && m_Header.m_StatusCode != 200)
-					return -m_Header.m_StatusCode;
-				return m_pResponse->Size() == m_Header.m_ContentLength ? 1 : -1;
+				if(m_pResponse->Size() == m_Header.m_ContentLength)
+					return SetState(STATE_DONE, "received response");
+				return SetState(STATE_ERROR, "error: wrong content-length");
 			}
 			return 0;
 		}
 
 		default:
-			return -1;
+			return SetState(STATE_ERROR, "unknown error");
 	}
 }

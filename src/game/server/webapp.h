@@ -56,17 +56,16 @@ public:
 	
 	bool DefaultScoring() { return m_DefaultScoring; }
 	
-	void Update();
-	void OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode);
+	void OnResponse(class CHttpConnection *pCon);
 
 	bool Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData = 0);
-	bool Upload(IOHANDLE File, const char *pURL, int Type, const char *pName, CWebData *pUserData = 0, int64 StartTime = -1);
+	bool Upload(const char *pFilename, const char *pURL, int Type, const char *pName, CWebData *pUserData = 0, int64 StartTime = -1);
 
-	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, CWebData *pUserData = 0, IOHANDLE File = 0, bool NeedOnline = true, int64 StartTime = -1)
+	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, CWebData *pUserData = 0, IOHANDLE File = 0, const char *pFilename = 0, bool NeedOnline = true, int64 StartTime = -1)
 	{
 		if(NeedOnline && !m_Online)
 			return false;
-		return IWebapp::SendRequest(pInString, Type, pResponse, pUserData, File, StartTime);
+		return IWebapp::SendRequest(pInString, Type, pResponse, pUserData, File, pFilename, StartTime);
 	}
 };
 

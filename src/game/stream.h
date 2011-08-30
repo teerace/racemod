@@ -34,13 +34,13 @@ public:
 	const char *GetPath() { return m_aFilename; }
 	const char *GetFilename()
 	{
-		char *pMapShort = m_aFilename;
-		for(char *pMap = pMapShort; *pMap; pMap++)
+		char *pShort = m_aFilename;
+		for(char *pCur = pShort; *pCur; pCur++)
 		{
-			if(*pMap == '/' || *pMap == '\\')
-				pMapShort = pMap+1;
+			if(*pCur == '/' || *pCur == '\\')
+				pShort = pCur+1;
 		}
-		return pMapShort;
+		return pShort;
 	}
 
 	bool Write(char *pData, int Size)

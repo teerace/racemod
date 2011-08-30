@@ -474,7 +474,7 @@ void CGameContext::OnTick()
 			
 			char aBuf[1024];
 			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "ping/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
-			m_pWebapp->SendRequest(aBuf, WEB_PING_PING, new CBufferStream(), 0, 0, false);
+			m_pWebapp->SendRequest(aBuf, WEB_PING_PING, new CBufferStream(), 0, 0, 0, false);
 			
 			m_LastPing = Server()->Tick();
 		}

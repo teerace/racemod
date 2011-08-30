@@ -7,7 +7,7 @@
 #include <engine/storage.h>
 #include <engine/external/json/reader.h>
 
-#include <game/stream.h>
+#include <game/http_con.h>
 
 #include "score.h"
 #include "gamecontext.h"
@@ -33,26 +33,22 @@ const char *CServerWebapp::ApiKey() { return g_Config.m_SvApiKey; }
 const char *CServerWebapp::ServerIP() { return g_Config.m_SvWebappIp; }
 const char *CServerWebapp::ApiPath() { return g_Config.m_SvApiPath; }
 
-void CServerWebapp::Update()
+void CServerWebapp::OnResponse(CHttpConnection *pCon)
 {
-	int Jobs = IWebapp::Update();
-	if(Jobs > 0)
-		dbg_msg("webapp", "removed %d jobs", Jobs);
-}
+	int Type = pCon->m_Type;
+	IStream *pData = pCon->m_pResponse;
+	bool Error = pCon->State() == CHttpConnection::STATE_ERROR || pCon->StatusCode() != 200;
 
-void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, int StatusCode)
-{
-	bool Error = StatusCode != 200;
 	Json::Value JsonData;
 	Json::Reader Reader;
 	bool Json = false;
-	if(StatusCode != -1 && !pData->IsFile())
+	if(pCon->State() != CHttpConnection::STATE_ERROR && !pData->IsFile())
 		Json = Reader.parse(pData->GetData(), pData->GetData()+pData->Size(), JsonData);
 
 	// TODO: add event listener (server and client)
 	if(Type == WEB_USER_AUTH)
 	{
-		CWebUserAuthData *pUser = (CWebUserAuthData*)pUserData;
+		CWebUserAuthData *pUser = (CWebUserAuthData*)pCon->m_pUserData;
 		int ClientID = pUser->m_ClientID;
 		if(GameServer()->m_apPlayers[ClientID])
 		{
@@ -100,7 +96,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 	}
 	else if(Type == WEB_USER_FIND)
 	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pCon->m_pUserData;
 		pUser->m_UserID = 0;
 		
 		if(!Error && Json)
@@ -130,7 +126,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 	}
 	else if(Type == WEB_USER_RANK_GLOBAL)
 	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pCon->m_pUserData;
 		pUser->m_GlobalRank = 0;
 
 		if(!Error)
@@ -161,7 +157,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 	}
 	else if(Type == WEB_USER_RANK_MAP)
 	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pCon->m_pUserData;
 		int GlobalRank = pUser->m_GlobalRank;
 		int MapRank = 0;
 		CPlayerData Run;
@@ -216,7 +212,7 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 	}
 	else if(Type == WEB_USER_TOP && Json && !Error)
 	{
-		CWebUserTopData *pUser = (CWebUserTopData*)pUserData;
+		CWebUserTopData *pUser = (CWebUserTopData*)pCon->m_pUserData;
 		int ClientID = pUser->m_ClientID;
 		if(GameServer()->m_apPlayers[ClientID])
 		{
@@ -315,12 +311,12 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 		else
 		{
 			Storage()->RemoveFile(((CFileStream*)pData)->GetPath(), IStorage::TYPE_SAVE);
-			dbg_msg("webapp", "couldn't download map: %s", aMap);
+			dbg_msg("webapp", "could not download map: %s", aMap);
 		}
 	}
 	else if(Type == WEB_RUN_POST)
 	{
-		CWebRunData *pUser = (CWebRunData*)pUserData;
+		CWebRunData *pUser = (CWebRunData*)pCon->m_pUserData;
 		if(pUser->m_Tick > -1)
 		{
 			char aFilename[256];
@@ -329,43 +325,43 @@ void CServerWebapp::OnResponse(int Type, IStream *pData, CWebData *pUserData, in
 			// demo
 			str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			IOHANDLE File = Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL); // TODO: delete this later
-			if(File)
-				Upload(File, aURL, WEB_UPLOAD_DEMO, "demo_file", 0, time_get()+time_freq()*2);
+			Upload(aFilename, aURL, WEB_UPLOAD_DEMO, "demo_file", 0, time_get()+time_freq()*2);
 
 			// ghost
 			str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			File = Storage()->OpenFile(aFilename, IOFLAG_READ, IStorage::TYPE_ALL); // TODO: delete this later
-			if(File)
-				Upload(File, aURL, WEB_UPLOAD_GHOST, "ghost_file", 0, time_get()+time_freq()*2);
+			Upload(aFilename, aURL, WEB_UPLOAD_GHOST, "ghost_file");
 		}
 	}
 	else if(Type == WEB_UPLOAD_DEMO || Type == WEB_UPLOAD_GHOST)
 	{
 		if(!Error)
-			dbg_msg("webapp", "uploaded file: TODO");
+			dbg_msg("webapp", "uploaded file: %s", pCon->GetFilename());
 		else
-			dbg_msg("webapp", "couldn't upload file: TODO");
+			dbg_msg("webapp", "could not upload file: %s", pCon->GetFilename());
+		Storage()->RemoveFile(pCon->GetPath(), IStorage::TYPE_SAVE);
 	}
 }
 
 bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData)
 {
-	char aStr[256];
-	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
 	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
 	if(!File)
 		return false;
+	char aStr[256];
+	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
 	return SendRequest(aStr, Type, new CFileStream(pFilename, File), pUserData);
 }
 
-bool CServerWebapp::Upload(IOHANDLE File, const char *pURL, int Type, const char *pName, CWebData *pUserData, int64 StartTime)
+bool CServerWebapp::Upload(const char *pFilename, const char *pURL, int Type, const char *pName, CWebData *pUserData, int64 StartTime)
 {
+	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
 	int FileLength = (int)io_length(File);
 	char aStr[512];
 	str_format(aStr, sizeof(aStr), UPLOAD, ApiPath(), pURL, ServerIP(), ApiKey(), FileLength+str_length(pName)+133, pName);
-	return SendRequest(aStr, Type, new CBufferStream(), pUserData, File, true, StartTime);
+	return SendRequest(aStr, Type, new CBufferStream(), pUserData, File, pFilename, true, StartTime);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)

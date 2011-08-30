@@ -26,14 +26,13 @@ IWebapp::IWebapp(const char* WebappIp, IStorage *pStorage) : m_pStorage(pStorage
 	m_Addr.port = Port;
 }
 
-bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, CWebData *pUserData, IOHANDLE File, int64 StartTime)
+bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, CWebData *pUserData, IOHANDLE File, const char *pFilename, int64 StartTime)
 {
 	CHttpConnection *pCon = new CHttpConnection();
-	if(!pCon->Create(m_Addr, Type, pResponse))
+	if(!pCon->Create(m_Addr, Type, pResponse, StartTime))
 		return false;
-	pCon->SetRequest(pData, str_length(pData), File);
+	pCon->SetRequest(pData, str_length(pData), File, pFilename);
 	pCon->m_pUserData = pUserData;
-	pCon->m_StartTime = StartTime;
 	m_Connections.add(pCon);
 	return true;
 }
@@ -46,27 +45,12 @@ int IWebapp::Update()
 		int Result = m_Connections[i]->Update();
 		if(Result != 0)
 		{
-			int StatusCode = 200;
-			if(Result == 1)
-				dbg_msg("webapp", "received response (type: %d)", m_Connections[i]->m_Type);
-			else
-			{
-				if(Result == -1)
-				{
-					StatusCode = -1;
-					dbg_msg("webapp", "connection error (type: %d)", m_Connections[i]->m_Type);
-				}
-				else
-				{
-					StatusCode = -Result;
-					dbg_msg("webapp", "error (status code: %d, type: %d)", StatusCode, m_Connections[i]->m_Type);
-				}
-			}
-
+			// close all files
 			if(m_Connections[i]->m_pResponse->IsFile())
 				((CFileStream*)m_Connections[i]->m_pResponse)->Clear();
+			m_Connections[i]->Clear();
 
-			OnResponse(m_Connections[i]->m_Type, m_Connections[i]->m_pResponse, m_Connections[i]->m_pUserData, StatusCode);
+			OnResponse(m_Connections[i]);
 			
 			delete m_Connections[i];
 			m_Connections.remove_index_fast(i);
