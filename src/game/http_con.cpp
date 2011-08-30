@@ -83,18 +83,24 @@ void CHttpConnection::SetRequest(const char *pData, int Size, IOHANDLE RequestFi
 
 int CHttpConnection::Update()
 {
-	if(time_get() < m_StartTime)
-		return 0;
+	if(time_get() - m_LastActionTime > time_freq() * 5 && m_LastActionTime != -1)
+	{
+		dbg_msg("webapp", "timeout (type: %d)", m_Type);
+		return -1;
+	}
 
 	switch(m_State)
 	{
 		case STATE_CONNECT:
 		{
+			if(time_get() < m_StartTime)
+				return 0;
+
 			m_State = STATE_WAIT;
 			if(net_tcp_connect(m_Socket, &m_Addr) != 0)
 			{
 				if(net_in_progress())
-					m_ConnectStartTime = time_get();
+					m_LastActionTime = time_get();
 				return net_in_progress() ? 0 : -1;
 			}
 			return 0;
@@ -102,15 +108,11 @@ int CHttpConnection::Update()
 
 		case STATE_WAIT:
 		{
-			if(time_get() - m_ConnectStartTime > time_freq() * 5 || m_ConnectStartTime == -1)
-			{
-				dbg_msg("webapp", "timeout (type: %d)", m_Type); // TODO: timeout for send and recv
-				return -1;
-			}
 			int Result = net_socket_write_wait(m_Socket, 0);
 			if(Result == 1)
 			{
 				dbg_msg("webapp", "connected (type: %d)", m_Type);
+				m_LastActionTime = time_get();
 				m_State = STATE_SEND;
 				return 0;
 			}
@@ -130,6 +132,7 @@ int CHttpConnection::Update()
 						int Send = net_tcp_send(m_Socket, aData, Bytes);
 						if(Send != Bytes)
 							return -1;
+						m_LastActionTime = time_get();
 						return 0;
 					}
 					else // not nice but it works...
@@ -138,6 +141,7 @@ int CHttpConnection::Update()
 						int Send = net_tcp_send(m_Socket, pFooter, str_length(pFooter));
 						if(Send != str_length(pFooter))
 							return -1;
+						m_LastActionTime = time_get();
 					}
 				}
 				dbg_msg("webapp", "sent request (type: %d)", m_Type);
@@ -148,6 +152,7 @@ int CHttpConnection::Update()
 				int Send = net_tcp_send(m_Socket, m_pRequestCur, min(1024, m_pRequestEnd-m_pRequestCur));
 				if(Send < 0)
 					return -1;
+				m_LastActionTime = time_get();
 				m_pRequestCur += Send;
 			}
 			return 0;
@@ -160,6 +165,7 @@ int CHttpConnection::Update()
 
 			if(Bytes > 0)
 			{
+				m_LastActionTime = time_get();
 				if(m_Header.m_Size == -1)
 				{
 					m_HeaderBuffer.Write(aBuf, Bytes);
