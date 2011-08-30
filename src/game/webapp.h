@@ -11,10 +11,13 @@ class IWebapp
 	class IStorage *m_pStorage;
 
 public:
-	IWebapp(const char* WebappIp, IStorage *pStorage);
+	IWebapp(IStorage *pStorage);
 	virtual ~IWebapp() { m_Connections.delete_all(); };
 
 	IStorage *Storage() { return m_pStorage; }
+
+	const char *ServerIP();
+	const char *ApiPath();
 	
 	int Update();
 	virtual bool SendRequest(const char *pInString, int Type, class IStream *pResponse, class CWebData *pUserData = 0, IOHANDLE File = 0, const char *pFilename = 0, int64 StartTime = -1); // TODO: rework the creating of requests

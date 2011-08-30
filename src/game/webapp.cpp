@@ -1,15 +1,16 @@
 /* Webapp class by Sushi and Redix */
 
+#include <engine/shared/config.h>
 #include <base/math.h>
 
 #include "http_con.h"
 #include "webapp.h"
 
-IWebapp::IWebapp(const char* WebappIp, IStorage *pStorage) : m_pStorage(pStorage)
+IWebapp::IWebapp(IStorage *pStorage) : m_pStorage(pStorage)
 {
 	char aBuf[512];
 	int Port = 80;
-	str_copy(aBuf, WebappIp, sizeof(aBuf));
+	str_copy(aBuf, ServerIP(), sizeof(aBuf));
 
 	for(int k = 0; aBuf[k]; k++)
 	{
@@ -25,6 +26,9 @@ IWebapp::IWebapp(const char* WebappIp, IStorage *pStorage) : m_pStorage(pStorage
 		net_host_lookup("localhost", &m_Addr, NETTYPE_IPV4);
 	m_Addr.port = Port;
 }
+
+const char *IWebapp::ServerIP() { return g_Config.m_WaWebappIp; }
+const char *IWebapp::ApiPath() { return g_Config.m_WaApiPath; }
 
 bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, CWebData *pUserData, IOHANDLE File, const char *pFilename, int64 StartTime)
 {

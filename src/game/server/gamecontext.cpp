@@ -778,7 +778,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				str_format(aBuf, sizeof(aBuf), "Race mod %s (C)Rajh, Redix and Sushi (%s)", RACE_VERSION, Server()->ClientName(ClientID));
 				SendChatTarget(-1, aBuf);
 #if defined(CONF_TEERACE)
-				str_format(aBuf, sizeof(aBuf), "Please visit 'http://%s/about/' for more information about teerace.", g_Config.m_SvWebappIp);
+				str_format(aBuf, sizeof(aBuf), "Please visit 'http://%s/about/' for more information about teerace.", g_Config.m_WaWebappIp);
 				SendChatTarget(-1, aBuf);
 #endif
 			}
@@ -925,7 +925,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				SendChatTarget(ClientID, aBuf);
 				str_format(aBuf, sizeof(aBuf), "Author: %s", m_pWebapp->CurrentMap()->m_aAuthor);
 				SendChatTarget(ClientID, aBuf);
-				str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_SvWebappIp, m_pWebapp->CurrentMap()->m_aURL);
+				str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_WaWebappIp, m_pWebapp->CurrentMap()->m_aURL);
 				SendChatTarget(ClientID, aBuf);
 				str_format(aBuf, sizeof(aBuf), "Finished runs: %d", m_pWebapp->CurrentMap()->m_RunCount);
 				SendChatTarget(ClientID, aBuf);
@@ -1904,7 +1904,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	
 	// create webapp object
 #if defined(CONF_TEERACE)
-	if(g_Config.m_SvUseWebapp && !m_pWebapp)
+	if(g_Config.m_WaUseWebapp && !m_pWebapp)
 		m_pWebapp = new CServerWebapp(this);
 #endif
 		

@@ -49,8 +49,6 @@ public:
 	virtual ~CServerWebapp() { }
 
 	const char *ApiKey();
-	const char *ServerIP();
-	const char *ApiPath();
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	

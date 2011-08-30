@@ -17,9 +17,6 @@ public:
 
 	void OnResponse(CHttpConnection *pCon);
 
-	const char *ServerIP();
-	const char *ApiPath();
-
 	// api token vars
 	bool m_ApiTokenRequested;
 	bool m_ApiTokenError;

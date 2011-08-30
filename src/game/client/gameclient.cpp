@@ -1017,10 +1017,10 @@ void CGameClient::OnNewSnapshot()
 				m_IsRace = true;
 				
 				// send login
-				if(g_Config.m_ClApiToken[0])
+				if(g_Config.m_WaApiToken[0])
 				{
 					char aLogin[64];
-					str_format(aLogin, sizeof(aLogin), "teerace:%s", g_Config.m_ClApiToken);
+					str_format(aLogin, sizeof(aLogin), "teerace:%s", g_Config.m_WaApiToken);
 					Client()->RconAuth("", aLogin);
 				}
 			}

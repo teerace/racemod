@@ -68,11 +68,10 @@ MACRO_CONFIG_INT(ClRaceSaveGhost, cl_race_save_ghost, 1, 0, 1, CFGFLAG_CLIENT|CF
 MACRO_CONFIG_INT(ClGhostNamePlates, cl_ghost_nameplates, 1, 0, 1, CFGFLAG_CLIENT|CFGFLAG_SAVE, "Show ghost nameplates")
 MACRO_CONFIG_INT(ClGhostNameplatesAlways, cl_ghost_nameplates_always, 0, 0, 1, CFGFLAG_CLIENT|CFGFLAG_SAVE, "Always show ghost nameplats disregarding of distance")
 
-MACRO_CONFIG_STR(ClUsername, cl_username, 32, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Teerace username")
-MACRO_CONFIG_STR(ClPassword, cl_password, 32, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Teerace password")
-MACRO_CONFIG_STR(ClApiToken, cl_api_token, 25, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Api token for webapp")
-MACRO_CONFIG_STR(ClWebappIp, cl_webapp_ip, 32, "race.teesites.net", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Webapp IP")
-MACRO_CONFIG_STR(ClApiPath, cl_api_path, 32, "/api/1", CFGFLAG_CLIENT|CFGFLAG_SAVE, "initial path to api")
+/* Webapp */
+MACRO_CONFIG_STR(WaUsername, wa_username, 32, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Teerace username")
+MACRO_CONFIG_STR(WaPassword, wa_password, 32, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Teerace password")
+MACRO_CONFIG_STR(WaApiToken, wa_api_token, 25, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Api token for webapp")
 
 // server
 MACRO_CONFIG_INT(SvWarmup, sv_warmup, 0, 0, 0, CFGFLAG_SERVER, "Number of seconds to do warmup before round starts")
@@ -137,13 +136,14 @@ MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL 
 #endif
 
 /* Webapp */
+MACRO_CONFIG_STR(WaWebappIp, wa_webapp_ip, 32, "race.teesites.net", CFGFLAG_CLIENT|CFGFLAG_SERVER, "Webapp IP")
+MACRO_CONFIG_STR(WaApiPath, wa_api_path, 32, "/api/1", CFGFLAG_CLIENT|CFGFLAG_SERVER, "initial path to api")
+
 #if defined(CONF_TEERACE)
-MACRO_CONFIG_INT(SvUseWebapp, sv_use_webapp, 0, 0, 1, CFGFLAG_SERVER, "Enables sending times to a teerace website")
-MACRO_CONFIG_STR(SvWebappIp, sv_webapp_ip, 32, "race.teesites.net", CFGFLAG_SERVER, "Webapp IP")
-MACRO_CONFIG_STR(SvApiPath, sv_api_path, 32, "/api/1", CFGFLAG_SERVER, "initial path to api")
-MACRO_CONFIG_STR(SvApiKey, sv_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
-MACRO_CONFIG_INT(SvDefaultScoring, sv_default_scoring, 1, 0, 1, CFGFLAG_SERVER, "Enables default scoring system")
-MACRO_CONFIG_INT(SvAutoRecord, sv_auto_record, 1, 0, 1, CFGFLAG_SERVER, "Enables auto recording")
+MACRO_CONFIG_INT(WaUseWebapp, wa_use_webapp, 0, 0, 1, CFGFLAG_SERVER, "Enables sending times to a teerace website")
+MACRO_CONFIG_STR(WaApiKey, wa_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
+MACRO_CONFIG_INT(WaDefaultScoring, wa_default_scoring, 1, 0, 1, CFGFLAG_SERVER, "Enables default scoring system")
+MACRO_CONFIG_INT(WaAutoRecord, wa_auto_record, 1, 0, 1, CFGFLAG_SERVER, "Enables auto recording")
 #endif
 
 // debug

@@ -20,18 +20,16 @@ const char CServerWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnectio
 const char CServerWebapp::UPLOAD[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: multipart/form-data; boundary=frontier\r\nContent-Length: %d\r\n\r\n--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"file.file\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-	: IWebapp(g_Config.m_SvWebappIp, pGameServer->Server()->Storage()),
+: IWebapp(pGameServer->Server()->Storage()),
   m_pGameServer(pGameServer),
   m_pServer(pGameServer->Server()),
-  m_DefaultScoring(g_Config.m_SvDefaultScoring)
+  m_DefaultScoring(g_Config.m_WaDefaultScoring)
 {
 	m_Online = 0;
 	LoadMaps();
 }
 
-const char *CServerWebapp::ApiKey() { return g_Config.m_SvApiKey; }
-const char *CServerWebapp::ServerIP() { return g_Config.m_SvWebappIp; }
-const char *CServerWebapp::ApiPath() { return g_Config.m_SvApiPath; }
+const char *CServerWebapp::ApiKey() { return g_Config.m_WaApiKey; }
 
 void CServerWebapp::OnResponse(CHttpConnection *pCon)
 {
