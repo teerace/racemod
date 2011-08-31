@@ -23,17 +23,17 @@ end
 
 function CHash(output, ...)
 	local inputs = TableFlatten({...})
-	
+
 	output = Path(output)
-	
+
 	-- compile all the files
 	local cmd = Script("scripts/cmd5.py") .. " "
 	for index, inname in ipairs(inputs) do
-		cmd = cmd .. Path(inname) .. " " 
+		cmd = cmd .. Path(inname) .. " "
 	end
-	
+
 	cmd = cmd .. " > " .. output
-	
+
 	AddJob(output, "cmd5 " .. output, cmd)
 	for index, inname in ipairs(inputs) do
 		AddDependency(output, inname)
@@ -170,7 +170,7 @@ function build(settings)
 		settings.link.libs:Add("ole32")
 		settings.link.libs:Add("shell32")
 	end
-	
+
 	-- compile zlib if needed
 	if config.zlib.value == 1 then
 		settings.link.libs:Add("z")
@@ -221,7 +221,7 @@ function build(settings)
 				end
 			end
 		end
-		
+
 	elseif family == "windows" then
 		client_settings.link.libs:Add("opengl32")
 		client_settings.link.libs:Add("glu32")
@@ -236,11 +236,11 @@ function build(settings)
 	config.sdl:Apply(client_settings)
 	-- apply freetype settings
 	config.freetype:Apply(client_settings)
-	
+
 	engine = Compile(engine_settings, Collect("src/engine/shared/*.cpp", "src/base/*.c"))
 	client = Compile(client_settings, Collect("src/engine/client/*.cpp"))
 	server = Compile(server_settings, Collect("src/engine/server/*.cpp"))
-	
+
 	versionserver = Compile(settings, Collect("src/versionsrv/*.cpp"))
 	masterserver = Compile(settings, Collect("src/mastersrv/*.cpp"))
 	game_shared = Compile(settings, Collect("src/game/*.cpp"), nethash, network_source)
@@ -257,13 +257,13 @@ function build(settings)
 		client_osxlaunch = Compile(client_settings, "src/osxlaunch/client.m")
 		server_osxlaunch = Compile(launcher_settings, "src/osxlaunch/server.m")
 	end
-	
+
 	tools = {}
 	for i,v in ipairs(tools_src) do
 		toolname = PathFilename(PathBase(v))
 		tools[i] = Link(settings, toolname, Compile(settings, v), engine, zlib, pnglite)
 	end
-	
+
 	-- build client, server, version server and master server
 	client_exe = Link(client_settings, "teeworlds", game_shared, game_client,
 		engine, client, game_editor, zlib, pnglite, wavpack,
@@ -281,7 +281,7 @@ function build(settings)
 	if platform == "macosx" then
 		serverlaunch = Link(launcher_settings, "serverlaunch", server_osxlaunch)
 	end
-		
+
 	versionserver_exe = Link(server_settings, "versionsrv", versionserver,
 		engine, zlib)
 

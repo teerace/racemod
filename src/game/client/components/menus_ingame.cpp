@@ -4,6 +4,7 @@
 
 #include <base/math.h>
 
+#include <engine/config.h>
 #include <engine/demo.h>
 #include <engine/friends.h>
 #include <engine/keys.h>
