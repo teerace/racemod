@@ -1,56 +1,26 @@
 /* Webapp class by Sushi and Redix */
 
-#include <base/math.h>
-
-#include <stdio.h>
-
 #include "http_con.h"
+#include "request.h"
+#include "response.h"
 
 // TODO: support for chunked transfer-encoding?
-// TODO: error handling
-bool CHttpConnection::CHeader::Parse(char *pStr)
-{
-	char *pEnd = (char*)str_find(pStr, "\r\n\r\n");
-	if(!pEnd)
-		return false;
-	
-	*(pEnd+2) = 0;
-	char *pData = pStr;
-	
-	if(sscanf(pData, "HTTP/%*d.%*d %d %*s\r\n", &this->m_StatusCode) != 1)
-	{
-		m_Error = true;
-		return false;
-	}
-	
-	while(sscanf(pData, "Content-Length: %ld\r\n", &this->m_ContentLength) != 1)
-	{
-		char *pLineEnd = (char*)str_find(pData, "\r\n");
-		if(!pLineEnd)
-		{
-			m_Error = true;
-			return false;
-		}
-		pData = pLineEnd + 2;
-	}
-	
-	m_Size = (pEnd-pStr)+4;
-	return true;
-}
+// TODO: move http directory somewhere else?
+CHttpConnection::CHttpConnection() : m_State(STATE_NONE), m_Type(-1), m_StartTime(-1),
+	m_LastActionTime(-1), m_pResponse(0), m_pRequest(0), m_pUserData(0) { }
 
 CHttpConnection::~CHttpConnection()
 {
 	if(m_pResponse)
 		delete m_pResponse;
 	if(m_pRequest)
-		mem_free(m_pRequest);
+		delete m_pRequest;
 	if(m_pUserData)
 		delete m_pUserData;
-	Clear();
 	Close();
 }
 
-bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse, int64 StartTime)
+bool CHttpConnection::Create(NETADDR Addr, int Type)
 {
 	m_Addr = Addr;
 	m_Socket = net_tcp_create(m_Addr);
@@ -60,15 +30,13 @@ bool CHttpConnection::Create(NETADDR Addr, int Type, IStream *pResponse, int64 S
 	net_set_non_blocking(m_Socket);
 	m_State = STATE_CONNECT;
 	m_Type = Type;
-	m_pResponse = pResponse;
-	m_StartTime = StartTime;
 	return true;
 }
 
-void CHttpConnection::Clear()
+void CHttpConnection::CloseFiles()
 {
-	if(m_RequestFile)
-		io_close(m_RequestFile);
+	m_pRequest->CloseFiles();
+	m_pResponse->CloseFiles();
 }
 
 void CHttpConnection::Close()
@@ -77,23 +45,11 @@ void CHttpConnection::Close()
 	m_State = STATE_NONE;
 }
 
-void CHttpConnection::SetRequest(const char *pData, int Size, IOHANDLE RequestFile, const char *pFilename)
-{
-	m_RequestSize = Size;
-	m_pRequest = (char *)mem_alloc(m_RequestSize, 1);
-	mem_copy(m_pRequest, pData, m_RequestSize);
-	m_pRequestCur = m_pRequest;
-	m_pRequestEnd = m_pRequest + m_RequestSize;
-	m_RequestFile = RequestFile;
-	if(pFilename)
-		str_copy(m_aRequestFilename, pFilename, sizeof(m_aRequestFilename));
-}
-
 int CHttpConnection::SetState(int State, const char *pMsg)
 {
 	m_State = State;
 	if(pMsg)
-		dbg_msg("http", "%s (type: %d)", pMsg, m_Type);
+		dbg_msg("http", "%s (%d : %s)", pMsg, m_Type, m_pRequest->GetURI());
 	if(m_State == STATE_DONE)
 		return 1;
 	if(m_State == STATE_ERROR)
@@ -110,7 +66,7 @@ int CHttpConnection::Update()
 	{
 		case STATE_CONNECT:
 		{
-			if(time_get() < m_StartTime)
+			if(time_get() < m_StartTime && m_StartTime != -1)
 				return 0;
 
 			m_State = STATE_WAIT;
@@ -132,7 +88,9 @@ int CHttpConnection::Update()
 			if(Result == 1)
 			{
 				m_LastActionTime = time_get();
-				return SetState(STATE_SEND, "connected");
+				if(m_pRequest->Finish())
+					return SetState(STATE_SEND, "connected");
+				return SetState(STATE_ERROR, "error: incomplete request");
 			}
 			if(Result == -1)
 			{
@@ -143,7 +101,7 @@ int CHttpConnection::Update()
 
 		case STATE_SEND:
 		{
-			if(m_pRequestCur >= m_pRequestEnd)
+			/*if(m_pRequestCur >= m_pRequestEnd)
 			{
 				if(m_RequestFile)
 				{
@@ -176,6 +134,26 @@ int CHttpConnection::Update()
 				m_LastActionTime = time_get();
 				m_pRequestCur += Send;
 				return 0;
+			}*/
+			char aData[1024] = {0};
+			int Bytes = m_pRequest->GetData(aData, sizeof(aData));
+			if(Bytes > 0)
+			{
+				int Size = net_tcp_send(m_Socket, aData, Bytes);
+				if(Size < 0)
+					return SetState(STATE_ERROR, "error: sending data");
+				m_LastActionTime = time_get();
+
+				if(Size > Bytes)
+					m_pRequest->MoveCursor(Bytes-Size);
+			}
+			else if(Bytes == 0)
+			{
+				return SetState(STATE_RECV, "sent request");
+			}
+			else
+			{
+				return SetState(STATE_ERROR, "error: request is incomplete");
 			}
 		}
 
@@ -187,22 +165,8 @@ int CHttpConnection::Update()
 			if(Bytes > 0)
 			{
 				m_LastActionTime = time_get();
-				if(m_Header.m_Size == -1)
-				{
-					m_HeaderBuffer.Write(aBuf, Bytes);
-					if(m_Header.Parse(m_HeaderBuffer.GetData()))
-					{
-						if(m_Header.m_Error)
-							return SetState(STATE_ERROR, "error: could not read the header");
-						else
-							m_pResponse->Write(m_HeaderBuffer.GetData()+m_Header.m_Size, m_HeaderBuffer.Size()-m_Header.m_Size);
-					}
-				}
-				else
-				{
-					if(!m_pResponse->Write(aBuf, Bytes))
-						return SetState(STATE_ERROR, "error: buffer/file");
-				}
+				if(m_pResponse->Write(aBuf, Bytes) == -1)
+					return SetState(STATE_ERROR, "error: could not read the header");
 			}
 			else if(Bytes < 0)
 			{
@@ -212,7 +176,7 @@ int CHttpConnection::Update()
 			}
 			else
 			{
-				if(m_pResponse->Size() == m_Header.m_ContentLength)
+				if(m_pResponse->Finish())
 					return SetState(STATE_DONE, "received response");
 				return SetState(STATE_ERROR, "error: wrong content-length");
 			}

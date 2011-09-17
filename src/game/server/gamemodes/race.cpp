@@ -6,7 +6,6 @@
 #include <game/server/gamecontext.h>
 #include <game/server/score.h>
 #if defined(CONF_TEERACE)
-#include <game/stream.h>
 #include <game/server/webapp.h>
 #include <engine/external/json/writer.h>
 #endif
@@ -276,9 +275,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 
 			std::string Json = Writer.write(Run);
 
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, GameServer()->Webapp()->ApiPath(), "runs/new/",
-				GameServer()->Webapp()->ServerIP(), GameServer()->Webapp()->ApiKey(), Json.length(), Json.c_str());
-			GameServer()->Webapp()->SendRequest(aBuf, WEB_RUN_POST, new CBufferStream(), pUserData);
+			CRequest *pRequest = GameServer()->Webapp()->CreateRequest("runs/new/", CRequest::HTTP_POST);
+			pRequest->SetBody(Json.c_str(), Json.length());
+			GameServer()->Webapp()->SendRequest(pRequest, WEB_RUN_POST, pUserData);
 		}
 		
 		// higher run count

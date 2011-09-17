@@ -5,6 +5,7 @@
 #include <string>
 #include <base/tl/array.h>
 
+#include <game/http/request.h>
 #include <game/data.h>
 #include <game/webapp.h>
 
@@ -27,44 +28,23 @@ class CServerWebapp : public IWebapp
 	array<std::string> m_lMapList;
 
 	CMapInfo m_CurrentMap;
-	
 	bool m_DefaultScoring;
-	bool m_Online;
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
 	
 	void LoadMaps();
-	
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
+
+	void RegisterFields(class CRequest *pRequest, bool Api);
+	void OnResponse(class CHttpConnection *pCon);
 	
 public:
-	static const char GET[];
-	static const char POST[];
-	static const char PUT[];
-	static const char DOWNLOAD[];
-	static const char UPLOAD[];
-	
 	CServerWebapp(CGameContext *pGameServer);
 	virtual ~CServerWebapp() { }
-
-	const char *ApiKey();
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
-	
 	bool DefaultScoring() { return m_DefaultScoring; }
-	
-	void OnResponse(class CHttpConnection *pCon);
-
-	bool Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData = 0);
-	bool Upload(const char *pFilename, const char *pURL, int Type, const char *pName, CWebData *pUserData = 0, int64 StartTime = -1);
-
-	bool SendRequest(const char *pInString, int Type, class IStream *pResponse, CWebData *pUserData = 0, IOHANDLE File = 0, const char *pFilename = 0, bool NeedOnline = true, int64 StartTime = -1)
-	{
-		if(NeedOnline && !m_Online)
-			return false;
-		return IWebapp::SendRequest(pInString, Type, pResponse, pUserData, File, pFilename, StartTime);
-	}
 };
 
 #endif

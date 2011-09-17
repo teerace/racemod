@@ -2,20 +2,20 @@
 #ifndef GAME_CLIENT_WEBAPP_H
 #define GAME_CLIENT_WEBAPP_H
 
+#include <game/http/request.h>
+#include <game/data.h>
 #include <game/webapp.h>
 
 class CClientWebapp : public IWebapp
 {
-private:
 	class CGameClient *m_pClient;
 
+	void RegisterFields(class CRequest *pRequest, bool Api) {}
+	void OnResponse(class CHttpConnection *pCon);
+
 public:
-	static const char POST[];
-
 	CClientWebapp(class CGameClient *pGameClient);
-	virtual ~CClientWebapp() {};
-
-	void OnResponse(CHttpConnection *pCon);
+	virtual ~CClientWebapp() {}
 
 	// api token vars
 	bool m_ApiTokenRequested;

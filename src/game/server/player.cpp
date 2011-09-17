@@ -5,7 +5,6 @@
 #include <engine/shared/config.h>
 
 #if defined(CONF_TEERACE)
-#include <game/stream.h>
 #include "webapp.h"
 #endif
 
@@ -78,11 +77,10 @@ void CPlayer::Tick()
 			pUserData->m_UserID = UserID;
 			pUserData->m_PrintRank = 0;
 
-			char aBuf[512];
-			char aURL[128];
-			str_format(aURL, sizeof(aURL), "users/rank/%d/", UserID);
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, GameServer()->Webapp()->ApiPath(), aURL, GameServer()->Webapp()->ServerIP(), GameServer()->Webapp()->ApiKey());
-			GameServer()->Webapp()->SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
+			char aURI[128];
+			str_format(aURI, sizeof(aURI), "users/rank/%d/", UserID);
+			CRequest *pRequest = GameServer()->Webapp()->CreateRequest(aURI, CRequest::HTTP_GET);
+			GameServer()->Webapp()->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
 		}
 	}
 #endif

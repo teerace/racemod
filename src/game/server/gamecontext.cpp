@@ -29,7 +29,6 @@
 #include "score/file_score.h"
 #if defined(CONF_TEERACE)
 #include <engine/external/json/writer.h>
-#include <game/stream.h>
 #include "webapp.h"
 #endif
 
@@ -469,12 +468,12 @@ void CGameContext::OnTick()
 			}
 			
 			Data["map"] = g_Config.m_SvMap;
-			
+
 			std::string Json = Writer.write(Data);
 			
-			char aBuf[1024];
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "ping/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
-			m_pWebapp->SendRequest(aBuf, WEB_PING_PING, new CBufferStream(), 0, 0, 0, false);
+			CRequest *pRequest = m_pWebapp->CreateRequest("ping/", CRequest::HTTP_POST);
+			pRequest->SetBody(Json.c_str(), Json.length());
+			m_pWebapp->SendRequest(pRequest, WEB_PING_PING);
 			
 			m_LastPing = Server()->Tick();
 		}
@@ -606,9 +605,9 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmd
 			pUserData->m_ClientID = ClientID;
 			pUserData->m_SendRconCmds = SendRconCmds;
 
-			char aBuf[512];
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "users/auth_token/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
-			m_pWebapp->SendRequest(aBuf, WEB_USER_AUTH, new CBufferStream(), pUserData);
+			CRequest *pRequest = m_pWebapp->CreateRequest("users/auth_token/", CRequest::HTTP_POST);
+			pRequest->SetBody(Json.c_str(), Json.length());
+			m_pWebapp->SendRequest(pRequest, WEB_USER_AUTH, pUserData);
 		}
 	}
 }
@@ -690,11 +689,11 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 		Post["seconds"] = Server()->GetPlayTicks(ClientID)/Server()->TickSpeed();
 		std::string Json = Writer.write(Post);
 
-		char aBuf[512];
-		char aURL[128];
-		str_format(aURL, sizeof(aURL), "users/playtime/%d/", UserID);
-		str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
-		m_pWebapp->SendRequest(aBuf, WEB_USER_PLAYTIME, new CBufferStream());
+		char aURI[128];
+		str_format(aURI, sizeof(aURI), "users/playtime/%d/", UserID);
+		CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_PUT);
+		pRequest->SetBody(Json.c_str(), Json.length());
+		m_pWebapp->SendRequest(pRequest, WEB_USER_PLAYTIME);
 	}
 #endif
 	AbortVoteKickOnDisconnect(ClientID);
@@ -802,14 +801,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				{
 					if(!m_pWebapp->DefaultScoring())
 					{
-						char aBuf[512];
-						char aURL[128];
-						str_format(aURL, sizeof(aURL), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, StartRank);
-						str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
 						CWebUserTopData *pUserData = new CWebUserTopData();
 						pUserData->m_StartRank = StartRank;
 						pUserData->m_ClientID = ClientID;
-						m_pWebapp->SendRequest(aBuf, WEB_USER_TOP, new CBufferStream(), pUserData);
+
+						char aURI[128];
+						str_format(aURI, sizeof(aURI), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, StartRank);
+						CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
+						m_pWebapp->SendRequest(pRequest, WEB_USER_TOP, pUserData);
 					}
 				}
 				else
@@ -863,10 +862,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						char aBuf[512];
 						if(UserID)
 						{
-							char aURL[128];
-							str_format(aURL, sizeof(aURL), "users/rank/%d/", Server()->GetUserID(ClientID));
-							str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
-							m_pWebapp->SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
+							char aURI[128];
+							str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
+							CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
+							m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
 						}
 						else
 						{
@@ -874,8 +873,9 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 							Json::FastWriter Writer;
 							Data["username"] = aName;
 							std::string Json = Writer.write(Data);
-							str_format(aBuf, sizeof(aBuf), CServerWebapp::POST, m_pWebapp->ApiPath(), "users/get_by_name/", m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
-							m_pWebapp->SendRequest(aBuf, WEB_USER_FIND, new CBufferStream(), pUserData);
+							CRequest *pRequest = m_pWebapp->CreateRequest("users/get_by_name/", CRequest::HTTP_POST);
+							pRequest->SetBody(Json.c_str(), Json.length());
+							m_pWebapp->SendRequest(pRequest, WEB_USER_FIND, pUserData);
 						}
 					}
 					else
@@ -896,11 +896,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 							pUserData->m_ClientID = ClientID;
 							pUserData->m_UserID = Server()->GetUserID(ClientID);
 
-							char aBuf[512];
-							char aURL[128];
-							str_format(aURL, sizeof(aURL), "users/rank/%d/", Server()->GetUserID(ClientID));
-							str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey());
-							m_pWebapp->SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
+							char aURI[128];
+							str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
+							CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
+							m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
 						}
 						else
 							SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
@@ -1331,11 +1330,11 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			}
 			std::string Json = Writer.write(Userdata);
 	
-			char aBuf[512];
-			char aURL[128];
-			str_format(aURL, sizeof(aURL), "users/skin/%d/", Server()->GetUserID(ClientID));
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::PUT, m_pWebapp->ApiPath(), aURL, m_pWebapp->ServerIP(), m_pWebapp->ApiKey(), Json.length(), Json.c_str());
-			m_pWebapp->SendRequest(aBuf, WEB_USER_UPDATESKIN, new CBufferStream());
+			char aURI[128];
+			str_format(aURI, sizeof(aURI), "users/skin/%d/", Server()->GetUserID(ClientID));
+			CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_PUT);
+			pRequest->SetBody(Json.c_str(), Json.length());
+			m_pWebapp->SendRequest(pRequest, WEB_USER_UPDATESKIN);
 		}
 #endif
 	}

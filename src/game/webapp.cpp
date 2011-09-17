@@ -1,16 +1,19 @@
 /* Webapp class by Sushi and Redix */
 
+#include <engine/storage.h>
 #include <engine/shared/config.h>
 #include <base/math.h>
 
-#include "http_con.h"
+#include "http/http_con.h"
+#include "http/request.h"
+#include "http/response.h"
 #include "webapp.h"
 
 IWebapp::IWebapp(IStorage *pStorage) : m_pStorage(pStorage)
 {
 	char aBuf[512];
 	int Port = 80;
-	str_copy(aBuf, ServerIP(), sizeof(aBuf));
+	str_copy(aBuf, g_Config.m_WaWebappIp, sizeof(aBuf));
 
 	for(int k = 0; aBuf[k]; k++)
 	{
@@ -27,39 +30,70 @@ IWebapp::IWebapp(IStorage *pStorage) : m_pStorage(pStorage)
 	m_Addr.port = Port;
 }
 
-const char *IWebapp::ServerIP() { return g_Config.m_WaWebappIp; }
-const char *IWebapp::ApiPath() { return g_Config.m_WaApiPath; }
+CRequest *IWebapp::CreateRequest(const char *pURI, int Method, bool Api)
+{
+	char aURI[256];
+	if(Api)
+	{
+		str_format(aURI, sizeof(aURI), "%s/%s", g_Config.m_WaApiPath, pURI);
+		pURI = aURI;
+	}
+	CRequest *pRequest = new CRequest(g_Config.m_WaWebappIp, pURI, Method);
+	RegisterFields(pRequest, Api);
+	return pRequest;
+}
 
-bool IWebapp::SendRequest(const char *pData, int Type, IStream *pResponse, CWebData *pUserData, IOHANDLE File, const char *pFilename, int64 StartTime)
+bool IWebapp::Send(CRequest *pRequest, CResponse *pResponse, int Type, CWebData *pUserData)
 {
 	CHttpConnection *pCon = new CHttpConnection();
-	if(!pCon->Create(m_Addr, Type, pResponse, StartTime))
+	if(!pCon->Create(m_Addr, Type))
 		return false;
-	pCon->SetRequest(pData, str_length(pData), File, pFilename);
-	pCon->m_pUserData = pUserData;
+	pCon->SetRequest(pRequest);
+	pCon->SetResponse(pResponse);
+	pCon->SetUserData(pUserData);
 	m_Connections.add(pCon);
 	return true;
 }
 
-int IWebapp::Update()
+bool IWebapp::SendRequest(CRequest *pRequest, int Type, CWebData *pUserData)
 {
-	int Num = 0, Max = 3;
+	return Send(pRequest, new CResponse(), Type, pUserData);
+}
+
+bool IWebapp::Download(const char *pFilename, const char *pURI, int Type, class CWebData *pUserData)
+{
+	IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+	CRequest *pRequest = CreateRequest(pURI, CRequest::HTTP_GET, false);
+	CResponse *pResponse = new CResponse();
+	pResponse->SetFile(File, pFilename);
+	return Send(pRequest, pResponse, Type, pUserData);
+}
+
+bool IWebapp::Upload(const char *pFilename, const char *pURI, int Type, class CWebData *pUserData)
+{
+	IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+		return false;
+	CRequest *pRequest = CreateRequest(pURI, CRequest::HTTP_POST);
+	pRequest->SetFile(File, pFilename);
+	return SendRequest(pRequest, Type, pUserData);
+}
+
+void IWebapp::Update()
+{
+	int Max = 3;
 	for(int i = 0; i < min(m_Connections.size(), Max); i++)
 	{
 		int Result = m_Connections[i]->Update();
 		if(Result != 0)
 		{
-			// close all files
-			if(m_Connections[i]->m_pResponse->IsFile())
-				((CFileStream*)m_Connections[i]->m_pResponse)->Clear();
-			m_Connections[i]->Clear();
-
+			m_Connections[i]->CloseFiles();
 			OnResponse(m_Connections[i]);
 			
 			delete m_Connections[i];
 			m_Connections.remove_index_fast(i);
-			Num++;
 		}
 	}
-	return Num;
 }

@@ -20,8 +20,6 @@
 #include <game/client/animstate.h>
 #include <game/client/webapp.h>
 #include <game/localization.h>
-#include <game/data.h>
-#include <game/stream.h>
 
 #include "binds.h"
 #include "countryflags.h"
@@ -918,10 +916,10 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 	if(DoButton_Menu((void*)&s_ApiTokenButton, m_pClient->Webapp()->m_ApiTokenRequested ? Localize("Checking...") : Localize("Request api token"), m_pClient->Webapp()->m_ApiTokenRequested ? -1 : 0, &ApiButton))
 	{
 		char aData[128];
-		char aBuf[512];
 		str_format(aData, sizeof(aData), "username=%s&password=%s", g_Config.m_WaUsername, g_Config.m_WaPassword);
-		str_format(aBuf, sizeof(aBuf), CClientWebapp::POST, m_pClient->Webapp()->ApiPath(), "anonclient/get_token/", m_pClient->Webapp()->ServerIP(), str_length(aData), aData);
-		m_pClient->Webapp()->SendRequest(aBuf, WEB_API_TOKEN, new CBufferStream());
+		CRequest *pRequest = m_pClient->Webapp()->CreateRequest("anonclient/get_token/", CRequest::HTTP_POST);
+		pRequest->SetBody(aData, str_length(aData), "application/x-www-form-urlencoded");
+		m_pClient->Webapp()->SendRequest(pRequest, WEB_API_TOKEN);
 	}
 
 	// Right

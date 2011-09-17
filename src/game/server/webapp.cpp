@@ -4,20 +4,15 @@
 #include <base/tl/algorithm.h>
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
-#include <engine/storage.h>
 #include <engine/external/json/reader.h>
+#include <engine/storage.h>
 
-#include <game/http_con.h>
+#include <game/http/http_con.h>
+#include <game/http/response.h>
 
 #include "score.h"
 #include "gamecontext.h"
 #include "webapp.h"
-
-const char CServerWebapp::GET[] = "GET %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nConnection: close\r\n\r\n";
-const char CServerWebapp::POST[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
-const char CServerWebapp::PUT[] = "PUT %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s";
-const char CServerWebapp::DOWNLOAD[] = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n";
-const char CServerWebapp::UPLOAD[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: multipart/form-data; boundary=frontier\r\nContent-Length: %d\r\n\r\n--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"file.file\"\r\nContent-Type: application/octet-stream\r\n\r\n";
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
 : IWebapp(pGameServer->Server()->Storage()),
@@ -25,28 +20,31 @@ CServerWebapp::CServerWebapp(CGameContext *pGameServer)
   m_pServer(pGameServer->Server()),
   m_DefaultScoring(g_Config.m_WaDefaultScoring)
 {
-	m_Online = 0;
 	LoadMaps();
 }
 
-const char *CServerWebapp::ApiKey() { return g_Config.m_WaApiKey; }
+void CServerWebapp::RegisterFields(CRequest *pRequest, bool Api)
+{
+	if(Api)
+		pRequest->AddField("API-AUTH", g_Config.m_WaApiKey);
+}
 
 void CServerWebapp::OnResponse(CHttpConnection *pCon)
 {
-	int Type = pCon->m_Type;
-	IStream *pData = pCon->m_pResponse;
-	bool Error = pCon->State() == CHttpConnection::STATE_ERROR || pCon->StatusCode() != 200;
+	int Type = pCon->Type();
+	CResponse *pData = pCon->Response();
+	bool Error = pCon->Error() || pCon->Response()->StatusCode() != 200;
 
 	Json::Value JsonData;
 	Json::Reader Reader;
 	bool Json = false;
-	if(pCon->State() != CHttpConnection::STATE_ERROR && !pData->IsFile())
-		Json = Reader.parse(pData->GetData(), pData->GetData()+pData->Size(), JsonData);
+	if(!pCon->Error() && !pData->IsFile())
+		Json = Reader.parse(pData->GetBody(), pData->GetBody()+pData->Size(), JsonData);
 
 	// TODO: add event listener (server and client)
 	if(Type == WEB_USER_AUTH)
 	{
-		CWebUserAuthData *pUser = (CWebUserAuthData*)pCon->m_pUserData;
+		CWebUserAuthData *pUser = (CWebUserAuthData*)pCon->UserData();
 		int ClientID = pUser->m_ClientID;
 		if(GameServer()->m_apPlayers[ClientID])
 		{
@@ -59,7 +57,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			int SendRconCmds = pUser->m_SendRconCmds;
 			int UserID = 0;
 			
-			if(str_comp(pData->GetData(), "false") != 0 && Json)
+			if(str_comp(pData->GetBody(), "false") != 0 && Json)
 				UserID = JsonData["id"].asInt();
 			
 			if(UserID > 0)
@@ -81,10 +79,10 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 				pUserData->m_ClientID = ClientID;
 				pUserData->m_UserID = UserID;
 
-				char aURL[128];
-				str_format(aURL, sizeof(aURL), "users/rank/%d/", UserID);
-				str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), aURL, ServerIP(), ApiKey());
-				SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pUserData);
+				char aURI[128];
+				str_format(aURI, sizeof(aURI), "users/rank/%d/", UserID);
+				CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
+				SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
 			}
 			else
 			{
@@ -94,7 +92,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_USER_FIND)
 	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pCon->m_pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pCon->UserData();
 		pUser->m_UserID = 0;
 		
 		if(!Error && Json)
@@ -106,11 +104,10 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			CWebUserRankData *pNewData = new CWebUserRankData();
 			mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
 
-			char aBuf[512];
-			char aURL[128];
-			str_format(aURL, sizeof(aURL), "users/rank/%d/", pUser->m_UserID);
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), aURL, ServerIP(), ApiKey());
-			SendRequest(aBuf, WEB_USER_RANK_GLOBAL, new CBufferStream(), pNewData);
+			char aURI[128];
+			str_format(aURI, sizeof(aURI), "users/rank/%d/", pUser->m_UserID);
+			CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
+			SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pNewData);
 		}
 		else if(pUser->m_PrintRank)
 		{
@@ -124,22 +121,21 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_USER_RANK_GLOBAL)
 	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pCon->m_pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pCon->UserData();
 		pUser->m_GlobalRank = 0;
 
 		if(!Error)
-			pUser->m_GlobalRank = str_toint(pData->GetData());
+			pUser->m_GlobalRank = str_toint(pData->GetBody());
 
 		if(pUser->m_GlobalRank)
 		{
 			CWebUserRankData *pNewData = new CWebUserRankData();
 			mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
 
-			char aBuf[512];
-			char aURL[128];
-			str_format(aURL, sizeof(aURL), "users/map_rank/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), aURL, ServerIP(), ApiKey());
-			SendRequest(aBuf, WEB_USER_RANK_MAP, new CBufferStream(), pNewData);
+			char aURI[128];
+			str_format(aURI, sizeof(aURI), "users/map_rank/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
+			CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
+			SendRequest(pRequest, WEB_USER_RANK_MAP, pNewData);
 		}
 		else if(pUser->m_PrintRank)
 		{
@@ -155,7 +151,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_USER_RANK_MAP)
 	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pCon->m_pUserData;
+		CWebUserRankData *pUser = (CWebUserRankData*)pCon->UserData();
 		int GlobalRank = pUser->m_GlobalRank;
 		int MapRank = 0;
 		CPlayerData Run;
@@ -210,7 +206,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_USER_TOP && Json && !Error)
 	{
-		CWebUserTopData *pUser = (CWebUserTopData*)pCon->m_pUserData;
+		CWebUserTopData *pUser = (CWebUserTopData*)pCon->UserData();
 		int ClientID = pUser->m_ClientID;
 		if(GameServer()->m_apPlayers[ClientID])
 		{
@@ -229,11 +225,13 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_PING_PING)
 	{
-		m_Online = !Error && str_comp(pData->GetData(), "\"PONG\"") == 0;
-		dbg_msg("webapp", "webapp is%s online", m_Online ? "" : " not");
-		char aBuf[256];
-		str_format(aBuf, sizeof(aBuf), CServerWebapp::GET, ApiPath(), "maps/list/", ServerIP(), ApiKey());
-		SendRequest(aBuf, WEB_MAP_LIST, new CBufferStream());
+		bool Online = !Error && str_comp(pData->GetBody(), "\"PONG\"") == 0;
+		dbg_msg("webapp", "webapp is%s online", Online ? "" : " not");
+		if(Online)
+		{
+			CRequest *pRequest = CreateRequest("maps/list/", CRequest::HTTP_GET);
+			SendRequest(pRequest, WEB_MAP_LIST);
+		}
 	}
 	else if(Type == WEB_MAP_LIST && Json && !Error)
 	{
@@ -295,7 +293,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_DOWNLOAD_MAP)
 	{
-		const char *pMap = ((CFileStream*)pData)->GetFilename();
+		const char *pMap = pData->GetFilename();
 		char aMap[256];
 		str_copy(aMap, pMap, min((int)sizeof(aMap),str_length(pMap)-3));
 
@@ -308,58 +306,38 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		}
 		else
 		{
-			Storage()->RemoveFile(((CFileStream*)pData)->GetPath(), IStorage::TYPE_SAVE);
+			Storage()->RemoveFile(pData->GetPath(), IStorage::TYPE_SAVE);
 			dbg_msg("webapp", "could not download map: %s", aMap);
 		}
 	}
 	else if(Type == WEB_RUN_POST)
 	{
-		CWebRunData *pUser = (CWebRunData*)pCon->m_pUserData;
+		CWebRunData *pUser = (CWebRunData*)pCon->UserData();
 		if(pUser->m_Tick > -1)
 		{
 			char aFilename[256];
 			char aURL[128];
 
+			// TODO: upload
 			// demo
-			str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+			/*str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			Upload(aFilename, aURL, WEB_UPLOAD_DEMO, "demo_file", 0, time_get()+time_freq()*2);
+			Upload(aFilename, aURL, WEB_UPLOAD_DEMO, "demo_file", 0, time_get()+time_freq()*2);*/
 
 			// ghost
-			str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+			/*str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			Upload(aFilename, aURL, WEB_UPLOAD_GHOST, "ghost_file");
+			Upload(aFilename, aURL, WEB_UPLOAD_GHOST, "ghost_file");*/
 		}
 	}
 	else if(Type == WEB_UPLOAD_DEMO || Type == WEB_UPLOAD_GHOST)
 	{
 		if(!Error)
-			dbg_msg("webapp", "uploaded file: %s", pCon->GetFilename());
+			dbg_msg("webapp", "uploaded file: %s", pCon->Request()->GetFilename());
 		else
-			dbg_msg("webapp", "could not upload file: %s", pCon->GetFilename());
-		Storage()->RemoveFile(pCon->GetPath(), IStorage::TYPE_SAVE);
+			dbg_msg("webapp", "could not upload file: %s", pCon->Request()->GetFilename());
+		Storage()->RemoveFile(pCon->Request()->GetPath(), IStorage::TYPE_SAVE);
 	}
-}
-
-bool CServerWebapp::Download(const char *pFilename, const char *pURL, int Type, CWebData *pUserData)
-{
-	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	char aStr[256];
-	str_format(aStr, sizeof(aStr), DOWNLOAD, pURL, ServerIP());
-	return SendRequest(aStr, Type, new CFileStream(pFilename, File), pUserData);
-}
-
-bool CServerWebapp::Upload(const char *pFilename, const char *pURL, int Type, const char *pName, CWebData *pUserData, int64 StartTime)
-{
-	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_SAVE);
-	if(!File)
-		return false;
-	int FileLength = (int)io_length(File);
-	char aStr[512];
-	str_format(aStr, sizeof(aStr), UPLOAD, ApiPath(), pURL, ServerIP(), ApiKey(), FileLength+str_length(pName)+133, pName);
-	return SendRequest(aStr, Type, new CBufferStream(), pUserData, File, pFilename, true, StartTime);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
@@ -379,7 +357,7 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 void CServerWebapp::LoadMaps()
 {
 	m_lMapList.clear();
-	m_pServer->Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
+	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 }
 
 #endif
