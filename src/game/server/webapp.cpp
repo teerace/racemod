@@ -255,12 +255,11 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			CMapInfo Info;
 			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
 			array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
-			bool WrongCrc = str_comp(r.front().m_aCrc, Map["crc"].asCString()) != 0;
-			if(r.empty() || WrongCrc)
+			if(r.empty() || str_comp(r.front().m_aCrc, Map["crc"].asCString()) != 0)
 			{
 				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
 				Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
-				if(WrongCrc)
+				if(str_comp(r.front().m_aCrc, Map["crc"].asCString()) != 0)
 					m_lMapList.remove_fast(r.front());
 			}
 			else if(r.front().m_ID == -1)
