@@ -59,7 +59,6 @@ void CGameContext::Construct(int Resetting)
 #if defined(CONF_TEERACE)
 	m_pWebapp = 0;
 	m_LastPing = -1;
-	m_CrcCheck = false;
 #endif
 }
 
@@ -1905,6 +1904,9 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 #if defined(CONF_TEERACE)
 	if(g_Config.m_WaUseWebapp && !m_pWebapp)
 		m_pWebapp = new CServerWebapp(this);
+
+	if(m_pWebapp)
+		m_pWebapp->OnInit();
 #endif
 		
 	// setup core world

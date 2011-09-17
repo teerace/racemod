@@ -3,10 +3,8 @@
 
 #include "request.h"
 
-// const char CServerWebapp::UPLOAD[] = "POST %s/%s HTTP/1.1\r\nHost: %s\r\nAPI-AUTH: %s\r\nContent-Type: multipart/form-data; boundary=frontier\r\nContent-Length: %d\r\n\r\n--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"file.file\"\r\nContent-Type: application/octet-stream\r\n\r\n";
-
 CRequest::CRequest(const char *pHost, const char *pURI, int Method) : m_Method(Method),
-	m_State(STATE_NONE), m_pBody(0), m_BodySize(0), m_pCur(0), m_pEnd(0)
+	m_State(STATE_NONE), m_pBody(0), m_BodySize(0), m_pCur(0), m_pEnd(0), m_StartTime(-1)
 {
 	AddField("Host", pHost);
 	AddField("Connection", "close");
@@ -46,8 +44,7 @@ bool CRequest::Finish()
 		int ContentLength = 0;
 		if(m_File)
 		{
-			// TODO: upload
-			AddField("Content-Type", "multipart/form-data; boundary=frontier");
+			ContentLength = io_length(m_File) + str_length(m_aUploadHeader) + str_length(m_aUploadFooter);
 		}
 		else if(m_pBody)
 		{
@@ -66,7 +63,7 @@ bool CRequest::Finish()
 
 bool CRequest::SetBody(const char *pData, int Size, const char *pContentType)
 {
-	if(Size <= 0 || m_pBody || m_Finish)
+	if(Size <= 0 || m_File || m_pBody || m_Finish)
 		return false;
 
 	m_BodySize = Size;
@@ -74,6 +71,17 @@ bool CRequest::SetBody(const char *pData, int Size, const char *pContentType)
 	mem_copy(m_pBody, pData, m_BodySize);
 	AddField("Content-Type", pContentType);
 	return true;
+}
+
+void CRequest::SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName)
+{
+	if(m_File || m_pBody || m_Finish)
+		return;
+
+	IHttpBase::SetFile(File, pFilename);
+	str_format(m_aUploadHeader, sizeof(m_aUploadHeader), "--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n", pUploadName, GetFilename());
+	str_copy(m_aUploadFooter, "\r\n--frontier--\r\n", sizeof(m_aUploadFooter));
+	AddField("Content-Type", "multipart/form-data; boundary=frontier");
 }
 
 int CRequest::GetData(char *pBuf, int MaxSize)
@@ -100,8 +108,8 @@ int CRequest::GetData(char *pBuf, int MaxSize)
 			}
 			else if(m_File)
 			{
-				m_pCur = 0; // TODO: upload
-				m_pEnd = 0;
+				m_pCur = m_aUploadHeader;
+				m_pEnd = m_pCur + str_length(m_aUploadHeader);
 				m_State = STATE_FILE_START;
 			}
 			else
@@ -117,18 +125,27 @@ int CRequest::GetData(char *pBuf, int MaxSize)
 		if(m_pCur >= m_pEnd)
 			return 0;
 	}
-	else if(m_State == STATE_FILE_START) // TODO: upload
+	else if(m_State == STATE_FILE_START)
 	{
 		if(m_pCur >= m_pEnd)
 			m_State = STATE_FILE;
 	}
-	else if(m_State == STATE_FILE) // TODO: upload
-	{
-	}
-	else if(m_State == STATE_FILE_END) // TODO: upload
+	else if(m_State == STATE_FILE_END)
 	{
 		if(m_pCur >= m_pEnd)
 			return 0;
+	}
+
+	if(m_State == STATE_FILE)
+	{
+		Size = io_read(m_File, pBuf, MaxSize);
+		if(Size == 0)
+		{
+			m_pCur = m_aUploadFooter;
+			m_pEnd = m_pCur + str_length(m_aUploadFooter);
+			m_State = STATE_FILE_END;
+			CloseFiles();
+		}
 	}
 
 	if(m_State != STATE_FILE)
@@ -152,6 +169,7 @@ void CRequest::MoveCursor(int Bytes)
 	}
 	else
 	{
-		// TODO: upload
+		int Pos = io_tell(m_File);
+		io_seek(m_File, Pos + Bytes, IOSEEK_START);
 	}
 }

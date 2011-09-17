@@ -2,7 +2,6 @@
 #ifndef GAME_SERVER_WEBAPP_H
 #define GAME_SERVER_WEBAPP_H
 
-#include <string>
 #include <base/tl/array.h>
 
 #include <game/http/request.h>
@@ -17,15 +16,18 @@ class CServerWebapp : public IWebapp
 		CMapInfo() { m_ID = -1; }
 		int m_RunCount;
 		int m_ID;
+		char m_aName[128];
 		char m_aCrc[16];
 		char m_aURL[128];
 		char m_aAuthor[32];
+
+		bool operator==(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) == 0; }
 	};
 
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
 
-	array<std::string> m_lMapList;
+	array<CMapInfo> m_lMapList;
 
 	CMapInfo m_CurrentMap;
 	bool m_DefaultScoring;
@@ -45,6 +47,7 @@ public:
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	bool DefaultScoring() { return m_DefaultScoring; }
+	void OnInit();
 };
 
 #endif

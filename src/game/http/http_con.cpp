@@ -6,7 +6,7 @@
 
 // TODO: support for chunked transfer-encoding?
 // TODO: move http directory somewhere else?
-CHttpConnection::CHttpConnection() : m_State(STATE_NONE), m_Type(-1), m_StartTime(-1),
+CHttpConnection::CHttpConnection() : m_State(STATE_NONE), m_Type(-1),
 	m_LastActionTime(-1), m_pResponse(0), m_pRequest(0), m_pUserData(0) { }
 
 CHttpConnection::~CHttpConnection()
@@ -66,7 +66,7 @@ int CHttpConnection::Update()
 	{
 		case STATE_CONNECT:
 		{
-			if(time_get() < m_StartTime && m_StartTime != -1)
+			if(time_get() < m_pRequest->StartTime() && m_pRequest->StartTime() != -1)
 				return 0;
 
 			m_State = STATE_WAIT;
@@ -101,40 +101,6 @@ int CHttpConnection::Update()
 
 		case STATE_SEND:
 		{
-			/*if(m_pRequestCur >= m_pRequestEnd)
-			{
-				if(m_RequestFile)
-				{
-					char aData[1024];
-					unsigned Bytes = io_read(m_RequestFile, aData, sizeof(aData));
-					if(Bytes > 0)
-					{
-						int Send = net_tcp_send(m_Socket, aData, Bytes);
-						if(Send != Bytes)
-							return SetState(STATE_ERROR, "error: sending file");
-						m_LastActionTime = time_get();
-						return 0;
-					}
-					else // not nice but it works...
-					{
-						const char *pFooter = "\r\n--frontier--\r\n";
-						int Send = net_tcp_send(m_Socket, pFooter, str_length(pFooter));
-						if(Send != str_length(pFooter))
-							return SetState(STATE_ERROR, "error: sending footer");
-						m_LastActionTime = time_get();
-					}
-				}
-				return SetState(STATE_RECV, "sent request");
-			}
-			else
-			{
-				int Send = net_tcp_send(m_Socket, m_pRequestCur, min(1024, m_pRequestEnd-m_pRequestCur));
-				if(Send < 0)
-					return SetState(STATE_ERROR, "error: sending data");
-				m_LastActionTime = time_get();
-				m_pRequestCur += Send;
-				return 0;
-			}*/
 			char aData[1024] = {0};
 			int Bytes = m_pRequest->GetData(aData, sizeof(aData));
 			if(Bytes > 0)

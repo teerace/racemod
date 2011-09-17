@@ -23,8 +23,13 @@ class CRequest : public IHttpBase
 	char *m_pBody;
 	int m_BodySize;
 
+	char m_aUploadHeader[256];
+	char m_aUploadFooter[256];
+
 	char *m_pCur;
 	char *m_pEnd;
+
+	int64 m_StartTime;
 
 	void GenerateHeader();
 
@@ -43,8 +48,12 @@ public:
 
 	bool Finish();
 	bool SetBody(const char *pData, int Size, const char *pContentType = "application/json");
+	void SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName);
 	int GetData(char *pBuf, int MaxSize);
 	void MoveCursor(int Bytes);
+
+	void SetStartTime(int64 StartTime) { m_StartTime = StartTime; }
+	int64 StartTime() { return m_StartTime; }
 };
 
 #endif

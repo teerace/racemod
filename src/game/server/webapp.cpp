@@ -235,11 +235,9 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_MAP_LIST && Json && !Error)
 	{
-		bool DoCrcCheck = !GameServer()->CrcCheck();
 		char aFilename[256];
 		const char *pPath = "maps/teerace/%s.map";
-		
-		GameServer()->CheckedCrc();
+		bool Change = false;
 		
 		for(unsigned int i = 0; i < JsonData.size(); i++)
 		{
@@ -252,44 +250,33 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 				Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
 				for(unsigned int j = 0; j < Checkpoint.size(); j++)
 					aCheckpointTimes[j] = str_tofloat(Checkpoint[j].asCString());
-				
 				GameServer()->Score()->GetRecord()->Set(Time, aCheckpointTimes);
-				m_CurrentMap.m_ID = Map["id"].asInt();
-				m_CurrentMap.m_RunCount = Map["run_count"].asInt();
-				str_copy(m_CurrentMap.m_aCrc, Map["crc"].asCString(), sizeof(m_CurrentMap.m_aCrc));
-				str_copy(m_CurrentMap.m_aURL, Map["get_download_url"].asCString(), sizeof(m_CurrentMap.m_aURL));
-				str_copy(m_CurrentMap.m_aAuthor, Map["author"].asCString(), sizeof(m_CurrentMap.m_aAuthor));
-				continue;
 			}
 			
-			array<std::string>::range r = find_linear(m_lMapList.all(), Map["name"].asString());
-			if(r.empty())
+			CMapInfo Info;
+			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
+			array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
+			bool WrongCrc = str_comp(r.front().m_aCrc, Map["crc"].asCString()) != 0;
+			if(r.empty() || WrongCrc)
 			{
 				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
 				Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
+				if(WrongCrc)
+					m_lMapList.remove_fast(r.front());
 			}
-			else if(DoCrcCheck) // map found... check crc
+			else if(r.front().m_ID == -1)
 			{
-				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-				CDataFileReader DataFile;
-				if(!DataFile.Open(m_pServer->Storage(), aFilename, IStorage::TYPE_SAVE))
-				{
-					str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-					Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
-				}
-				else
-				{
-					char aCrc[16];
-					str_format(aCrc, sizeof(aCrc), "%x", DataFile.Crc());
-					if(str_comp(aCrc, Map["crc"].asCString()))
-					{
-						str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-						Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
-					}
-					DataFile.Close();
-				}
+				r.front().m_ID = Map["id"].asInt();
+				r.front().m_RunCount = Map["run_count"].asInt();
+				str_copy(r.front().m_aURL, Map["get_download_url"].asCString(), sizeof(r.front().m_aURL));
+				str_copy(r.front().m_aAuthor, Map["author"].asCString(), sizeof(r.front().m_aAuthor));
+				dbg_msg("webapp", "added map info: %s (%d)", r.front().m_aName, r.front().m_ID);
+				Change = true;
 			}
 		}
+
+		if(Change)
+			OnInit();
 	}
 	else if(Type == WEB_DOWNLOAD_MAP)
 	{
@@ -299,10 +286,21 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 
 		if(!Error)
 		{
-			m_lMapList.add(aMap);
-			dbg_msg("webapp", "added map: %s", aMap);
-			if(str_comp(pMap, g_Config.m_SvMap) == 0)
-				Server()->ReloadMap();
+			CDataFileReader DataFile;
+			if(DataFile.Open(m_pServer->Storage(), pData->GetPath(), IStorage::TYPE_SAVE))
+			{
+				CMapInfo Info;
+				char aCrc[16];
+				str_format(Info.m_aCrc, sizeof(Info.m_aCrc), "%x", DataFile.Crc());
+				DataFile.Close();
+	
+				str_copy(Info.m_aName, aMap, sizeof(Info.m_aName));
+				m_lMapList.add(Info);
+
+				dbg_msg("webapp", "added map: %s", Info.m_aName);
+				if(str_comp(Info.m_aName, g_Config.m_SvMap) == 0)
+					Server()->ReloadMap();
+			}
 		}
 		else
 		{
@@ -318,16 +316,13 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			char aFilename[256];
 			char aURL[128];
 
-			// TODO: upload
-			// demo
-			/*str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+			str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			Upload(aFilename, aURL, WEB_UPLOAD_DEMO, "demo_file", 0, time_get()+time_freq()*2);*/
+			Upload(aFilename, aURL, "demo_file", WEB_UPLOAD_DEMO, 0, time_get()+time_freq()*2);
 
-			// ghost
-			/*str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+			str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			Upload(aFilename, aURL, WEB_UPLOAD_GHOST, "ghost_file");*/
+			Upload(aFilename, aURL, "ghost_file", WEB_UPLOAD_GHOST);
 		}
 	}
 	else if(Type == WEB_UPLOAD_DEMO || Type == WEB_UPLOAD_GHOST)
@@ -346,12 +341,33 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 	int Length = str_length(pName);
 	if(IsDir || Length < 4 || str_comp(pName+Length-4, ".map") != 0)
 		return 0;
+
+	CMapInfo Info;
+	char aFile[256];
+	str_format(aFile, sizeof(aFile), "maps/teerace/%s", pName);
+	CDataFileReader DataFile;
+	if(!DataFile.Open(pWebapp->m_pServer->Storage(), aFile, IStorage::TYPE_SAVE))
+		return 0;
+	char aCrc[16];
+	str_format(Info.m_aCrc, sizeof(Info.m_aCrc), "%x", DataFile.Crc());
+	DataFile.Close();
 	
-	char aBuf[256];
-	str_copy(aBuf, pName, min((int)sizeof(aBuf),Length-3));
-	pWebapp->m_lMapList.add(aBuf);
-	
+	str_copy(Info.m_aName, pName, min((int)sizeof(Info.m_aName),Length-3));
+	dbg_msg("", "added %s %s", Info.m_aName, Info.m_aCrc);
+	pWebapp->m_lMapList.add(Info);
 	return 0;
+}
+
+void CServerWebapp::OnInit()
+{
+	m_CurrentMap.m_ID = -1;
+	str_copy(m_CurrentMap.m_aName, g_Config.m_SvMap, sizeof(m_CurrentMap.m_aName));
+	array<CMapInfo>::range r = find_linear(m_lMapList.all(), m_CurrentMap);
+	if(!r.empty())
+	{
+		m_CurrentMap = r.front();
+		dbg_msg("webapp", "current map: %s (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
+	}
 }
 
 void CServerWebapp::LoadMaps()

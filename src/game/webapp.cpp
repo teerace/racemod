@@ -71,13 +71,14 @@ bool IWebapp::Download(const char *pFilename, const char *pURI, int Type, class 
 	return Send(pRequest, pResponse, Type, pUserData);
 }
 
-bool IWebapp::Upload(const char *pFilename, const char *pURI, int Type, class CWebData *pUserData)
+bool IWebapp::Upload(const char *pFilename, const char *pURI, const char *pUploadName, int Type, class CWebData *pUserData, int64 StartTime)
 {
 	IOHANDLE File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_SAVE);
 	if(!File)
 		return false;
 	CRequest *pRequest = CreateRequest(pURI, CRequest::HTTP_POST);
-	pRequest->SetFile(File, pFilename);
+	pRequest->SetFile(File, pFilename, pUploadName);
+	pRequest->SetStartTime(StartTime);
 	return SendRequest(pRequest, Type, pUserData);
 }
 

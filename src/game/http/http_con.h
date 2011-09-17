@@ -22,7 +22,6 @@ class CHttpConnection
 	int m_State;
 	int m_Type;
 
-	int64 m_StartTime;
 	int64 m_LastActionTime;
 
 	class CResponse *m_pResponse;
@@ -46,7 +45,6 @@ public:
 	CResponse *Response() { return m_pResponse; }
 	CWebData *UserData() { return m_pUserData; }
 
-	void SetStartTime(int64 StartTime) { m_StartTime = StartTime; }
 	void SetRequest(CRequest *pRequest) { m_pRequest = pRequest; }
 	void SetResponse(CResponse *pResponse) { m_pResponse = pResponse; }
 	void SetUserData(CWebData *pUserData) { m_pUserData = pUserData; }
