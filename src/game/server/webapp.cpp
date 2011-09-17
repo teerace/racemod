@@ -259,7 +259,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			{
 				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
 				Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
-				if(str_comp(r.front().m_aCrc, Map["crc"].asCString()) != 0)
+				if(!r.empty())
 					m_lMapList.remove_fast(r.front());
 			}
 			else if(r.front().m_ID == -1)
