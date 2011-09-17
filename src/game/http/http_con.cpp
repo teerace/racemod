@@ -1,5 +1,6 @@
 /* Webapp class by Sushi and Redix */
 
+#include <game/data.h>
 #include "http_con.h"
 #include "request.h"
 #include "response.h"

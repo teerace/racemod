@@ -858,7 +858,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						pUserData->m_ClientID = ClientID;
 						pUserData->m_UserID = UserID;
 
-						char aBuf[512];
 						if(UserID)
 						{
 							char aURI[128];

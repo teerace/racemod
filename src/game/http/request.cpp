@@ -150,7 +150,7 @@ int CRequest::GetData(char *pBuf, int MaxSize)
 
 	if(m_State != STATE_FILE)
 	{
-		Size = min(m_pEnd-m_pCur, MaxSize);
+		Size = min((int)(m_pEnd-m_pCur), MaxSize);
 		mem_copy(pBuf, m_pCur, Size);
 		m_pCur += Size;
 	}

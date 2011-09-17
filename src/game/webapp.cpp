@@ -4,7 +4,6 @@
 #include <engine/shared/config.h>
 #include <base/math.h>
 
-#include "http/http_con.h"
 #include "http/request.h"
 #include "http/response.h"
 #include "webapp.h"

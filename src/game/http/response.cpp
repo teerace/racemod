@@ -29,8 +29,8 @@ int CResponse::ParseHeader()
 		if(!pVal) break;
 
 		CHttpField Tmp;
-		str_copy(Tmp.m_aKey, pData, min((int)sizeof(Tmp.m_aKey), pKey-pData+1));
-		str_copy(Tmp.m_aValue, pKey+2, min((int)sizeof(Tmp.m_aValue), pVal-pKey-1));
+		str_copy(Tmp.m_aKey, pData, min((int)sizeof(Tmp.m_aKey), (int)(pKey-pData+1)));
+		str_copy(Tmp.m_aValue, pKey+2, min((int)sizeof(Tmp.m_aValue), (int)(pVal-pKey-1)));
 		AddField(Tmp);
 		pData = pVal+2;
 	}

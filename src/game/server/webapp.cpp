@@ -7,7 +7,6 @@
 #include <engine/external/json/reader.h>
 #include <engine/storage.h>
 
-#include <game/http/http_con.h>
 #include <game/http/response.h>
 
 #include "score.h"
@@ -290,7 +289,6 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			if(DataFile.Open(m_pServer->Storage(), pData->GetPath(), IStorage::TYPE_SAVE))
 			{
 				CMapInfo Info;
-				char aCrc[16];
 				str_format(Info.m_aCrc, sizeof(Info.m_aCrc), "%x", DataFile.Crc());
 				DataFile.Close();
 	
@@ -348,7 +346,6 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 	CDataFileReader DataFile;
 	if(!DataFile.Open(pWebapp->m_pServer->Storage(), aFile, IStorage::TYPE_SAVE))
 		return 0;
-	char aCrc[16];
 	str_format(Info.m_aCrc, sizeof(Info.m_aCrc), "%x", DataFile.Crc());
 	DataFile.Close();
 	
