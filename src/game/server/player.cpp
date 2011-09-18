@@ -69,7 +69,7 @@ void CPlayer::Tick()
 		m_RequestedBestTime = true;
 		
 		int UserID = Server()->GetUserID(m_ClientID);
-		if(UserID > 0)
+		if(GameServer()->Webapp() && UserID > 0)
 		{
 			CWebUserRankData *pUserData = new CWebUserRankData();
 			str_copy(pUserData->m_aName, Server()->GetUserName(m_ClientID), sizeof(pUserData->m_aName));

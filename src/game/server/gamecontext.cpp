@@ -680,7 +680,7 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 #if defined(CONF_TEERACE)
 	// add job to update play time
 	int UserID = Server()->GetUserID(ClientID);
-	if(UserID > 0)
+	if(m_pWebapp && UserID > 0)
 	{
 		// calculate time in seconds
 		Json::Value Post;
@@ -796,22 +796,25 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowTop5(pPlayer->GetCID());
 				
 #if defined(CONF_TEERACE)
-				if(m_pWebapp->CurrentMap()->m_ID > -1)
+				if(m_pWebapp)
 				{
-					if(!m_pWebapp->DefaultScoring())
+					if(m_pWebapp->CurrentMap()->m_ID > -1)
 					{
-						CWebUserTopData *pUserData = new CWebUserTopData();
-						pUserData->m_StartRank = StartRank;
-						pUserData->m_ClientID = ClientID;
+						if(!m_pWebapp->DefaultScoring())
+						{
+							CWebUserTopData *pUserData = new CWebUserTopData();
+							pUserData->m_StartRank = StartRank;
+							pUserData->m_ClientID = ClientID;
 
-						char aURI[128];
-						str_format(aURI, sizeof(aURI), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, StartRank);
-						CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
-						m_pWebapp->SendRequest(pRequest, WEB_USER_TOP, pUserData);
+							char aURI[128];
+							str_format(aURI, sizeof(aURI), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, StartRank);
+							CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
+							m_pWebapp->SendRequest(pRequest, WEB_USER_TOP, pUserData);
+						}
 					}
+					else
+						SendChatTarget(ClientID, "This map is not a teerace map.");
 				}
-				else
-					SendChatTarget(ClientID, "This map is not a teerace map.");
 #endif
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/rank", 5))
@@ -823,61 +826,64 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowRank(pPlayer->GetCID(), aName, true);
 					
 #if defined(CONF_TEERACE)
-					if(m_pWebapp->CurrentMap()->m_ID > -1)
+					if(m_pWebapp)
 					{
-						int UserID = 0;
-						// search for players on the server
-						for(int i = 0; i < MAX_CLIENTS; i++)
+						if(m_pWebapp->CurrentMap()->m_ID > -1)
 						{
-							// search for 100% match
-							if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (!str_comp(Server()->ClientName(i), aName) || !str_comp(Server()->GetUserName(i), aName)))
-							{
-								UserID = Server()->GetUserID(i);
-								str_copy(aName, Server()->GetUserName(i), sizeof(aName));
-								break;
-							}
-						}
-						
-						if(!UserID)
-						{
+							int UserID = 0;
 							// search for players on the server
 							for(int i = 0; i < MAX_CLIENTS; i++)
 							{
-								// search for part match
-								if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (str_find_nocase(Server()->ClientName(i), aName) || str_find_nocase(Server()->GetUserName(i), aName)))
+								// search for 100% match
+								if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (!str_comp(Server()->ClientName(i), aName) || !str_comp(Server()->GetUserName(i), aName)))
 								{
 									UserID = Server()->GetUserID(i);
 									str_copy(aName, Server()->GetUserName(i), sizeof(aName));
 									break;
 								}
 							}
-						}
 						
-						CWebUserRankData *pUserData = new CWebUserRankData();
-						str_copy(pUserData->m_aName, aName, sizeof(pUserData->m_aName));
-						pUserData->m_ClientID = ClientID;
-						pUserData->m_UserID = UserID;
+							if(!UserID)
+							{
+								// search for players on the server
+								for(int i = 0; i < MAX_CLIENTS; i++)
+								{
+									// search for part match
+									if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (str_find_nocase(Server()->ClientName(i), aName) || str_find_nocase(Server()->GetUserName(i), aName)))
+									{
+										UserID = Server()->GetUserID(i);
+										str_copy(aName, Server()->GetUserName(i), sizeof(aName));
+										break;
+									}
+								}
+							}
+						
+							CWebUserRankData *pUserData = new CWebUserRankData();
+							str_copy(pUserData->m_aName, aName, sizeof(pUserData->m_aName));
+							pUserData->m_ClientID = ClientID;
+							pUserData->m_UserID = UserID;
 
-						if(UserID)
-						{
-							char aURI[128];
-							str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
-							CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
-							m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
+							if(UserID)
+							{
+								char aURI[128];
+								str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
+								CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
+								m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
+							}
+							else
+							{
+								Json::Value Data;
+								Json::FastWriter Writer;
+								Data["username"] = aName;
+								std::string Json = Writer.write(Data);
+								CRequest *pRequest = m_pWebapp->CreateRequest("users/get_by_name/", CRequest::HTTP_POST);
+								pRequest->SetBody(Json.c_str(), Json.length());
+								m_pWebapp->SendRequest(pRequest, WEB_USER_FIND, pUserData);
+							}
 						}
 						else
-						{
-							Json::Value Data;
-							Json::FastWriter Writer;
-							Data["username"] = aName;
-							std::string Json = Writer.write(Data);
-							CRequest *pRequest = m_pWebapp->CreateRequest("users/get_by_name/", CRequest::HTTP_POST);
-							pRequest->SetBody(Json.c_str(), Json.length());
-							m_pWebapp->SendRequest(pRequest, WEB_USER_FIND, pUserData);
-						}
+							SendChatTarget(ClientID, "This map is not a teerace map.");
 					}
-					else
-						SendChatTarget(ClientID, "This map is not a teerace map.");
 #endif
 				}
 				else
@@ -885,30 +891,33 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
 					
 #if defined(CONF_TEERACE)
-					if(m_pWebapp->CurrentMap()->m_ID > -1)
+					if(m_pWebapp)
 					{
-						if(Server()->GetUserID(ClientID) > 0)
+						if(m_pWebapp->CurrentMap()->m_ID > -1)
 						{
-							CWebUserRankData *pUserData = new CWebUserRankData();
-							str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
-							pUserData->m_ClientID = ClientID;
-							pUserData->m_UserID = Server()->GetUserID(ClientID);
+							if(Server()->GetUserID(ClientID) > 0)
+							{
+								CWebUserRankData *pUserData = new CWebUserRankData();
+								str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
+								pUserData->m_ClientID = ClientID;
+								pUserData->m_UserID = Server()->GetUserID(ClientID);
 
-							char aURI[128];
-							str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
-							CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
-							m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
+								char aURI[128];
+								str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
+								CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
+								m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
+							}
+							else
+								SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
 						}
 						else
-							SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
+							SendChatTarget(ClientID, "This map is not a teerace map.");
 					}
-					else
-						SendChatTarget(ClientID, "This map is not a teerace map.");
 #endif
 				}
 			}
 #if defined(CONF_TEERACE)
-			else if(!str_comp(pMsg->m_pMessage, "/mapinfo"))
+			else if(!str_comp(pMsg->m_pMessage, "/mapinfo") && m_pWebapp)
 			{
 				if(m_pWebapp->CurrentMap()->m_ID < 0)
 				{
@@ -1316,7 +1325,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		m_pController->OnPlayerInfoChange(pPlayer);
 
 #if defined(CONF_TEERACE)
-		if(Server()->GetUserID(ClientID) > 0)
+		if(m_pWebapp && Server()->GetUserID(ClientID) > 0)
 		{
 			Json::Value Userdata;
 			Json::FastWriter Writer;

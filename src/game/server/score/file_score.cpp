@@ -21,9 +21,9 @@ CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Time, const char
 CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_pServer(pGameServer->Server())
 {
 #if defined(CONF_TEERACE)
-	SetActive(g_Config.m_WaDefaultScoring);
+	SetActive(!(g_Config.m_WaUseWebapp && !g_Config.m_WaDefaultScoring));
 	
-	if(!g_Config.m_WaDefaultScoring)
+	if(!Active())
 		return;
 #endif
 
