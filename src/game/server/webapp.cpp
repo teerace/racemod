@@ -19,7 +19,8 @@ CServerWebapp::CServerWebapp(CGameContext *pGameServer)
   m_pServer(pGameServer->Server()),
   m_DefaultScoring(g_Config.m_WaDefaultScoring)
 {
-	LoadMaps();
+	// load maps
+	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 }
 
 void CServerWebapp::RegisterFields(CRequest *pRequest, bool Api)
@@ -31,14 +32,14 @@ void CServerWebapp::RegisterFields(CRequest *pRequest, bool Api)
 void CServerWebapp::OnResponse(CHttpConnection *pCon)
 {
 	int Type = pCon->Type();
-	CResponse *pData = pCon->Response();
-	bool Error = pCon->Error() || pCon->Response()->StatusCode() != 200;
+	CResponse *pResponse = pCon->Response();
+	bool Error = pCon->Error() || pResponse->StatusCode() != 200;
 
 	Json::Value JsonData;
 	Json::Reader Reader;
 	bool Json = false;
-	if(!pCon->Error() && !pData->IsFile())
-		Json = Reader.parse(pData->GetBody(), pData->GetBody()+pData->Size(), JsonData);
+	if(!pCon->Error() && !pResponse->IsFile())
+		Json = Reader.parse(pResponse->GetBody(), pResponse->GetBody()+pResponse->Size(), JsonData);
 
 	// TODO: add event listener (server and client)
 	if(Type == WEB_USER_AUTH)
@@ -56,7 +57,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			int SendRconCmds = pUser->m_SendRconCmds;
 			int UserID = 0;
 			
-			if(str_comp(pData->GetBody(), "false") != 0 && Json)
+			if(str_comp(pResponse->GetBody(), "false") != 0 && Json)
 				UserID = JsonData["id"].asInt();
 			
 			if(UserID > 0)
@@ -124,7 +125,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		pUser->m_GlobalRank = 0;
 
 		if(!Error)
-			pUser->m_GlobalRank = str_toint(pData->GetBody());
+			pUser->m_GlobalRank = str_toint(pResponse->GetBody());
 
 		if(pUser->m_GlobalRank)
 		{
@@ -224,7 +225,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_PING_PING)
 	{
-		bool Online = !Error && str_comp(pData->GetBody(), "\"PONG\"") == 0;
+		bool Online = !Error && str_comp(pResponse->GetBody(), "\"PONG\"") == 0;
 		dbg_msg("webapp", "webapp is%s online", Online ? "" : " not");
 		if(Online)
 		{
@@ -241,8 +242,12 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		for(unsigned int i = 0; i < JsonData.size(); i++)
 		{
 			Json::Value Map = JsonData[i];
+
+			CMapInfo Info;
+			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
+			sscanf(Map["crc"].asCString(), "%08x", &Info.m_Crc);
 			
-			if(!DefaultScoring() && Map["get_best_score"].type() && !str_comp(Map["name"].asCString(), g_Config.m_SvMap))
+			if(!DefaultScoring() && Map["get_best_score"].type() && !str_comp(Info.m_aName, g_Config.m_SvMap))
 			{
 				float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
 				float aCheckpointTimes[25] = {0.0f};
@@ -251,11 +256,9 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 					aCheckpointTimes[j] = str_tofloat(Checkpoint[j].asCString());
 				GameServer()->Score()->GetRecord()->Set(Time, aCheckpointTimes);
 			}
-			
-			CMapInfo Info;
-			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
+
 			array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
-			if(r.empty() || str_comp(r.front().m_aCrc, Map["crc"].asCString()) != 0)
+			if(r.empty() || r.front().m_Crc != Info.m_Crc)
 			{
 				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
 				Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
@@ -278,31 +281,16 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_DOWNLOAD_MAP)
 	{
-		const char *pMap = pData->GetFilename();
-		char aMap[256];
-		str_copy(aMap, pMap, min((int)sizeof(aMap),str_length(pMap)-3));
-
 		if(!Error)
 		{
-			CDataFileReader DataFile;
-			if(DataFile.Open(m_pServer->Storage(), pData->GetPath(), IStorage::TYPE_SAVE))
-			{
-				CMapInfo Info;
-				str_format(Info.m_aCrc, sizeof(Info.m_aCrc), "%x", DataFile.Crc());
-				DataFile.Close();
-	
-				str_copy(Info.m_aName, aMap, sizeof(Info.m_aName));
-				m_lMapList.add(Info);
-
-				dbg_msg("webapp", "added map: %s", Info.m_aName);
-				if(str_comp(Info.m_aName, g_Config.m_SvMap) == 0)
-					Server()->ReloadMap();
-			}
+			CMapInfo *pInfo = AddMap(pResponse->GetFilename());
+			if(pInfo && str_comp(pInfo->m_aName, g_Config.m_SvMap) == 0)
+				Server()->ReloadMap();
 		}
 		else
 		{
-			Storage()->RemoveFile(pData->GetPath(), IStorage::TYPE_SAVE);
-			dbg_msg("webapp", "could not download map: %s", aMap);
+			Storage()->RemoveFile(pResponse->GetPath(), IStorage::TYPE_SAVE);
+			dbg_msg("webapp", "could not download map: %s", pResponse->GetFilename());
 		}
 	}
 	else if(Type == WEB_RUN_POST)
@@ -336,22 +324,26 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 {
 	CServerWebapp *pWebapp = (CServerWebapp*)pUser;
 	int Length = str_length(pName);
-	if(IsDir || Length < 4 || str_comp(pName+Length-4, ".map") != 0)
+	if(!IsDir && Length >= 4 && str_comp(pName+Length-4, ".map") == 0)
+		pWebapp->AddMap(pName);
+	return 0;
+}
+
+CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename)
+{
+	char aFile[256];
+	str_format(aFile, sizeof(aFile), "maps/teerace/%s", pFilename);
+	CDataFileReader DataFile;
+	if(!DataFile.Open(m_pServer->Storage(), aFile, IStorage::TYPE_SAVE))
 		return 0;
 
 	CMapInfo Info;
-	char aFile[256];
-	str_format(aFile, sizeof(aFile), "maps/teerace/%s", pName);
-	CDataFileReader DataFile;
-	if(!DataFile.Open(pWebapp->m_pServer->Storage(), aFile, IStorage::TYPE_SAVE))
-		return 0;
-	str_format(Info.m_aCrc, sizeof(Info.m_aCrc), "%x", DataFile.Crc());
+	Info.m_Crc = DataFile.Crc();
 	DataFile.Close();
-	
-	str_copy(Info.m_aName, pName, min((int)sizeof(Info.m_aName),Length-3));
-	dbg_msg("", "added %s %s", Info.m_aName, Info.m_aCrc);
-	pWebapp->m_lMapList.add(Info);
-	return 0;
+	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName),str_length(pFilename)-3));
+	dbg_msg("", "added map: %s (%08x)", Info.m_aName, Info.m_Crc);
+	int Num = m_lMapList.add(Info);
+	return &m_lMapList[Num];
 }
 
 void CServerWebapp::OnInit()
@@ -364,12 +356,6 @@ void CServerWebapp::OnInit()
 		m_CurrentMap = r.front();
 		dbg_msg("webapp", "current map: %s (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
 	}
-}
-
-void CServerWebapp::LoadMaps()
-{
-	m_lMapList.clear();
-	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 }
 
 #endif

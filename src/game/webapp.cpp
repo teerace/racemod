@@ -86,8 +86,7 @@ void IWebapp::Update()
 	int Max = 3;
 	for(int i = 0; i < min(m_Connections.size(), Max); i++)
 	{
-		int Result = m_Connections[i]->Update();
-		if(Result != 0)
+		if(m_Connections[i]->Update() != 0)
 		{
 			m_Connections[i]->CloseFiles();
 			OnResponse(m_Connections[i]);

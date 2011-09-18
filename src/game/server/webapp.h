@@ -17,7 +17,7 @@ class CServerWebapp : public IWebapp
 		int m_RunCount;
 		int m_ID;
 		char m_aName[128];
-		char m_aCrc[16];
+		unsigned m_Crc;
 		char m_aURL[128];
 		char m_aAuthor[32];
 
@@ -35,7 +35,7 @@ class CServerWebapp : public IWebapp
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
 	
-	void LoadMaps();
+	CMapInfo *AddMap(const char *pFilename);
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 
 	void RegisterFields(class CRequest *pRequest, bool Api);

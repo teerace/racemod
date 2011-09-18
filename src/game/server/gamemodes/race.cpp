@@ -256,7 +256,8 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 
 			char aBuf[1024];
 			Run["map_id"] = GameServer()->Webapp()->CurrentMap()->m_ID;
-			Run["map_crc"] = GameServer()->Webapp()->CurrentMap()->m_aCrc;
+			str_format(aBuf, sizeof(aBuf), "%08x", GameServer()->Webapp()->CurrentMap()->m_Crc);
+			Run["map_crc"] = aBuf;
 			Run["user_id"] = Server()->GetUserID(ID);
 			// TODO: take this out after 0.6 release
 			str_copy(aBuf, Server()->ClientName(ID), MAX_NAME_LENGTH);
