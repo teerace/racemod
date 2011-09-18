@@ -456,11 +456,17 @@ void CGameContext::OnTick()
 					{
 						char aBuf[16];
 						str_format(aBuf, sizeof(aBuf), "%d", Server()->GetUserID(i));
-						Data["users"][aBuf] = Server()->ClientName(i);
+						char aName[MAX_NAME_LENGTH];
+						str_copy(aName, Server()->ClientName(i), sizeof(aName));
+						str_sanitize_strong(aName);
+						Data["users"][aBuf] = aName;
 					}
 					else
 					{
-						Data["anonymous"][Num] = Server()->ClientName(i);
+						char aName[MAX_NAME_LENGTH];
+						str_copy(aName, Server()->ClientName(i), sizeof(aName));
+						str_sanitize_strong(aName);
+						Data["anonymous"][Num] = aName;
 						Num++;
 					}
 				}

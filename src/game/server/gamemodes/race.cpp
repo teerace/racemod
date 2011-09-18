@@ -259,12 +259,15 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 			str_format(aBuf, sizeof(aBuf), "%08x", GameServer()->Webapp()->CurrentMap()->m_Crc);
 			Run["map_crc"] = aBuf;
 			Run["user_id"] = Server()->GetUserID(ID);
-			// TODO: take this out after 0.6 release
 			str_copy(aBuf, Server()->ClientName(ID), MAX_NAME_LENGTH);
 			str_sanitize_strong(aBuf);
 			Run["nickname"] = aBuf;
 			if(Server()->ClientClan(ID)[0])
-				Run["clan"] = Server()->ClientClan(ID);
+			{
+				str_copy(aBuf, Server()->ClientClan(ID), MAX_CLAN_LENGTH);
+				str_sanitize_strong(aBuf);
+				Run["clan"] = aBuf;
+			}
 			str_format(aBuf, sizeof(aBuf), "%.3f", FinishTime);
 			Run["time"] = aBuf;
 			float *pCpTime = p->m_aCpCurrent;
