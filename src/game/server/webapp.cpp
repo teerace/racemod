@@ -1,6 +1,8 @@
 /* Webapp class by Sushi and Redix */
 #if defined(CONF_TEERACE)
 
+#include <stdio.h>
+
 #include <base/tl/algorithm.h>
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
