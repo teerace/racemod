@@ -275,7 +275,7 @@ function build(settings)
 			game_shared, game_server, zlib, server_link_other, json, game_http)
 	else
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, server_link_other)
+			game_shared, game_server, zlib, server_link_other, game_http)
 	end
 
 	serverlaunch = {}
