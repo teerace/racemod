@@ -7,7 +7,6 @@
 #include <game/server/score.h>
 #if defined(CONF_TEERACE)
 #include <game/server/webapp.h>
-#include <engine/external/json/writer.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -210,12 +209,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	bool NewRecord = pBest->Check(FinishTime, p->m_aCpCurrent);
 
 	// save the score
-	if(str_comp_num(Server()->ClientName(ID), "nameless tee", 12) != 0 && NewRecord)
-	{
-		GameServer()->Score()->SaveScore(ID);
-		if(GameServer()->Score()->CheckRecord(ID) && g_Config.m_SvShowTimes)
-			GameServer()->SendRecord(-1);
-	}
+	GameServer()->Score()->SaveScore(ID, FinishTime, p->m_aCpCurrent, NewRecord);
+	if(NewRecord && GameServer()->Score()->CheckRecord(ID) && g_Config.m_SvShowTimes)
+		GameServer()->SendRecord(-1);
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %6.3f second(s)", Server()->ClientName(ID), (int)FinishTime/60, fmod(FinishTime,60));
@@ -232,69 +228,10 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 		else
 			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 	}
-	
-#if defined(CONF_TEERACE)	
-	// post to webapp
-	if(GameServer()->Webapp())
-	{
-		CWebRunData *pUserData = new CWebRunData();
-		pUserData->m_UserID = Server()->GetUserID(ID);
-		pUserData->m_ClientID = ID;
-		pUserData->m_Tick = -1;
 
-		if(NewRecord && Server()->GetUserID(ID) > 0)
-		{
-			// set demo and ghost so that it is saved
-			Server()->SaveGhostDemo(ID);
-			pUserData->m_Tick = Server()->Tick();
-		}
-
-		if(GameServer()->Webapp()->CurrentMap()->m_ID > -1)
-		{
-			Json::Value Run;
-			Json::FastWriter Writer;
-
-			char aBuf[1024];
-			Run["map_id"] = GameServer()->Webapp()->CurrentMap()->m_ID;
-			str_format(aBuf, sizeof(aBuf), "%08x", GameServer()->Webapp()->CurrentMap()->m_Crc);
-			Run["map_crc"] = aBuf;
-			Run["user_id"] = Server()->GetUserID(ID);
-			str_copy(aBuf, Server()->ClientName(ID), MAX_NAME_LENGTH);
-			str_sanitize_strong(aBuf);
-			Run["nickname"] = aBuf;
-			if(Server()->ClientClan(ID)[0])
-			{
-				str_copy(aBuf, Server()->ClientClan(ID), MAX_CLAN_LENGTH);
-				str_sanitize_strong(aBuf);
-				Run["clan"] = aBuf;
-			}
-			str_format(aBuf, sizeof(aBuf), "%.3f", FinishTime);
-			Run["time"] = aBuf;
-			float *pCpTime = p->m_aCpCurrent;
-			str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
-				pCpTime[0], pCpTime[1], pCpTime[2], pCpTime[3], pCpTime[4], pCpTime[5], pCpTime[6], pCpTime[7], pCpTime[8], pCpTime[9],
-				pCpTime[10], pCpTime[11], pCpTime[12], pCpTime[13], pCpTime[14], pCpTime[15], pCpTime[16], pCpTime[17], pCpTime[18], pCpTime[19],
-				pCpTime[20], pCpTime[21], pCpTime[22], pCpTime[23], pCpTime[24], pCpTime[25]);
-			Run["checkpoints"] = aBuf;
-
-			std::string Json = Writer.write(Run);
-
-			CRequest *pRequest = GameServer()->Webapp()->CreateRequest("runs/new/", CRequest::HTTP_POST);
-			pRequest->SetBody(Json.c_str(), Json.length());
-			GameServer()->Webapp()->SendRequest(pRequest, WEB_RUN_POST, pUserData);
-		}
-		
-		// higher run count
-		GameServer()->Webapp()->CurrentMap()->m_RunCount++;
-	}
-	
-	// set stop record tick
+#if defined(CONF_TEERACE)
 	if(Server()->IsRecording(ID))
 		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
-	
-	// stop ghost record
-	if(Server()->IsGhostRecording(ID))
-		Server()->StopGhostRecord(ID, FinishTime);
 #endif
 
 	return true;

@@ -4,10 +4,6 @@
 #include <stdio.h>
 #include <engine/shared/config.h>
 
-#if defined(CONF_TEERACE)
-#include "webapp.h"
-#endif
-
 #include "player.h"
 
 
@@ -35,12 +31,6 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 		
 	m_ResetPickups = true;
 	m_IsUsingRaceClient = false;
-
-#if defined(CONF_TEERACE)
-	m_GlobalRank = 0;
-	m_MapRank = 0;
-	m_RequestedBestTime = false;
-#endif
 }
 
 CPlayer::~CPlayer()
@@ -62,27 +52,6 @@ void CPlayer::Tick()
 #if defined(CONF_TEERACE)
 	// higher playticks
 	Server()->HigherPlayTicks(m_ClientID);
-
-	// getting best time if nessesary
-	if(!m_RequestedBestTime)
-	{
-		m_RequestedBestTime = true;
-		
-		int UserID = Server()->GetUserID(m_ClientID);
-		if(GameServer()->Webapp() && UserID > 0)
-		{
-			CWebUserRankData *pUserData = new CWebUserRankData();
-			str_copy(pUserData->m_aName, Server()->GetUserName(m_ClientID), sizeof(pUserData->m_aName));
-			pUserData->m_ClientID = m_ClientID;
-			pUserData->m_UserID = UserID;
-			pUserData->m_PrintRank = 0;
-
-			char aURI[128];
-			str_format(aURI, sizeof(aURI), "users/rank/%d/", UserID);
-			CRequest *pRequest = GameServer()->Webapp()->CreateRequest(aURI, CRequest::HTTP_GET);
-			GameServer()->Webapp()->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
-		}
-	}
 #endif
 	
 	// do latency stuff

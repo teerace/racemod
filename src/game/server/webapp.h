@@ -28,9 +28,7 @@ class CServerWebapp : public IWebapp
 	class IServer *m_pServer;
 
 	array<CMapInfo> m_lMapList;
-
 	CMapInfo m_CurrentMap;
-	bool m_DefaultScoring;
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
@@ -46,7 +44,6 @@ public:
 	virtual ~CServerWebapp() { }
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
-	bool DefaultScoring() { return m_DefaultScoring; }
 	void OnInit();
 };
 

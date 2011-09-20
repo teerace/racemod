@@ -1,8 +1,7 @@
 #ifndef GAME_SERVER_INTERFACE_SCORE_H
 #define GAME_SERVER_INTERFACE_SCORE_H
 
-#include "entities/character.h"
-#include "gamecontext.h"
+#include <engine/shared/protocol.h>
 
 #define NUM_CHECKPOINTS 25
 
@@ -55,21 +54,12 @@ class IScore
 	CPlayerData m_aPlayerData[MAX_CLIENTS];
 	CPlayerData m_CurrentRecord;
 	
-#if defined(CONF_TEERACE)
-	bool m_Active;
-#endif
-	
 public:
 	IScore() { m_CurrentRecord.Reset(); }
 	virtual ~IScore() {}
 	
 	CPlayerData *PlayerData(int ID) { return &m_aPlayerData[ID]; }
 	CPlayerData *GetRecord() { return &m_CurrentRecord; }
-
-#if defined(CONF_TEERACE)
-	bool Active() { return m_Active; }
-	void SetActive(bool Active) { m_Active = Active; }
-#endif
 
 	bool CheckRecord(int ClientID)
 	{
@@ -80,10 +70,10 @@ public:
 	}
 	
 	virtual void LoadScore(int ClientID) = 0;
-	virtual void SaveScore(int ClientID) = 0;
+	virtual void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord) = 0;
 	
 	virtual void ShowTop5(int ClientID, int Debut=1) = 0;
-	virtual void ShowRank(int ClientID, const char* pName, bool Search=false) = 0;
+	virtual void ShowRank(int ClientID, const char *pName, bool Search=false) = 0;
 };
 
 #endif

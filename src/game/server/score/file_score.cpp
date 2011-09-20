@@ -1,11 +1,10 @@
 /* copyright (c) 2008 rajh and gregwar. Score stuff */
 
-#include <base/tl/sorted_array.h>
 #include <engine/shared/config.h>
 #include <sstream>
 #include <fstream>
-#include <string.h>
-#include "../gamemodes/race.h"
+
+#include "../gamecontext.h"
 #include "file_score.h"
 
 static LOCK gs_ScoreLock = 0;
@@ -20,13 +19,6 @@ CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Time, const char
 
 CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_pServer(pGameServer->Server())
 {
-#if defined(CONF_TEERACE)
-	SetActive(!(g_Config.m_WaUseWebapp && !g_Config.m_WaDefaultScoring));
-	
-	if(!Active())
-		return;
-#endif
-
 	if(gs_ScoreLock == 0)
 		gs_ScoreLock = lock_create();
 		
@@ -35,11 +27,6 @@ CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), 
 
 CFileScore::~CFileScore()
 {
-#if defined(CONF_TEERACE)
-	if(!Active())
-		return;
-#endif
-
 	lock_wait(gs_ScoreLock);
 	
 	// clear list
@@ -87,11 +74,6 @@ void CFileScore::SaveScoreThread(void *pUser)
 
 void CFileScore::Save()
 {
-#if defined(CONF_TEERACE)
-	if(!Active())
-		return;
-#endif
-
 	void *pSaveThread = thread_create(SaveScoreThread, this);
 	thread_detach(pSaveThread);
 }
@@ -191,11 +173,6 @@ CFileScore::CPlayerScore *CFileScore::SearchName(const char *pName, int *pPositi
 
 void CFileScore::LoadScore(int ClientID)
 {
-#if defined(CONF_TEERACE)
-	if(!Active())
-		return;
-#endif
-
 	char aIP[16];
 	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));
 	CPlayerScore *pPlayer = SearchScore(ClientID, 0, 0);
@@ -212,12 +189,10 @@ void CFileScore::LoadScore(int ClientID)
 		PlayerData(ClientID)->Set(pPlayer->m_Time, pPlayer->m_aCpTime);
 }
 
-void CFileScore::SaveScore(int ClientID)
+void CFileScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord)
 {
-#if defined(CONF_TEERACE)
-	if(!Active())
+	if(!NewRecord)
 		return;
-#endif
 
 	const char *pName = Server()->ClientName(ClientID);
 	char aIP[16];
@@ -243,11 +218,6 @@ void CFileScore::SaveScore(int ClientID)
 
 void CFileScore::ShowTop5(int ClientID, int Debut)
 {
-#if defined(CONF_TEERACE)
-	if(!Active())
-		return;
-#endif
-
 	char aBuf[512];
 	GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 	for(int i = 0; i < 5; i++)
@@ -262,13 +232,8 @@ void CFileScore::ShowTop5(int ClientID, int Debut)
 	GameServer()->SendChatTarget(ClientID, "------------------------------");
 }
 
-void CFileScore::ShowRank(int ClientID, const char* pName, bool Search)
+void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 {
-#if defined(CONF_TEERACE)
-	if(!Active())
-		return;
-#endif
-
 	CPlayerScore *pScore;
 	int Pos;
 	char aBuf[512];

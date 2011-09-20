@@ -11,15 +11,14 @@
 
 #include <game/http/response.h>
 
-#include "score.h"
+#include "score/wa_score.h"
 #include "gamecontext.h"
 #include "webapp.h"
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
 : IWebapp(pGameServer->Server()->Storage()),
   m_pGameServer(pGameServer),
-  m_pServer(pGameServer->Server()),
-  m_DefaultScoring(g_Config.m_WaDefaultScoring)
+  m_pServer(pGameServer->Server())
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
@@ -74,17 +73,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 				if(JsonData["is_staff"].asBool())
 					Server()->StaffAuth(ClientID, SendRconCmds);
 
-				GameServer()->m_apPlayers[ClientID]->m_RequestedBestTime = true;
-
-				CWebUserRankData *pUserData = new CWebUserRankData();
-				str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
-				pUserData->m_ClientID = ClientID;
-				pUserData->m_UserID = UserID;
-
-				char aURI[128];
-				str_format(aURI, sizeof(aURI), "users/rank/%d/", UserID);
-				CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
-				SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
+				((CWebappScore*)GameServer()->Score())->LoadScore(ClientID, true);
 			}
 			else
 			{
@@ -161,7 +150,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		if(!Error && Json)
 		{
 			MapRank = JsonData["position"].asInt();
-			if(MapRank && !DefaultScoring())
+			if(MapRank)
 			{
 				float Time = str_tofloat(JsonData["bestrun"]["time"].asCString());
 				float aCheckpointTimes[25] = {0.0f};
@@ -175,12 +164,8 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		if(GameServer()->m_apPlayers[pUser->m_ClientID])
 		{
 			bool Own = pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID);
-			if(Own && GlobalRank && MapRank && !DefaultScoring())
-			{
-				GameServer()->m_apPlayers[pUser->m_ClientID]->m_GlobalRank = GlobalRank;
-				GameServer()->m_apPlayers[pUser->m_ClientID]->m_MapRank = MapRank;
+			if(Own && GlobalRank && MapRank)
 				GameServer()->Score()->PlayerData(pUser->m_ClientID)->Set(Run.m_Time, Run.m_aCpTime);
-			}
 
 			if(pUser->m_PrintRank)
 			{
@@ -249,7 +234,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
 			sscanf(Map["crc"].asCString(), "%08x", &Info.m_Crc);
 			
-			if(!DefaultScoring() && Map["get_best_score"].type() && !str_comp(Info.m_aName, g_Config.m_SvMap))
+			if(Map["get_best_score"].type() && !str_comp(Info.m_aName, g_Config.m_SvMap))
 			{
 				float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
 				float aCheckpointTimes[25] = {0.0f};

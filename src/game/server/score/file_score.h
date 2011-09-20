@@ -4,7 +4,6 @@
 #define GAME_SERVER_FILESCORE_H
 
 #include <base/tl/sorted_array.h>
-
 #include "../score.h"
 
 class CFileScore : public IScore
@@ -43,11 +42,11 @@ public:
 	CFileScore(CGameContext *pGameServer);
 	~CFileScore();
 	
-	virtual void LoadScore(int ClientID);
-	virtual void SaveScore(int ClientID);
+	void LoadScore(int ClientID);
+	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
 	
-	virtual void ShowTop5(int ClientID, int Debut=1);
-	virtual void ShowRank(int ClientID, const char* pName, bool Search=false);
+	void ShowTop5(int ClientID, int Debut=1);
+	void ShowRank(int ClientID, const char *pName, bool Search=false);
 };
 
 #endif

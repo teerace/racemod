@@ -124,6 +124,8 @@ MACRO_CONFIG_INT(SvShowOthers, sv_show_others, 1, 0, 1, CFGFLAG_SERVER, "Shows t
 
 MACRO_CONFIG_STR(SvScoreFolder, sv_score_folder, 32, "records", CFGFLAG_SERVER, "Folder to save score files to")
 
+MACRO_CONFIG_STR(SvScore, sv_score, 32, "file", CFGFLAG_SERVER, "Scoring (file, web, mysql)")
+
 /* SQL */
 #if defined(CONF_SQL)
 MACRO_CONFIG_INT(SvUseSQL, sv_use_sql, 0, 0, 1, CFGFLAG_SERVER, "Enables SQL DB instead of record file")
@@ -140,9 +142,7 @@ MACRO_CONFIG_STR(WaWebappIp, wa_webapp_ip, 32, "race.teesites.net", CFGFLAG_CLIE
 MACRO_CONFIG_STR(WaApiPath, wa_api_path, 32, "/api/1", CFGFLAG_CLIENT|CFGFLAG_SERVER, "initial path to api")
 
 #if defined(CONF_TEERACE)
-MACRO_CONFIG_INT(WaUseWebapp, wa_use_webapp, 0, 0, 1, CFGFLAG_SERVER, "Enables sending times to a teerace website")
 MACRO_CONFIG_STR(WaApiKey, wa_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
-MACRO_CONFIG_INT(WaDefaultScoring, wa_default_scoring, 1, 0, 1, CFGFLAG_SERVER, "Enables default scoring system")
 MACRO_CONFIG_INT(WaAutoRecord, wa_auto_record, 1, 0, 1, CFGFLAG_SERVER, "Enables auto recording")
 #endif
 

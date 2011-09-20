@@ -11,8 +11,8 @@
 
 class CSqlScore : public IScore
 {
-	CGameContext *m_pGameServer;
-	IServer *m_pServer;
+	class CGameContext *m_pGameServer;
+	class IServer *m_pServer;
 	
 	sql::Driver *m_pDriver;
 	sql::Connection *m_pConnection;
@@ -49,10 +49,10 @@ public:
 	CSqlScore(CGameContext *pGameServer);
 	~CSqlScore();
 	
-	virtual void LoadScore(int ClientID);
-	virtual void SaveScore(int ClientID);
-	virtual void ShowRank(int ClientID, const char* pName, bool Search=false);
-	virtual void ShowTop5(int ClientID, int Debut=1);
+	void LoadScore(int ClientID);
+	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
+	void ShowRank(int ClientID, const char *pName, bool Search=false);
+	void ShowTop5(int ClientID, int Debut=1);
 };
 
 struct CSqlScoreData

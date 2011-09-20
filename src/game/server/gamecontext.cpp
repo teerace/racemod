@@ -23,11 +23,12 @@
 #include "gamemodes/race.h"
 #include "gamemodes/fastcap.h"
 #include "score.h"
+#include "score/file_score.h"
 #if defined(CONF_SQL)
 #include "score/sql_score.h"
 #endif
-#include "score/file_score.h"
 #if defined(CONF_TEERACE)
+#include "score/wa_score.h"
 #include <engine/external/json/writer.h>
 #include "webapp.h"
 #endif
@@ -800,127 +801,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 					Score()->ShowTop5(pPlayer->GetCID(), StartRank);
 				else
 					Score()->ShowTop5(pPlayer->GetCID());
-				
-#if defined(CONF_TEERACE)
-				if(m_pWebapp)
-				{
-					if(m_pWebapp->CurrentMap()->m_ID > -1)
-					{
-						if(!m_pWebapp->DefaultScoring())
-						{
-							CWebUserTopData *pUserData = new CWebUserTopData();
-							pUserData->m_StartRank = StartRank;
-							pUserData->m_ClientID = ClientID;
-
-							char aURI[128];
-							str_format(aURI, sizeof(aURI), "maps/rank/%d/%d/", m_pWebapp->CurrentMap()->m_ID, StartRank);
-							CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
-							m_pWebapp->SendRequest(pRequest, WEB_USER_TOP, pUserData);
-						}
-					}
-					else
-						SendChatTarget(ClientID, "This map is not a teerace map.");
-				}
-#endif
 			}
 			else if(!str_comp_num(pMsg->m_pMessage, "/rank", 5))
 			{
-				char aName[256];
-				
+				char aName[64];
 				if(g_Config.m_SvShowTimes && sscanf(pMsg->m_pMessage, "/rank %s", aName) == 1)
-				{
 					Score()->ShowRank(pPlayer->GetCID(), aName, true);
-					
-#if defined(CONF_TEERACE)
-					if(m_pWebapp)
-					{
-						if(m_pWebapp->CurrentMap()->m_ID > -1)
-						{
-							int UserID = 0;
-							// search for players on the server
-							for(int i = 0; i < MAX_CLIENTS; i++)
-							{
-								// search for 100% match
-								if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (!str_comp(Server()->ClientName(i), aName) || !str_comp(Server()->GetUserName(i), aName)))
-								{
-									UserID = Server()->GetUserID(i);
-									str_copy(aName, Server()->GetUserName(i), sizeof(aName));
-									break;
-								}
-							}
-						
-							if(!UserID)
-							{
-								// search for players on the server
-								for(int i = 0; i < MAX_CLIENTS; i++)
-								{
-									// search for part match
-									if(m_apPlayers[i] && Server()->GetUserID(i) > 0 && (str_find_nocase(Server()->ClientName(i), aName) || str_find_nocase(Server()->GetUserName(i), aName)))
-									{
-										UserID = Server()->GetUserID(i);
-										str_copy(aName, Server()->GetUserName(i), sizeof(aName));
-										break;
-									}
-								}
-							}
-						
-							CWebUserRankData *pUserData = new CWebUserRankData();
-							str_copy(pUserData->m_aName, aName, sizeof(pUserData->m_aName));
-							pUserData->m_ClientID = ClientID;
-							pUserData->m_UserID = UserID;
-
-							if(UserID)
-							{
-								char aURI[128];
-								str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
-								CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
-								m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
-							}
-							else
-							{
-								Json::Value Data;
-								Json::FastWriter Writer;
-								Data["username"] = aName;
-								std::string Json = Writer.write(Data);
-								CRequest *pRequest = m_pWebapp->CreateRequest("users/get_by_name/", CRequest::HTTP_POST);
-								pRequest->SetBody(Json.c_str(), Json.length());
-								m_pWebapp->SendRequest(pRequest, WEB_USER_FIND, pUserData);
-							}
-						}
-						else
-							SendChatTarget(ClientID, "This map is not a teerace map.");
-					}
-#endif
-				}
 				else
-				{
 					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
-					
-#if defined(CONF_TEERACE)
-					if(m_pWebapp)
-					{
-						if(m_pWebapp->CurrentMap()->m_ID > -1)
-						{
-							if(Server()->GetUserID(ClientID) > 0)
-							{
-								CWebUserRankData *pUserData = new CWebUserRankData();
-								str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
-								pUserData->m_ClientID = ClientID;
-								pUserData->m_UserID = Server()->GetUserID(ClientID);
-
-								char aURI[128];
-								str_format(aURI, sizeof(aURI), "users/rank/%d/", Server()->GetUserID(ClientID));
-								CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_GET);
-								m_pWebapp->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
-							}
-							else
-								SendChatTarget(ClientID, "To get globally ranked create an account at http://race.teesites.net and login.");
-						}
-						else
-							SendChatTarget(ClientID, "This map is not a teerace map.");
-					}
-#endif
-				}
 			}
 #if defined(CONF_TEERACE)
 			else if(!str_comp(pMsg->m_pMessage, "/mapinfo") && m_pWebapp)
@@ -1902,26 +1790,37 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 
 	RaceController()->InitTeleporter();
 
-	// delete old score object
-	if(m_pScore)
-		delete m_pScore;
-		
-	// create score object
-#if defined(CONF_SQL)
-	if(g_Config.m_SvUseSQL)
-		m_pScore = new CSqlScore(this);
-	else
-#endif
-		m_pScore = new CFileScore(this);
-	
-	// create webapp object
 #if defined(CONF_TEERACE)
-	if(g_Config.m_WaUseWebapp && !m_pWebapp)
+	// create webapp object
+	if(str_comp(g_Config.m_SvScore, "web") == 0 && !m_pWebapp)
 		m_pWebapp = new CServerWebapp(this);
+	else if(str_comp(g_Config.m_SvScore, "web") != 0 && m_pWebapp)
+	{
+		delete m_pWebapp;
+		m_pWebapp = 0;
+	}
 
 	if(m_pWebapp)
 		m_pWebapp->OnInit();
 #endif
+
+	// delete old score object
+	if(m_pScore)
+		delete m_pScore;
+
+	// create score object
+	if(str_comp(g_Config.m_SvScore, "file") == 0)
+		m_pScore = new CFileScore(this);
+#if defined(CONF_SQL)
+	else if(str_comp(g_Config.m_SvScore, "mysql") == 0)
+		m_pScore = new CSqlScore(this);
+#endif
+#if defined(CONF_TEERACE)
+	else if(str_comp(g_Config.m_SvScore, "web") == 0)
+		m_pScore = new CWebappScore(this);
+#endif
+	else
+		m_pScore = new CFileScore(this);
 		
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)
