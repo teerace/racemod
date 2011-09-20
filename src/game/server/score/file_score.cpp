@@ -1,5 +1,7 @@
 /* copyright (c) 2008 rajh and gregwar. Score stuff */
 
+#include <string.h>
+
 #include <engine/shared/config.h>
 #include <sstream>
 #include <fstream>
@@ -129,7 +131,7 @@ CFileScore::CPlayerScore *CFileScore::SearchScore(int ID, bool ScoreIP, int *pPo
 	int Pos = 1;
 	for(sorted_array<CPlayerScore>::range r = m_Top.all(); !r.empty(); r.pop_front())
 	{
-		if(!strcmp(r.front().m_aIP, aIP) && g_Config.m_SvScoreIP && ScoreIP)
+		if(!str_comp(r.front().m_aIP, aIP) && g_Config.m_SvScoreIP && ScoreIP)
 		{
 			if(pPosition)
 				*pPosition = Pos;
@@ -157,7 +159,7 @@ CFileScore::CPlayerScore *CFileScore::SearchName(const char *pName, int *pPositi
 				Found++;
 				pPlayer = &r.front();
 			}
-			if(!strcmp(r.front().m_aName, pName))
+			if(!str_comp(r.front().m_aName, pName))
 				return &r.front();
 		}
 		Pos++;
@@ -176,7 +178,7 @@ void CFileScore::LoadScore(int ClientID)
 	char aIP[16];
 	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));
 	CPlayerScore *pPlayer = SearchScore(ClientID, 0, 0);
-	if(pPlayer && strcmp(pPlayer->m_aIP, aIP) != 0)
+	if(pPlayer && str_comp(pPlayer->m_aIP, aIP) != 0)
 	{
 		lock_wait(gs_ScoreLock);
 		str_copy(pPlayer->m_aIP, aIP, sizeof(pPlayer->m_aIP));
