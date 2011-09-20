@@ -52,12 +52,15 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 			str_format(aBuf, sizeof(aBuf), "%08x", Webapp()->CurrentMap()->m_Crc);
 			Run["map_crc"] = aBuf;
 			Run["user_id"] = Server()->GetUserID(ClientID);
-			// TODO: take this out after 0.6 release
 			str_copy(aBuf, Server()->ClientName(ClientID), MAX_NAME_LENGTH);
 			str_sanitize_strong(aBuf);
 			Run["nickname"] = aBuf;
 			if(Server()->ClientClan(ClientID)[0])
-				Run["clan"] = Server()->ClientClan(ClientID);
+			{
+				str_copy(aBuf, Server()->ClientClan(ClientID), MAX_CLAN_LENGTH);
+				str_sanitize_strong(aBuf);
+				Run["clan"] = aBuf;
+			}
 			str_format(aBuf, sizeof(aBuf), "%.3f", Time);
 			Run["time"] = aBuf;
 			str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
