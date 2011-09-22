@@ -229,6 +229,8 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		for(unsigned int i = 0; i < JsonData.size(); i++)
 		{
 			Json::Value Map = JsonData[i];
+			if(!Map["crc"].isString())
+				continue; // skip maps without crc
 
 			CMapInfo Info;
 			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
