@@ -915,6 +915,8 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 	static int s_ApiTokenButton = 0;
 	if(DoButton_Menu((void*)&s_ApiTokenButton, m_pClient->Webapp()->m_ApiTokenRequested ? Localize("Checking...") : Localize("Request api token"), m_pClient->Webapp()->m_ApiTokenRequested ? -1 : 0, &ApiButton))
 	{
+		m_pClient->Webapp()->m_ApiTokenRequested = true;
+
 		char aData[128];
 		str_format(aData, sizeof(aData), "username=%s&password=%s", g_Config.m_WaUsername, g_Config.m_WaPassword);
 		CRequest *pRequest = m_pClient->Webapp()->CreateRequest("anonclient/get_token/", CRequest::HTTP_POST);
