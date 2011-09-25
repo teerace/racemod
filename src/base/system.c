@@ -288,6 +288,8 @@ IOHANDLE io_open(const char *filename, int flags)
 	}
 	if(flags == IOFLAG_WRITE)
 		return (IOHANDLE)fopen(filename, "wb");
+	if(flags == IOFLAG_UPDATE)
+		return (IOHANDLE)fopen(filename, "r+");
 	return 0x0;
 }
 

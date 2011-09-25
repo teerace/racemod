@@ -143,6 +143,8 @@ public:
 	int m_CurrentMapSize;
 
 #if defined(CONF_TEERACE)
+	char m_aConfigFilename[128];
+
 	CDemoRecorder m_aDemoRecorder[MAX_CLIENTS+1];
 	CGhostRecorder m_aGhostRecorder[MAX_CLIENTS];
 #else
@@ -207,6 +209,9 @@ public:
 	void PumpNetwork();
 
 #if defined(CONF_TEERACE)
+	void SaveConfigFilename(int NumArgs, const char **ppArguments);
+	const char* GetConfigFilename() { return m_aConfigFilename; }
+	
 	void ReloadMap();
 
 	void SetUserID(int ClientID, int UserID) { m_aClients[ClientID].m_UserID = UserID; }

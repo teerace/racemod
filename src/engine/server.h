@@ -66,6 +66,7 @@ public:
 	virtual void DemoRecorder_HandleAutoStart() = 0;
 
 #if defined(CONF_TEERACE)
+	virtual const char* GetConfigFilename() = 0;
 	virtual void ReloadMap() = 0;
 
 	virtual void SetUserID(int ClientID, int UserID) = 0;

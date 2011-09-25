@@ -10,6 +10,7 @@
 
 class CServerWebapp : public IWebapp
 {
+public:
 	class CMapInfo
 	{
 	public:
@@ -24,6 +25,15 @@ class CServerWebapp : public IWebapp
 		bool operator==(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) == 0; }
 	};
 
+	CServerWebapp(CGameContext *pGameServer);
+	virtual ~CServerWebapp() { }
+	
+	CMapInfo *CurrentMap() { return &m_CurrentMap; }
+	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
+	int GetMapCount() { return m_lMapList.size(); }
+	void OnInit();
+
+private:
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
 
@@ -38,13 +48,6 @@ class CServerWebapp : public IWebapp
 
 	void RegisterFields(class CRequest *pRequest, bool Api);
 	void OnResponse(class CHttpConnection *pCon);
-	
-public:
-	CServerWebapp(CGameContext *pGameServer);
-	virtual ~CServerWebapp() { }
-	
-	CMapInfo *CurrentMap() { return &m_CurrentMap; }
-	void OnInit();
 };
 
 #endif

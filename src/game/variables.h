@@ -128,7 +128,6 @@ MACRO_CONFIG_STR(SvScore, sv_score, 32, "file", CFGFLAG_SERVER, "Scoring (file, 
 
 /* SQL */
 #if defined(CONF_SQL)
-MACRO_CONFIG_INT(SvUseSQL, sv_use_sql, 0, 0, 1, CFGFLAG_SERVER, "Enables SQL DB instead of record file")
 MACRO_CONFIG_STR(SvSqlUser, sv_sql_user, 32, "nameless", CFGFLAG_SERVER, "SQL User")
 MACRO_CONFIG_STR(SvSqlPw, sv_sql_pw, 32, "tee", CFGFLAG_SERVER, "SQL Password")
 MACRO_CONFIG_STR(SvSqlIp, sv_sql_ip, 32, "127.0.0.1", CFGFLAG_SERVER, "SQL Database IP")
@@ -138,12 +137,13 @@ MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL 
 #endif
 
 /* Webapp */
+#if defined(CONF_TEERACE)
 MACRO_CONFIG_STR(WaWebappIp, wa_webapp_ip, 32, "race.teesites.net", CFGFLAG_CLIENT|CFGFLAG_SERVER, "Webapp IP")
 MACRO_CONFIG_STR(WaApiPath, wa_api_path, 32, "/api/1", CFGFLAG_CLIENT|CFGFLAG_SERVER, "initial path to api")
-
-#if defined(CONF_TEERACE)
 MACRO_CONFIG_STR(WaApiKey, wa_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
 MACRO_CONFIG_INT(WaAutoRecord, wa_auto_record, 1, 0, 1, CFGFLAG_SERVER, "Enables auto recording")
+
+MACRO_CONFIG_STR(WaVoteDescription, wa_vote_description, 64, "change map to %s", CFGFLAG_SERVER, "Vote description for update map vote command")
 #endif
 
 // debug

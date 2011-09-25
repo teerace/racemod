@@ -332,6 +332,10 @@ int CServer::Init()
 		m_aClients[i].m_Snapshots.Init();
 	}
 
+#if defined(CONF_TEERACE)
+	m_aConfigFilename[0] = 0;
+#endif
+
 	m_CurrentGameTick = 0;
 
 	return 0;
@@ -1166,6 +1170,20 @@ void CServer::PumpNetwork()
 }
 
 #if defined(CONF_TEERACE)
+void CServer::SaveConfigFilename(int NumArgs, const char **ppArguments)
+{
+	for(int i = 0; i < NumArgs; i++)
+	{
+		// check for scripts to execute
+		if(ppArguments[i][0] == '-' && ppArguments[i][1] == 'f' && ppArguments[i][2] == 0)
+		{
+			if(NumArgs - i > 1)
+				str_copy(m_aConfigFilename , ppArguments[i+1], sizeof(m_aConfigFilename));
+			i++;
+		}
+	}
+}
+
 void CServer::ReloadMap()
 {
 	m_MapReload = 1;
@@ -1934,7 +1952,11 @@ int main(int argc, const char **argv) // ignore_convention
 
 	// parse the command line arguments
 	if(argc > 1) // ignore_convention
+	{
 		pConsole->ParseArguments(argc-1, &argv[1]); // ignore_convention
+
+		pServer->SaveConfigFilename(argc-1, &argv[1]);
+	}
 
 	// restore empty config strings to their defaults
 	pConfig->RestoreStrings();

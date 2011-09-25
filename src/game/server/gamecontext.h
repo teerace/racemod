@@ -74,6 +74,8 @@ class CGameContext : public IGameServer
 	static void ConGetPos(IConsole::IResult *pResult, void *pUserData);
 #if defined(CONF_TEERACE)
 	static void ConPing(IConsole::IResult *pResult, void *pUserData);
+	static void ConMaplist(IConsole::IResult *pResult, void *pUserData);
+	static void ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData);
 #endif
 
 	CGameContext(int Resetting);
