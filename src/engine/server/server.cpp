@@ -1954,8 +1954,9 @@ int main(int argc, const char **argv) // ignore_convention
 	if(argc > 1) // ignore_convention
 	{
 		pConsole->ParseArguments(argc-1, &argv[1]); // ignore_convention
-
+#if defined(CONF_TEERACE)
 		pServer->SaveConfigFilename(argc-1, &argv[1]);
+#endif
 	}
 
 	// restore empty config strings to their defaults
