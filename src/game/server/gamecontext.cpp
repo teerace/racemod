@@ -786,93 +786,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				ChatConsole()->ExecuteLine(pMsg->m_pMessage + 1);
 				m_ChatConsoleClientID = -1;
 			}
-			/*
-			if(!str_comp(pMsg->m_pMessage, "/info"))
-			{
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "Race mod %s (C)Rajh, Redix and Sushi (%s)", RACE_VERSION, Server()->ClientName(ClientID));
-				SendChatTarget(-1, aBuf);
-#if defined(CONF_TEERACE)
-				str_format(aBuf, sizeof(aBuf), "Please visit 'http://%s/about/' for more information about teerace.", g_Config.m_WaWebappIp);
-				SendChatTarget(-1, aBuf);
-#endif
-			}
-			else if(!str_comp_num(pMsg->m_pMessage, "/top5", 5))
-			{
-				if(!g_Config.m_SvShowTimes)
-				{
-					SendChatTarget(ClientID, "Showing the Top5 is not allowed on this server.");
-					return;
-				}
-				
-				int StartRank = 1;
-				
-				if(sscanf(pMsg->m_pMessage, "/top5 %d", &StartRank) == 1)
-					Score()->ShowTop5(pPlayer->GetCID(), StartRank);
-				else
-					Score()->ShowTop5(pPlayer->GetCID());
-			}
-			else if(!str_comp_num(pMsg->m_pMessage, "/rank", 5))
-			{
-				char aName[64];
-				if(g_Config.m_SvShowTimes && sscanf(pMsg->m_pMessage, "/rank %s", aName) == 1)
-					Score()->ShowRank(pPlayer->GetCID(), aName, true);
-				else
-					Score()->ShowRank(pPlayer->GetCID(), Server()->ClientName(ClientID));
-			}
-#if defined(CONF_TEERACE)
-			else if(!str_comp(pMsg->m_pMessage, "/mapinfo") && m_pWebapp)
-			{
-				if(m_pWebapp->CurrentMap()->m_ID < 0)
-				{
-					SendChatTarget(ClientID, "This map is not a teerace map.");
-					return;
-				}
-
-				char aBuf[256];
-				SendChatTarget(ClientID, "----------- Mapinfo -----------");
-				str_format(aBuf, sizeof(aBuf), "Name: %s", g_Config.m_SvMap);
-				SendChatTarget(ClientID, aBuf);
-				str_format(aBuf, sizeof(aBuf), "Author: %s", m_pWebapp->CurrentMap()->m_aAuthor);
-				SendChatTarget(ClientID, aBuf);
-				str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_WaWebappIp, m_pWebapp->CurrentMap()->m_aURL);
-				SendChatTarget(ClientID, aBuf);
-				str_format(aBuf, sizeof(aBuf), "Finished runs: %d", m_pWebapp->CurrentMap()->m_RunCount);
-				SendChatTarget(ClientID, aBuf);
-				SendChatTarget(ClientID, "-------------------------------");
-			}
-#endif
-			else if(!str_comp(pMsg->m_pMessage, "/show_others"))
-			{
-				if(!g_Config.m_SvShowOthers && !Server()->IsAuthed(ClientID))
-				{
-					SendChatTarget(ClientID, "This command is not allowed on this server.");
-					return;
-				}
-				
-				if(pPlayer->m_IsUsingRaceClient)
-					SendChatTarget(ClientID, "Please use the settings to switch this option.");
-				else
-					pPlayer->m_ShowOthers = !pPlayer->m_ShowOthers;
-			}
-			else if(!str_comp(pMsg->m_pMessage, "/cmdlist"))
-			{
-				SendChatTarget(ClientID, "---Command List---");
-				SendChatTarget(ClientID, "\"/info\" information about the mod");
-				SendChatTarget(ClientID, "\"/rank\" shows your rank");
-				SendChatTarget(ClientID, "\"/rank NAME\" shows the rank of a specific player");
-				SendChatTarget(ClientID, "\"/top5 X\" shows the top 5");
-#if defined(CONF_TEERACE)
-				SendChatTarget(ClientID, "\"/mapinfo\" shows infos about the map");
-#endif
-				SendChatTarget(ClientID, "\"/show_others\" show other players?");
-			}
-			else if(!str_comp_num(pMsg->m_pMessage, "/", 1))
-			{
-				SendChatTarget(ClientID, "Wrong command.");
-				SendChatTarget(ClientID, "Say \"/cmdlist\" for list of command available.");
-			}
-			*/
 			else
 			{
 				// check for invalid chars
@@ -1852,12 +1765,116 @@ void CGameContext::OnConsoleInit()
 #endif
 }
 
+void CGameContext::ChatConInfo(IConsole::IResult *pResult, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "Race mod %s (C)Rajh, Redix and Sushi", RACE_VERSION);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
+#if defined(CONF_TEERACE)
+	str_format(aBuf, sizeof(aBuf), "Please visit 'http://%s/about/' for more information about teerace.", g_Config.m_WaWebappIp);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
+#endif
+}
+
+void CGameContext::ChatConTop5(IConsole::IResult *pResult, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+
+	if(!g_Config.m_SvShowTimes)
+	{
+		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "Showing the Top5 is not allowed on this server.");
+		return;
+	}
+
+	if(pResult->NumArguments() > 0)
+		pSelf->Score()->ShowTop5(pSelf->m_ChatConsoleClientID,  pResult->GetInteger(0));
+	else
+		pSelf->Score()->ShowTop5(pSelf->m_ChatConsoleClientID);
+}
+
+void CGameContext::ChatConRank(IConsole::IResult *pResult, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+
+	if(g_Config.m_SvShowTimes && pResult->NumArguments() > 0)
+		pSelf->Score()->ShowRank(pSelf->m_ChatConsoleClientID, pResult->GetString(0), true);
+	else
+		pSelf->Score()->ShowRank(pSelf->m_ChatConsoleClientID, pSelf->Server()->ClientName(pSelf->m_ChatConsoleClientID));
+}
+
+void CGameContext::ChatConShowOthers(IConsole::IResult *pResult, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+
+	if(!g_Config.m_SvShowOthers && !pSelf->Server()->IsAuthed(pSelf->m_ChatConsoleClientID))
+	{
+		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "This command is not allowed on this server.");
+		return;
+	}
+	
+	if(pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_IsUsingRaceClient)
+		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "Please use the settings to switch this option.");
+	else
+		pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_ShowOthers = !pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_ShowOthers;
+}
+
+void CGameContext::ChatConCmdlist(IConsole::IResult *pResult, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "---Command List---");
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "\"/info\" information about the mod");
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "\"/rank\" shows your rank");
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "\"/rank NAME\" shows the rank of a specific player");
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "\"/top5 X\" shows the top 5");
+#if defined(CONF_TEERACE)
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "\"/mapinfo\" shows infos about the map");
+#endif
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "\"/show_others\" show other players?");
+}
+
+#if defined(CONF_TEERACE)
+void CGameContext::ChatConMapInfo(IConsole::IResult *pResult, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+
+	if(m_pWebapp->CurrentMap()->m_ID < 0)
+	{
+		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "This map is not a teerace map.");
+		return;
+	}
+
+	char aBuf[256];
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "----------- Mapinfo -----------");
+	str_format(aBuf, sizeof(aBuf), "Name: %s", g_Config.m_SvMap);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
+	str_format(aBuf, sizeof(aBuf), "Author: %s", m_pWebapp->CurrentMap()->m_aAuthor);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
+	str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_WaWebappIp, m_pWebapp->CurrentMap()->m_aURL);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
+	str_format(aBuf, sizeof(aBuf), "Finished runs: %d", m_pWebapp->CurrentMap()->m_RunCount);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
+	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "-------------------------------");
+}
+#endif
+
 void CGameContext::InitChatConsole()
 {
 	m_pChatConsole = CreateConsole(CFGFLAG_SERVERCHAT);
 	m_ChatConsoleClientID = -1;
 
 	ChatConsole()->RegisterPrintCallback(IConsole::OUTPUT_LEVEL_STANDARD, SendChatResponse, this);
+	ChatConsole()->Register("info", "", CFGFLAG_SERVERCHAT, ChatConInfo, this, "");
+	ChatConsole()->Register("top5", "?i", CFGFLAG_SERVERCHAT, ChatConTop5, this, "");
+	ChatConsole()->Register("rank", "?r", CFGFLAG_SERVERCHAT, ChatConRank, this, "");
+	ChatConsole()->Register("show_others", "", CFGFLAG_SERVERCHAT, ChatConShowOthers, this, "");
+	ChatConsole()->Register("cmdlist", "", CFGFLAG_SERVERCHAT, ChatConCmdlist, this, "");
+
+#if defined(CONF_TEERACE)
+	ChatConsole()->Register("mapinfo", "", CFGFLAG_SERVERCHAT, ChatConMapInfo, this, "");
+#endif
 }
 
 void CGameContext::SendChatResponse(const char *pLine, void *pUser)
@@ -1871,7 +1888,10 @@ void CGameContext::SendChatResponse(const char *pLine, void *pUser)
 		return;
 	ReentryGuard++;
 
-	pSelf->SendChatTarget(pSelf->m_ChatConsoleClientID, pLine);
+	while(*pLine && *pLine != ' ')
+		pLine++;
+	if(*pLine && *(pLine + 1))
+		pSelf->SendChatTarget(pSelf->m_ChatConsoleClientID, pLine + 1);
 
 	ReentryGuard--;
 }

@@ -94,6 +94,15 @@ public:
 	void InitChatConsole();
 
 	static void SendChatResponse(const char *pLine, void *pUser);
+	static void ChatConInfo(IConsole::IResult *pResult, void *pUser);
+	static void ChatConTop5(IConsole::IResult *pResult, void *pUser);
+	static void ChatConRank(IConsole::IResult *pResult, void *pUser);
+	static void ChatConShowOthers(IConsole::IResult *pResult, void *pUser);
+	static void ChatConCmdlist(IConsole::IResult *pResult, void *pUser);
+
+#if defined(CONF_TEERACE)
+	static void ChatConMapInfo(IConsole::IResult *pResult, void *pUser);
+#endif
 
 	int m_ChatConsoleClientID;
 
