@@ -1840,6 +1840,12 @@ void CGameContext::ChatConMapInfo(IConsole::IResult *pResult, void *pUser)
 {
 	CGameContext *pSelf = (CGameContext *)pUser;
 
+	if(!pSelf->m_pWebapp)
+	{
+		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "This server does not use the webapp.");
+		return;
+	}
+
 	if(pSelf->m_pWebapp->CurrentMap()->m_ID < 0)
 	{
 		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "This map is not a teerace map.");
