@@ -80,6 +80,8 @@ CGameContext::~CGameContext()
 		delete m_apPlayers[i];
 	if(!m_Resetting)
 		delete m_pVoteOptionHeap;
+	delete m_pChatConsole;
+	m_pChatConsole = 0;
 }
 
 void CGameContext::Clear()
@@ -777,7 +779,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		else
  		{
 			pPlayer->m_LastChat = Server()->Tick();
-			
+
+			if(pMsg->m_pMessage[0] == '/')
+			{
+				m_ChatConsoleClientID = ClientID;
+				ChatConsole()->ExecuteLine(pMsg->m_pMessage + 1);
+				m_ChatConsoleClientID = -1;
+			}
+			/*
 			if(!str_comp(pMsg->m_pMessage, "/info"))
 			{
 				char aBuf[128];
@@ -863,6 +872,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				SendChatTarget(ClientID, "Wrong command.");
 				SendChatTarget(ClientID, "Say \"/cmdlist\" for list of command available.");
 			}
+			*/
 			else
 			{
 				// check for invalid chars
@@ -1842,6 +1852,30 @@ void CGameContext::OnConsoleInit()
 #endif
 }
 
+void CGameContext::InitChatConsole()
+{
+	m_pChatConsole = CreateConsole(CFGFLAG_SERVERCHAT);
+	m_ChatConsoleClientID = -1;
+
+	ChatConsole()->RegisterPrintCallback(IConsole::OUTPUT_LEVEL_STANDARD, SendChatResponse, this);
+}
+
+void CGameContext::SendChatResponse(const char *pLine, void *pUser)
+{
+	CGameContext *pSelf = (CGameContext *)pUser;
+	if(pSelf->m_ChatConsoleClientID == -1)
+		return;
+
+	static volatile int ReentryGuard = 0;
+	if(ReentryGuard)
+		return;
+	ReentryGuard++;
+
+	pSelf->SendChatTarget(pSelf->m_ChatConsoleClientID, pLine);
+
+	ReentryGuard--;
+}
+
 void CGameContext::OnInit(/*class IKernel *pKernel*/)
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
@@ -1860,6 +1894,8 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 
 	if(g_Config.m_SvLoadMapDefaults)
 		LoadMapSettings();
+
+	InitChatConsole();
 
 	// reset everything here
 	//world = new GAMEWORLD;
