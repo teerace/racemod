@@ -1840,7 +1840,7 @@ void CGameContext::ChatConMapInfo(IConsole::IResult *pResult, void *pUser)
 {
 	CGameContext *pSelf = (CGameContext *)pUser;
 
-	if(m_pWebapp->CurrentMap()->m_ID < 0)
+	if(pSelf->m_pWebapp->CurrentMap()->m_ID < 0)
 	{
 		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "This map is not a teerace map.");
 		return;
@@ -1850,11 +1850,11 @@ void CGameContext::ChatConMapInfo(IConsole::IResult *pResult, void *pUser)
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "----------- Mapinfo -----------");
 	str_format(aBuf, sizeof(aBuf), "Name: %s", g_Config.m_SvMap);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
-	str_format(aBuf, sizeof(aBuf), "Author: %s", m_pWebapp->CurrentMap()->m_aAuthor);
+	str_format(aBuf, sizeof(aBuf), "Author: %s", pSelf->m_pWebapp->CurrentMap()->m_aAuthor);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
-	str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_WaWebappIp, m_pWebapp->CurrentMap()->m_aURL);
+	str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_WaWebappIp, pSelf->m_pWebapp->CurrentMap()->m_aURL);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
-	str_format(aBuf, sizeof(aBuf), "Finished runs: %d", m_pWebapp->CurrentMap()->m_RunCount);
+	str_format(aBuf, sizeof(aBuf), "Finished runs: %d", pSelf->m_pWebapp->CurrentMap()->m_RunCount);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "-------------------------------");
 }
