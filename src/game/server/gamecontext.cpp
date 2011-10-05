@@ -313,12 +313,8 @@ void CGameContext::SendBroadcast(const char *pText, int ClientID)
 
 void CGameContext::SendRecord(int ClientID)
 {
-	char aBuf[16];
-	str_format(aBuf, sizeof(aBuf), "%.0f", Score()->GetRecord()->m_Time*1000.0f); // damn ugly but the only way i know to do it
-	int TimeToSend;
-	sscanf(aBuf, "%d", &TimeToSend);
 	CNetMsg_Sv_Record Msg;
-	Msg.m_Time = TimeToSend;
+	Msg.m_Time = (int)((Score()->GetRecord()->m_Time * 10000.0f + 9.0f) / 10.0f); // TODO: on next major release simply cast
 
 	if(ClientID == -1)
 	{
