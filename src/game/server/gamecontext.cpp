@@ -1785,7 +1785,7 @@ void CGameContext::ChatConTop5(IConsole::IResult *pResult, void *pUser)
 	}
 
 	if(pResult->NumArguments() > 0)
-		pSelf->Score()->ShowTop5(pSelf->m_ChatConsoleClientID,  pResult->GetInteger(0));
+		pSelf->Score()->ShowTop5(pSelf->m_ChatConsoleClientID,  max(1, pResult->GetInteger(0)));
 	else
 		pSelf->Score()->ShowTop5(pSelf->m_ChatConsoleClientID);
 }
