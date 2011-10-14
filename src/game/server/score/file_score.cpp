@@ -112,7 +112,7 @@ void CFileScore::Init()
 					i++;
 				}
 			}
-			m_Top.add(*new CPlayerScore(TmpName.c_str(), atof(TmpScore.c_str()), TmpIP.c_str(), aTmpCpTime));
+			m_Top.add(CPlayerScore(TmpName.c_str(), atof(TmpScore.c_str()), TmpIP.c_str(), aTmpCpTime));
 		}
 	}
 	f.close();
@@ -212,7 +212,7 @@ void CFileScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewRec
 		sort(m_Top.all());
 	}
 	else
-		m_Top.add(*new CPlayerScore(pName, PlayerData(ClientID)->m_Time, aIP, PlayerData(ClientID)->m_aCpTime));
+		m_Top.add(CPlayerScore(pName, PlayerData(ClientID)->m_Time, aIP, PlayerData(ClientID)->m_aCpTime));
 
 	lock_release(gs_ScoreLock);
 	Save();
