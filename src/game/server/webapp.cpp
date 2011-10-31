@@ -199,14 +199,20 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		{
 			char aBuf[256];
 			float LastTime = 0.0f;
+			int SameTimeCount = 0;
 			GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 			for(unsigned int i = 0; i < JsonData.size() && i < 5; i++)
 			{
 				Json::Value Run = JsonData[i];
 				float Time = str_tofloat(Run["run"]["time"].asCString());
+
+				if(Time == LastTime)
+					SameTimeCount++;
+				else
+					SameTimeCount = 0;
+
 				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-					Time==LastTime ? i+pUser->m_StartRank-1 : i+pUser->m_StartRank,
-					Run["run"]["user"]["username"].asCString(),(int)Time/60, fmod(Time, 60));
+					i+pUser->m_StartRank-SameTimeCount, Run["run"]["user"]["username"].asCString(),(int)Time/60, fmod(Time, 60));
 				GameServer()->SendChatTarget(ClientID, aBuf);
 
 				LastTime = Time;
