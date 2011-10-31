@@ -198,14 +198,18 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		if(GameServer()->m_apPlayers[ClientID])
 		{
 			char aBuf[256];
+			float LastTime = 0.0f;
 			GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 			for(unsigned int i = 0; i < JsonData.size() && i < 5; i++)
 			{
 				Json::Value Run = JsonData[i];
 				float Time = str_tofloat(Run["run"]["time"].asCString());
 				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-					i+pUser->m_StartRank, Run["run"]["user"]["username"].asCString(), (int)Time/60, fmod(Time, 60));
+					Time==LastTime ? i+pUser->m_StartRank-1 : i+pUser->m_StartRank,
+					Run["run"]["user"]["username"].asCString(),(int)Time/60, fmod(Time, 60));
 				GameServer()->SendChatTarget(ClientID, aBuf);
+
+				LastTime = Time;
 			}
 			GameServer()->SendChatTarget(ClientID, "------------------------------");
 		}
