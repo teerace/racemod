@@ -100,7 +100,7 @@ int CCollision::GetIndex(vec2 PrevPos, vec2 Pos)
 		int Ny = clamp((int)Pos.y/32, 0, m_Height-1);
 		
 		if((m_pTiles[Ny*m_Width+Nx].m_Index >= TILE_STOPL && m_pTiles[Ny*m_Width+Nx].m_Index <= 59) ||
-			(m_pTele && (m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN || m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEOUT)) ||
+			(m_pTele && m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN) ||
 			(m_pSpeedup && m_pSpeedup[Ny*m_Width+Nx].m_Force > 0))
 		{
 			return Ny*m_Width+Nx;
@@ -119,7 +119,7 @@ int CCollision::GetIndex(vec2 PrevPos, vec2 Pos)
 		Nx = clamp((int)Tmp.x/32, 0, m_Width-1);
 		Ny = clamp((int)Tmp.y/32, 0, m_Height-1);
 		if((m_pTiles[Ny*m_Width+Nx].m_Index >= TILE_STOPL && m_pTiles[Ny*m_Width+Nx].m_Index <= 59) ||
-			(m_pTele && (m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN || m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEOUT)) ||
+			(m_pTele && m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN) ||
 			(m_pSpeedup && m_pSpeedup[Ny*m_Width+Nx].m_Force > 0))
 		{
 			return Ny*m_Width+Nx;
