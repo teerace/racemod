@@ -32,10 +32,32 @@ public:
 	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
 	int GetMapCount() { return m_lMapList.size(); }
 	void OnInit();
+	void Tick();
 
 private:
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
+
+	class CUpload
+	{
+	public:
+		char m_aFilename[128];
+		char m_aURL[128];
+		char m_aUploadname[128];
+		int m_Type;
+		int64 m_StartTime;
+
+		CUpload() {}
+		CUpload(const char* pFilename, const char* pURL, const char* pUploadname, int Type, int64 StartTime)
+		{
+			str_copy(m_aFilename, pFilename, sizeof(m_aFilename));
+			str_copy(m_aURL, pURL, sizeof(m_aURL));
+			str_copy(m_aUploadname, pUploadname, sizeof(m_aUploadname));
+			m_Type = Type;
+			m_StartTime = StartTime;
+		}
+	};
+	array<CUpload> m_lUploads;
 
 	array<CMapInfo> m_lMapList;
 	CMapInfo m_CurrentMap;
@@ -45,6 +67,8 @@ private:
 	
 	CMapInfo *AddMap(const char *pFilename);
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
+
+	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, int Type, int64 StartTime = -1);
 
 	void RegisterFields(class CRequest *pRequest, bool Api);
 	void OnResponse(class CHttpConnection *pCon);

@@ -22,6 +22,7 @@ CServerWebapp::CServerWebapp(CGameContext *pGameServer)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
+	m_lUploads.clear();
 }
 
 void CServerWebapp::RegisterFields(CRequest *pRequest, bool Api)
@@ -302,11 +303,11 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 
 			str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			Upload(aFilename, aURL, "demo_file", WEB_UPLOAD_DEMO, 0, time_get()+time_freq()*2);
+			AddUpload(aFilename, aURL, "demo_file", WEB_UPLOAD_DEMO, time_get()+time_freq()*2);
 
 			str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
 			str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			Upload(aFilename, aURL, "ghost_file", WEB_UPLOAD_GHOST);
+			AddUpload(aFilename, aURL, "ghost_file", WEB_UPLOAD_GHOST);
 		}
 	}
 	else if(Type == WEB_UPLOAD_DEMO || Type == WEB_UPLOAD_GHOST)
@@ -355,6 +356,25 @@ void CServerWebapp::OnInit()
 		m_CurrentMap = r.front();
 		dbg_msg("webapp", "current map: %s (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
 	}
+}
+
+void CServerWebapp::Tick()
+{
+	// do uploads
+	for(int i = 0; i < m_lUploads.size(); i++)
+	{
+		if(m_lUploads[i].m_StartTime <= time_get())
+		{
+			Upload(m_lUploads[i].m_aFilename, m_lUploads[i].m_aURL, m_lUploads[i].m_aUploadname, m_lUploads[i].m_Type);
+			m_lUploads.remove_index_fast(i);
+			i = 0;
+		}
+	}
+}
+
+void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const char *pUploadName, int Type, int64 StartTime)
+{
+	m_lUploads.add(CUpload(pFilename, pURL, pUploadName, Type, StartTime));
 }
 
 #endif
