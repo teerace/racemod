@@ -44,7 +44,7 @@ IGameController::~IGameController()
 
 float IGameController::EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos)
 {
-	float Score = 0.0f;
+	/*float Score = 0.0f;
 	CCharacter *pC = static_cast<CCharacter *>(GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_CHARACTER));
 	for(; pC; pC = (CCharacter *)pC->TypeNext())
 	{
@@ -53,11 +53,12 @@ float IGameController::EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos)
 		if(pEval->m_FriendlyTeam != -1 && pC->GetPlayer()->GetTeam() == pEval->m_FriendlyTeam)
 			Scoremod = 0.5f;
 
-		/*float d = distance(Pos, pC->m_Pos);
-		Score += Scoremod * (d == 0 ? 1000000000.0f : 1.0f/d);*/
+		float d = distance(Pos, pC->m_Pos);
+		Score += Scoremod * (d == 0 ? 1000000000.0f : 1.0f/d);
 	}
 
-	return Score;
+	return Score;*/
+	return 0.0f;
 }
 
 void IGameController::EvaluateSpawnType(CSpawnEval *pEval, int Type)
