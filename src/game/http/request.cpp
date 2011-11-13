@@ -4,7 +4,7 @@
 #include "request.h"
 
 CRequest::CRequest(const char *pHost, const char *pURI, int Method) : m_Method(Method),
-	m_State(STATE_NONE), m_pBody(0), m_BodySize(0), m_pCur(0), m_pEnd(0), m_StartTime(-1)
+	m_State(STATE_NONE), m_pBody(0), m_BodySize(0), m_pCur(0), m_pEnd(0)
 {
 	AddField("Host", pHost);
 	AddField("Connection", "close");

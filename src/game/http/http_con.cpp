@@ -67,9 +67,6 @@ int CHttpConnection::Update()
 	{
 		case STATE_CONNECT:
 		{
-			if(time_get() < m_pRequest->StartTime() && m_pRequest->StartTime() != -1)
-				return 0;
-
 			m_State = STATE_WAIT;
 			if(net_tcp_connect(m_Socket, &m_Addr) != 0)
 			{

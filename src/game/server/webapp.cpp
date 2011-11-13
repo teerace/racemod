@@ -367,7 +367,7 @@ void CServerWebapp::Tick()
 		{
 			Upload(m_lUploads[i].m_aFilename, m_lUploads[i].m_aURL, m_lUploads[i].m_aUploadname, m_lUploads[i].m_Type);
 			m_lUploads.remove_index_fast(i);
-			i = 0;
+			i--; // since one item was removed
 		}
 	}
 }

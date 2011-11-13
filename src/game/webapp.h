@@ -23,7 +23,7 @@ public:
 	CRequest *CreateRequest(const char *pURI, int Method, bool Api = true);
 	bool SendRequest(CRequest *pRequest, int Type, class CWebData *pUserData = 0);
 	bool Download(const char *pFilename, const char *pURI, int Type, class CWebData *pUserData = 0);
-	bool Upload(const char *pFilename, const char *pURI, const char *pUploadName, int Type, class CWebData *pUserData = 0, int64 StartTime = -1);
+	bool Upload(const char *pFilename, const char *pURI, const char *pUploadName, int Type, class CWebData *pUserData = 0);
 
 	void Update();
 

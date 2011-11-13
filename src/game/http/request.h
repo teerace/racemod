@@ -29,8 +29,6 @@ class CRequest : public IHttpBase
 	char *m_pCur;
 	char *m_pEnd;
 
-	int64 m_StartTime;
-
 	void GenerateHeader();
 
 public:
@@ -51,9 +49,6 @@ public:
 	void SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName);
 	int GetData(char *pBuf, int MaxSize);
 	void MoveCursor(int Bytes);
-
-	void SetStartTime(int64 StartTime) { m_StartTime = StartTime; }
-	int64 StartTime() { return m_StartTime; }
 };
 
 #endif
