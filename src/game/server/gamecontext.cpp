@@ -1796,7 +1796,22 @@ void CGameContext::ChatConRank(IConsole::IResult *pResult, void *pUser)
 	CGameContext *pSelf = (CGameContext *)pUser;
 
 	if(g_Config.m_SvShowTimes && pResult->NumArguments() > 0)
-		pSelf->Score()->ShowRank(pSelf->m_ChatConsoleClientID, pResult->GetString(0), true);
+	{
+		char aStr[256];
+		str_copy(aStr, pResult->GetString(0), sizeof(aStr));
+		
+		// strip trailing spaces
+		int i = str_length(aStr);
+		while(i >= 0)
+		{
+			if(aStr[i] < 0 || aStr[i] > 32)
+				break;
+			aStr[i] = 0;
+			i--;
+		}
+
+		pSelf->Score()->ShowRank(pSelf->m_ChatConsoleClientID, aStr, true);
+	}
 	else
 		pSelf->Score()->ShowRank(pSelf->m_ChatConsoleClientID, pSelf->Server()->ClientName(pSelf->m_ChatConsoleClientID));
 }
