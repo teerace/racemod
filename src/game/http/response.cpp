@@ -79,9 +79,9 @@ int CResponse::Write(char *pData, int Size)
 
 bool CResponse::Finish()
 {
+	CloseFiles();
 	m_Finish = true; // not sure about this
 	if(m_HeaderSize <= 0 || m_Size - m_HeaderSize != str_toint(GetField("Content-Length")))
 		return false;
-	CloseFiles();
 	return true;
 }
