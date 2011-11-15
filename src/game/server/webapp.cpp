@@ -9,6 +9,8 @@
 #include <engine/external/json/reader.h>
 #include <engine/storage.h>
 
+#include <game/version.h>
+
 #include <game/http/response.h>
 
 #include "score/wa_score.h"
@@ -28,7 +30,10 @@ CServerWebapp::CServerWebapp(CGameContext *pGameServer)
 void CServerWebapp::RegisterFields(CRequest *pRequest, bool Api)
 {
 	if(Api)
+	{
 		pRequest->AddField("API-AUTH", g_Config.m_WaApiKey);
+		pRequest->AddField("API-GAMESERVER-VERSION", TEERACE_GAMESERVER_VERSION);
+	}
 }
 
 void CServerWebapp::OnResponse(CHttpConnection *pCon)
@@ -36,6 +41,18 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	int Type = pCon->Type();
 	CResponse *pResponse = pCon->Response();
 	bool Error = pCon->Error() || pResponse->StatusCode() != 200;
+
+	// server outdated
+	if(pResponse->StatusCode() == 432)
+	{
+		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp", "This server is outdated and cannot fully cooperate with Teerace, hence its support is currently disabled. Please notify the server administrator.");
+		return;
+	}
+	else if(pResponse->StatusCode() == 403)
+	{
+		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp", "This server was denied access to Teerace network. Please notify the server administator.");
+		return;
+	}
 
 	Json::Value JsonData;
 	Json::Reader Reader;
@@ -223,12 +240,36 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	}
 	else if(Type == WEB_PING_PING)
 	{
-		bool Online = !Error && str_comp(pResponse->GetBody(), "\"PONG\"") == 0;
+		bool Online = !Error;
 		dbg_msg("webapp", "webapp is%s online", Online ? "" : " not");
 		if(Online)
 		{
 			CRequest *pRequest = CreateRequest("maps/list/", CRequest::HTTP_GET);
 			SendRequest(pRequest, WEB_MAP_LIST);
+
+			if(Json)
+			{
+				Json::Value Awards = JsonData["awards"];
+				for(unsigned int i = 0; i < Awards.size(); i++)
+				{
+					Json::Value Award = Awards[i];
+					int UserID = Award["user_id"].isInt() ? Award["user_id"].asInt() : 0;
+
+					if(!UserID)
+						return;
+
+					// show awards to everyone only if the player is there
+					for(int j = 0; j < MAX_CLIENTS; j++)
+					{
+						if(UserID != Server()->GetUserID(j))
+							continue;
+
+						char aBuf[256];
+						str_format(aBuf, sizeof(aBuf), "%s achieved award \"%s\".", Server()->ClientName(j), Award["name"].asCString());
+						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+					}
+				}
+			}
 		}
 	}
 	else if(Type == WEB_MAP_LIST && Json && !Error)
