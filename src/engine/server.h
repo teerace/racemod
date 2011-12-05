@@ -27,6 +27,8 @@ public:
 	int Tick() const { return m_CurrentGameTick; }
 	int TickSpeed() const { return m_TickSpeed; }
 
+	virtual int MaxClients() const = 0;
+
 #if defined(CONF_TEERACE)
 	virtual class IStorage *Storage() = 0;
 #endif
