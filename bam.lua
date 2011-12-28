@@ -644,4 +644,3 @@ else
 	build(release_teerace_sql_settings)
 	DefaultTarget("game_debug")
 end
-end
