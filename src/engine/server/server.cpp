@@ -1717,7 +1717,11 @@ void CServer::DemoRecorder_HandleAutoStart()
 
 bool CServer::DemoRecorder_IsRecording()
 {
+#if defined(CONF_TEERACE)
+	return m_aDemoRecorder[MAX_CLIENTS].IsRecording();
+#else
 	return m_DemoRecorder.IsRecording();
+#endif
 }
 
 void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
