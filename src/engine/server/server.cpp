@@ -1478,7 +1478,7 @@ int CServer::Run()
 
 	// start server
 	NETADDR BindAddr;
-	if(g_Config.m_SvBindaddr[0] && net_host_lookup(g_Config.m_SvBindaddr, &BindAddr, NETTYPE_ALL) == 0)
+	if(g_Config.m_Bindaddr[0] && net_host_lookup(g_Config.m_Bindaddr, &BindAddr, NETTYPE_ALL) == 0)
 	{
 		// sweet!
 		BindAddr.port = g_Config.m_SvPort;
@@ -1715,6 +1715,11 @@ void CServer::DemoRecorder_HandleAutoStart()
 	}
 }
 
+bool CServer::DemoRecorder_IsRecording()
+{
+	return m_DemoRecorder.IsRecording();
+}
+
 void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
 {
 	CServer* pServer = (CServer *)pUser;
@@ -1893,7 +1898,7 @@ int main(int argc, const char **argv) // ignore_convention
 	IGameServer *pGameServer = CreateGameServer();
 	IConsole *pConsole = CreateConsole(CFGFLAG_SERVER|CFGFLAG_ECON);
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
-	IStorage *pStorage = CreateStorage("Teeworlds", argc, argv); // ignore_convention
+	IStorage *pStorage = CreateStorage("Teeworlds", IStorage::STORAGETYPE_SERVER, argc, argv); // ignore_convention
 	IConfig *pConfig = CreateConfig();
 
 	pServer->InitRegister(&pServer->m_NetServer, pEngineMasterServer, pConsole);

@@ -99,6 +99,11 @@ void CProjectile::Tick()
 	}
 }
 
+void CProjectile::TickPaused()
+{
+	++m_StartTick;
+}
+
 void CProjectile::FillInfo(CNetObj_Projectile *pProj)
 {
 	pProj->m_X = (int)m_Pos.x;

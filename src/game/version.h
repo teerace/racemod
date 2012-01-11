@@ -8,4 +8,5 @@
 #define GAME_NETVERSION "0.6 626fce9a778df4d4"
 #define RACE_VERSION "3.3-dev"
 #define TEERACE_GAMESERVER_VERSION "1"
+static const char GAME_RELEASE_VERSION[8] = {'0', '.', '6', '1', 0};
 #endif

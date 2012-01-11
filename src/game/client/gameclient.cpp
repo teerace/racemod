@@ -599,7 +599,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 			pMsg->m_SoundID == SOUND_CTF_GRAB_PL)
 			g_GameClient.m_pSounds->Enqueue(CSounds::CHN_GLOBAL, pMsg->m_SoundID);
 		else
-			g_GameClient.m_pSounds->Play(CSounds::CHN_GLOBAL, pMsg->m_SoundID, 1.0f, vec2(0,0));
+			g_GameClient.m_pSounds->Play(CSounds::CHN_GLOBAL, pMsg->m_SoundID, 1.0f);
 	}
 	else if(MsgId == NETMSGTYPE_SV_PLAYERTIME)
 	{
@@ -729,7 +729,7 @@ void CGameClient::ProcessEvents()
 		else if(Item.m_Type == NETEVENTTYPE_SOUNDWORLD)
 		{
 			CNetEvent_SoundWorld *ev = (CNetEvent_SoundWorld *)pData;
-			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
+			g_GameClient.m_pSounds->PlayAt(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
 		}
 	}
 }
@@ -1069,6 +1069,15 @@ void CGameClient::OnNewSnapshot()
 			if(!Online[i])
 				m_aClients[i].m_Score = 0.0f;
 		}
+	}
+	// add tuning to demo
+	if(DemoRecorder()->IsRecording() && mem_comp(&StandardTuning, &m_Tuning, sizeof(CTuningParams)) != 0)
+	{
+		CMsgPacker Msg(NETMSGTYPE_SV_TUNEPARAMS);
+		int *pParams = (int *)&m_Tuning;
+		for(unsigned i = 0; i < sizeof(m_Tuning)/sizeof(int); i++)
+			Msg.AddInt(pParams[i]);
+		Client()->SendMsg(&Msg, MSGFLAG_RECORD|MSGFLAG_NOSEND);
 	}
 }
 

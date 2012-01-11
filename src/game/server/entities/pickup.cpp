@@ -138,6 +138,13 @@ void CPickup::Tick()
 	}
 }
 
+void CPickup::TickPaused()
+{
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		if(m_SpawnTick[i] != -1)
+			++m_SpawnTick[i];
+}
+
 void CPickup::Snap(int SnappingClient)
 {
 	if(m_SpawnTick[SnappingClient] != -1 || NetworkClipped(SnappingClient))

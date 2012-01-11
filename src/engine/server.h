@@ -72,6 +72,7 @@ public:
 	virtual void Kick(int ClientID, const char *pReason) = 0;
 
 	virtual void DemoRecorder_HandleAutoStart() = 0;
+	virtual bool DemoRecorder_IsRecording() = 0;
 
 #if defined(CONF_TEERACE)
 	virtual const char* GetConfigFilename() = 0;
