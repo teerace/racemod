@@ -101,6 +101,7 @@ int CHttpConnection::Update()
 		{
 			char aData[1024] = {0};
 			int Bytes = m_pRequest->GetData(aData, sizeof(aData));
+
 			if(Bytes > 0)
 			{
 				int Size = net_tcp_send(m_Socket, aData, Bytes);
@@ -110,6 +111,8 @@ int CHttpConnection::Update()
 
 				if(Size > Bytes)
 					m_pRequest->MoveCursor(Bytes-Size);
+
+				return 0;
 			}
 			else if(Bytes == 0)
 			{

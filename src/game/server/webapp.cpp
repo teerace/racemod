@@ -57,7 +57,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 	Json::Value JsonData;
 	Json::Reader Reader;
 	bool Json = false;
-	if(!pCon->Error() && !pResponse->IsFile())
+	if(!Error && !pResponse->IsFile())
 		Json = Reader.parse(pResponse->GetBody(), pResponse->GetBody()+pResponse->Size(), JsonData);
 
 	// TODO: add event listener (server and client)
