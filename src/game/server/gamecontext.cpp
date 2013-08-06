@@ -1799,6 +1799,7 @@ void CGameContext::ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData)
 			str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
 
 		// check for duplicate entry
+		int OptionFound = false;
 		CVoteOptionServer *pOption = pSelf->m_pVoteOptionFirst;
 		while(pOption)
 		{
@@ -1806,10 +1807,14 @@ void CGameContext::ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData)
 			{
 				str_format(aBuf, sizeof(aBuf), "option '%s' already exists", aVoteDescription);
 				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-				return;
+				OptionFound = true;
+				break;
 			}
 			pOption = pOption->m_pNext;
 		}
+
+		if(OptionFound)
+			continue;
 
 		// add the option
 		++pSelf->m_NumVoteOptions;
