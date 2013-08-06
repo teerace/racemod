@@ -139,12 +139,14 @@ MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL 
 #endif
 
 /* Webapp */
+#if defined(CONF_TEERACE)
 MACRO_CONFIG_STR(WaWebappIp, wa_webapp_ip, 32, "race.teesites.net", CFGFLAG_CLIENT|CFGFLAG_SERVER, "Webapp IP")
 MACRO_CONFIG_STR(WaApiPath, wa_api_path, 32, "/api/1", CFGFLAG_CLIENT|CFGFLAG_SERVER, "initial path to api")
 
-#if defined(CONF_TEERACE)
 MACRO_CONFIG_STR(WaApiKey, wa_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
+
 MACRO_CONFIG_INT(WaAutoRecord, wa_auto_record, 1, 0, 1, CFGFLAG_SERVER, "Enables auto recording")
+MACRO_CONFIG_INT(WaAutoAddMaps, wa_auto_add_maps, 0, 0, 1, CFGFLAG_SERVER, "Enables auto adding maps")
 
 MACRO_CONFIG_STR(WaVoteDescription, wa_vote_description, 64, "change map to %s", CFGFLAG_SERVER, "Vote description for update map vote command")
 #endif

@@ -73,6 +73,8 @@ private:
 
 	void RegisterFields(class CRequest *pRequest, bool Api);
 	void OnResponse(class CHttpConnection *pCon);
+
+	void AddMapVotes();
 };
 
 #endif

@@ -1767,11 +1767,15 @@ void CGameContext::ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData)
 	char aBuf[256];
 
 	// open config file
-	IOHANDLE File = pSelf->Server()->Storage()->OpenFile(pSelf->Server()->GetConfigFilename(), IOFLAG_UPDATE, IStorage::TYPE_ALL);
-	if(!File)
+	IOHANDLE File = 0;
+	if(!g_Config.m_WaAutoAddMaps) // only save to config if we dont add votes automatically
 	{
-		str_format(aBuf, sizeof(aBuf), "failed to save vote option to config file %s", pSelf->Server()->GetConfigFilename());
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		File = pSelf->Server()->Storage()->OpenFile(pSelf->Server()->GetConfigFilename(), IOFLAG_UPDATE, IStorage::TYPE_ALL);
+		if(!File)
+		{
+			str_format(aBuf, sizeof(aBuf), "failed to save vote option to config file %s", pSelf->Server()->GetConfigFilename());
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		}
 	}
 
 	int CurrentMapType = pSelf->m_pWebapp->CurrentMap()->m_ID != -1 ? pSelf->m_pWebapp->CurrentMap()->m_MapType : -1;

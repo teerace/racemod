@@ -397,6 +397,9 @@ void CServerWebapp::OnInit()
 	{
 		m_CurrentMap = r.front();
 		dbg_msg("webapp", "current map: %s (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
+
+		// add votes
+		AddMapVotes();
 	}
 }
 
@@ -418,5 +421,61 @@ void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const cha
 {
 	m_lUploads.add(CUpload(pFilename, pURL, pUploadName, Type, StartTime));
 }
+
+void CServerWebapp::AddMapVotes()
+{
+	if(g_Config.m_WaAutoAddMaps)
+	{
+		for(int i = 0; i < m_lMapList.size(); i++)
+		{
+			CMapInfo *pMapInfo = &m_lMapList[i];
+			if(m_CurrentMap.m_ID != -1 && pMapInfo->m_ID != -1 && m_CurrentMap.m_MapType == pMapInfo->m_MapType)
+			{
+				char aVoteDescription[128];
+				if(str_find(g_Config.m_WaVoteDescription, "%s"))
+					str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
+				else
+					str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
+
+				// check for duplicate entry
+				int OptionFound = false;
+				CVoteOptionServer *pOption = GameServer()->m_pVoteOptionFirst;
+				while(pOption)
+				{
+					if(str_comp_nocase(aVoteDescription, pOption->m_aDescription) == 0)
+					{
+						OptionFound = true;
+						break;
+					}
+					pOption = pOption->m_pNext;
+				}
+
+				if(OptionFound)
+					continue;
+
+				// add the option
+				++GameServer()->m_NumVoteOptions;
+				char aCommand[128];
+				str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
+				int Len = str_length(aCommand);
+
+				pOption = (CVoteOptionServer *)GameServer()->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
+				pOption->m_pNext = 0;
+				pOption->m_pPrev = GameServer()->m_pVoteOptionLast;
+				if(pOption->m_pPrev)
+					pOption->m_pPrev->m_pNext = pOption;
+				GameServer()->m_pVoteOptionLast = pOption;
+				if(!GameServer()->m_pVoteOptionFirst)
+					GameServer()->m_pVoteOptionFirst = pOption;
+
+				str_copy(pOption->m_aDescription, aVoteDescription, sizeof(pOption->m_aDescription));
+				mem_copy(pOption->m_aCommand, aCommand, Len+1);
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "added option '%s' '%s'", pOption->m_aDescription, pOption->m_aCommand);
+				GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+			}
+		}
+	}
+} 
 
 #endif
