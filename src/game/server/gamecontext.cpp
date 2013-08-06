@@ -1764,68 +1764,92 @@ void CGameContext::ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData)
 	if(!pSelf->m_pWebapp)
 		return;
 
-	int ID = clamp(pResult->GetInteger(0), 0, pSelf->m_pWebapp->GetMapCount()-1);
-	CServerWebapp::CMapInfo *pMapInfo = pSelf->m_pWebapp->GetMap(ID);
-	char aVoteDescription[128];
-	if(str_find(g_Config.m_WaVoteDescription, "%s"))
-		str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
-	else
-		str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
-
-	// check for duplicate entry
-	CVoteOptionServer *pOption = pSelf->m_pVoteOptionFirst;
-	while(pOption)
-	{
-		if(str_comp_nocase(aVoteDescription, pOption->m_aDescription) == 0)
-		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "option '%s' already exists", aVoteDescription);
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-			return;
-		}
-		pOption = pOption->m_pNext;
-	}
-
-	// add the option
-	++pSelf->m_NumVoteOptions;
-	char aCommand[128];
-	str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
-	int Len = str_length(aCommand);
-
-	pOption = (CVoteOptionServer *)pSelf->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
-	pOption->m_pNext = 0;
-	pOption->m_pPrev = pSelf->m_pVoteOptionLast;
-	if(pOption->m_pPrev)
-		pOption->m_pPrev->m_pNext = pOption;
-	pSelf->m_pVoteOptionLast = pOption;
-	if(!pSelf->m_pVoteOptionFirst)
-		pSelf->m_pVoteOptionFirst = pOption;
-
-	str_copy(pOption->m_aDescription, aVoteDescription, sizeof(pOption->m_aDescription));
-	mem_copy(pOption->m_aCommand, aCommand, Len+1);
 	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "added option '%s' '%s'", pOption->m_aDescription, pOption->m_aCommand);
-	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 
-	// inform clients about added option
-	CNetMsg_Sv_VoteOptionAdd OptionMsg;
-	OptionMsg.m_pDescription = pOption->m_aDescription;
-	pSelf->Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
-
-	// write it to the config
+	// open config file
 	IOHANDLE File = pSelf->Server()->Storage()->OpenFile(pSelf->Server()->GetConfigFilename(), IOFLAG_UPDATE, IStorage::TYPE_ALL);
 	if(!File)
 	{
 		str_format(aBuf, sizeof(aBuf), "failed to save vote option to config file %s", pSelf->Server()->GetConfigFilename());
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-		return;
 	}
 
-	// seek to the end
-	io_seek(File, 0, IOSEEK_END);
-	str_format(aBuf, sizeof(aBuf), "\nadd_vote \"%s\" \"%s\"", aVoteDescription, aCommand);
-	io_write(File, aBuf, str_length(aBuf));
-	io_close(File);
+	int CurrentMapType = pSelf->m_pWebapp->CurrentMap()->m_ID != -1 ? pSelf->m_pWebapp->CurrentMap()->m_MapType : -1;
+	if(!pResult->NumArguments() && CurrentMapType == -1)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "failed to get map type of current map");
+			return;
+	}
+
+	bool First = true;
+	int Argument = pResult->NumArguments() ? clamp(pResult->GetInteger(0), 0, pSelf->m_pWebapp->GetMapCount()-1) : -1;
+	for(int i = 0; i < pSelf->m_pWebapp->GetMapCount(); i++)
+	{
+		int ID = pResult->NumArguments() ? Argument : i;
+		CServerWebapp::CMapInfo *pMapInfo = pSelf->m_pWebapp->GetMap(ID);
+
+		// dont add maps with other map type
+		if(!pResult->NumArguments() && pMapInfo->m_MapType != CurrentMapType)
+			continue;
+
+		char aVoteDescription[128];
+		if(str_find(g_Config.m_WaVoteDescription, "%s"))
+			str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
+		else
+			str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
+
+		// check for duplicate entry
+		CVoteOptionServer *pOption = pSelf->m_pVoteOptionFirst;
+		while(pOption)
+		{
+			if(str_comp_nocase(aVoteDescription, pOption->m_aDescription) == 0)
+			{
+				str_format(aBuf, sizeof(aBuf), "option '%s' already exists", aVoteDescription);
+				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+				return;
+			}
+			pOption = pOption->m_pNext;
+		}
+
+		// add the option
+		++pSelf->m_NumVoteOptions;
+		char aCommand[128];
+		str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
+		int Len = str_length(aCommand);
+
+		pOption = (CVoteOptionServer *)pSelf->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
+		pOption->m_pNext = 0;
+		pOption->m_pPrev = pSelf->m_pVoteOptionLast;
+		if(pOption->m_pPrev)
+			pOption->m_pPrev->m_pNext = pOption;
+		pSelf->m_pVoteOptionLast = pOption;
+		if(!pSelf->m_pVoteOptionFirst)
+			pSelf->m_pVoteOptionFirst = pOption;
+
+		str_copy(pOption->m_aDescription, aVoteDescription, sizeof(pOption->m_aDescription));
+		mem_copy(pOption->m_aCommand, aCommand, Len+1);
+		str_format(aBuf, sizeof(aBuf), "added option '%s' '%s'", pOption->m_aDescription, pOption->m_aCommand);
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+
+		// inform clients about added option
+		CNetMsg_Sv_VoteOptionAdd OptionMsg;
+		OptionMsg.m_pDescription = pOption->m_aDescription;
+		pSelf->Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
+
+		if(File)
+		{
+			if(First)
+			{
+				io_seek(File, 0, IOSEEK_END); // seek to the end
+				First = false;
+			}
+			str_format(aBuf, sizeof(aBuf), "\nadd_vote \"%s\" \"%s\"", aVoteDescription, aCommand);
+			io_write(File, aBuf, str_length(aBuf));
+		}
+	}
+
+	if(File)
+		io_close(File);
 }
 #endif
 
@@ -1866,7 +1890,7 @@ void CGameContext::OnConsoleInit()
 #if defined(CONF_TEERACE)
 	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "Checks if the webapp is online");
 	Console()->Register("maplist", "?i", CFGFLAG_SERVER, ConMaplist, this, "Shows the current map list with map ID's");
-	Console()->Register("update_map_votes", "i", CFGFLAG_SERVER, ConUpdateMapVote, this, "Updates the map votes and stores it into the config");
+	Console()->Register("update_map_votes", "?i", CFGFLAG_SERVER, ConUpdateMapVote, this, "Updates the map votes and stores it into the config");
 #endif
 }
 

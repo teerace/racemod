@@ -310,6 +310,7 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			{
 				r.front().m_ID = Map["id"].asInt();
 				r.front().m_RunCount = Map["run_count"].asInt();
+				r.front().m_MapType = Map["get_map_type"].asInt();
 				str_copy(r.front().m_aURL, Map["get_download_url"].asCString(), sizeof(r.front().m_aURL));
 				str_copy(r.front().m_aAuthor, Map["author"].asCString(), sizeof(r.front().m_aAuthor));
 				dbg_msg("webapp", "added map info: %s (%d)", r.front().m_aName, r.front().m_ID);
