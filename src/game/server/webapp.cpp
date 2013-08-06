@@ -473,6 +473,11 @@ void CServerWebapp::AddMapVotes()
 				char aBuf[256];
 				str_format(aBuf, sizeof(aBuf), "added option '%s' '%s'", pOption->m_aDescription, pOption->m_aCommand);
 				GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+
+				// inform clients about added option
+				CNetMsg_Sv_VoteOptionAdd OptionMsg;
+				OptionMsg.m_pDescription = pOption->m_aDescription;
+				GameServer()->Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
 			}
 		}
 	}
