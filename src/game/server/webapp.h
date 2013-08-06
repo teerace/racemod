@@ -3,6 +3,7 @@
 #define GAME_SERVER_WEBAPP_H
 
 #include <base/tl/array.h>
+#include <base/tl/sorted_array.h>
 
 #include <game/http/request.h>
 #include <game/data.h>
@@ -24,6 +25,7 @@ public:
 		char m_aAuthor[32];
 
 		bool operator==(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) == 0; }
+		bool operator<(const CMapInfo& Other) { return this->m_ID < Other.m_ID; }
 	};
 
 	CServerWebapp(CGameContext *pGameServer);
@@ -60,7 +62,7 @@ private:
 	};
 	array<CUpload> m_lUploads;
 
-	array<CMapInfo> m_lMapList;
+	sorted_array<CMapInfo> m_lMapList;
 	CMapInfo m_CurrentMap;
 	
 	class CGameContext *GameServer() { return m_pGameServer; }
