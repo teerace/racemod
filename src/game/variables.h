@@ -139,9 +139,10 @@ MACRO_CONFIG_STR(SvSqlPrefix, sv_sql_prefix, 16, "record", CFGFLAG_SERVER, "SQL 
 #endif
 
 /* Webapp */
-#if defined(CONF_TEERACE)
 MACRO_CONFIG_STR(WaWebappIp, wa_webapp_ip, 32, "race.teesites.net", CFGFLAG_CLIENT|CFGFLAG_SERVER, "Webapp IP")
 MACRO_CONFIG_STR(WaApiPath, wa_api_path, 32, "/api/1", CFGFLAG_CLIENT|CFGFLAG_SERVER, "initial path to api")
+
+#if defined(CONF_TEERACE)
 
 MACRO_CONFIG_STR(WaApiKey, wa_api_key, 33, "", CFGFLAG_SERVER, "api key to register the server on the website")
 
