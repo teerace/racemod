@@ -504,7 +504,7 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 					str_copy(m_MapInfo.m_aLicense, (char *)DataFile.GetData(pItem->m_License), sizeof(m_MapInfo.m_aLicense));
 
 				// load settings
-				if(pItem->m_Settings > -1)
+				if(pItem->m_Settings > -1 && DataFile.NumData() > pItem->m_Settings) // not very secure but the best for now. In next race version do a new version of this item
 				{
 					int Size = DataFile.GetUncompressedDataSize(pItem->m_Settings);
 					char *pBuf = new char[Size];
