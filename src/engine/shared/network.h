@@ -286,6 +286,8 @@ class CNetServer
 
 	CNetRecvUnpacker m_RecvUnpacker;
 
+	int m_NumConAttempts; // log flooding attacks
+	int64 m_TimeNumConAttempts;
 	unsigned char m_SecurityTokenSeed[16];
 
 	void OnTokenCtrlMsg(NETADDR &Addr, int ControlMsg, const CNetPacketConstruct &Packet);
