@@ -217,6 +217,7 @@ public:
 	void DirectInit(NETADDR &Addr, SECURITY_TOKEN SecurityToken);
 	void SetUnknownSeq() { m_UnknownSeq = true; }
 	SECURITY_TOKEN SecurityToken() const { return m_SecurityToken; }
+	void SetSequence(int Sequence) { m_Sequence = Sequence; }
 };
 
 class CConsoleNetConnection
@@ -298,7 +299,7 @@ class CNetServer
 	bool ClientExists(const NETADDR &Addr);
 	void SendControl(NETADDR &Addr, int ControlMsg, const void *pExtra, int ExtraSize, SECURITY_TOKEN SecurityToken);
 
-	int TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, bool NoAuth=false);
+	int TryAcceptClient(NETADDR &Addr, SECURITY_TOKEN SecurityToken, bool VanillaAuth=false);
 	int NumClientsWithAddr(NETADDR Addr);
 	void SendMsgs(NETADDR &Addr, const CMsgPacker *Msgs[], int num);
 
