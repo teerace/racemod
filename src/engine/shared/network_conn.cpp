@@ -27,6 +27,7 @@ void CNetConnection::Reset()
 	m_LastUpdateTime = 0;
 	m_Token = -1;
 	m_UnknownSeq = false;
+	m_SecurityToken = NET_SECURITY_TOKEN_UNKNOWN;
 	mem_zero(&m_PeerAddr, sizeof(m_PeerAddr));
 
 	m_Buffer.Init();
