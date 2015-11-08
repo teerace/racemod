@@ -226,7 +226,6 @@ public:
 	// called when the map is loaded and we should init for a new round
 	void OnEnterGame();
 	virtual void EnterGame();
-	virtual bool CheckHost(const char* pAddressStr, NETADDR *pReturnAddr);
 
 	virtual void Connect(const char *pAddress);
 	void DisconnectWithReason(const char *pReason);
