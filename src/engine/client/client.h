@@ -79,6 +79,7 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	class CServerBrowser m_ServerBrowser;
 	class CFriends m_Friends;
 	class CMapChecker m_MapChecker;
+	class CHttpClient m_HttpClient;
 
 	char m_aServerAddressStr[256];
 
@@ -194,6 +195,8 @@ public:
 
 	// ----- send functions -----
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags);
+	
+	virtual void SendHttp(class CHttpConnection *pCon);
 
 	int SendMsgEx(CMsgPacker *pMsg, int Flags, bool System=true);
 	void SendInfo();

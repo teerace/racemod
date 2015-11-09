@@ -1302,15 +1302,6 @@ int net_would_block()
 #endif
 }
 
-int net_in_progress()
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	return net_errno() == WSAEWOULDBLOCK;
-#else
-	return net_errno() == EINPROGRESS;
-#endif
-}
-
 int net_init()
 {
 #if defined(CONF_FAMILY_WINDOWS)
