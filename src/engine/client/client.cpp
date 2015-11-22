@@ -28,8 +28,8 @@
 #include <engine/shared/datafile.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/filecollection.h>
-#include <engine/shared/http.h>
-#include <engine/shared/mapchecker.h>
+#include <engine/shared/ghost.h>
+#include <engine/shared/http.h>#include <engine/shared/mapchecker.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
@@ -483,16 +483,6 @@ void CClient::SetState(int s)
 	m_State = s;
 	if(Old != s)
 		GameClient()->OnStateChange(m_State, Old);
-}
-
-bool CClient::DemoIsRecording()
-{
-	return m_DemoRecorder.IsRecording();
-}
-
-bool CClient::DemoIsPlaying()
-{
-	return m_DemoPlayer.IsPlaying();
 }
 
 // called when the map is loaded and we should init for a new round
@@ -1105,7 +1095,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				}
 			}
 		}
-		else if((pPacket->m_Flags&NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_DATA)
+		else if(Msg == NETMSG_MAP_DATA) // ddnet fast download compatibility
 		{
 			int Last = Unpacker.GetInt();
 			int MapCRC = Unpacker.GetInt();
@@ -1713,6 +1703,8 @@ void CClient::RegisterInterfaces()
 {
 	Kernel()->RegisterInterface(static_cast<IDemoRecorder*>(&m_DemoRecorder));
 	Kernel()->RegisterInterface(static_cast<IDemoPlayer*>(&m_DemoPlayer));
+	Kernel()->RegisterInterface(static_cast<IGhostRecorder*>(&m_GhostRecorder));
+	Kernel()->RegisterInterface(static_cast<IGhostLoader*>(&m_GhostLoader));
 	Kernel()->RegisterInterface(static_cast<IServerBrowser*>(&m_ServerBrowser));
 	Kernel()->RegisterInterface(static_cast<IFriends*>(&m_Friends));
 }
@@ -2113,50 +2105,21 @@ void CClient::Con_RemoveFavorite(IConsole::IResult *pResult, void *pUserData)
 		pSelf->m_ServerBrowser.RemoveFavorite(Addr);
 }
 
-const char *CClient::DemoRecord(const char *pName)
+// Race
+const char *CClient::DemoRecorder_StartRace(const char *pFilename)
 {
 	char aFilename[512];
-	str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", m_aCurrentMap, pName);
-	
-	if(m_State != STATE_ONLINE)
-		dbg_msg("demorec/record", "client is not online");
-	else
-		m_DemoRecorder.Start(Storage(), m_pConsole, aFilename, GameClient()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
-	
-	return m_aCurrentMap;
-}
-
-void CClient::DemoRecord_Stop()
-{
-	if(m_DemoRecorder.IsRecording())
-		m_DemoRecorder.Stop();
-}
-
-// Race
-const char* CClient::GetCurrentMap()
-{
-	return m_aCurrentMap;
-}
-
-int CClient::GetCurrentMapCrc()
-{
-	return m_CurrentMapCrc;
-}
-
-const char* CClient::RaceRecordStart(const char *pFilename)
-{
-	char aFilename[128];
 	str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", m_aCurrentMap, pFilename);
-	
+
 	if(State() != STATE_ONLINE)
 		dbg_msg("demorec/record", "client is not online");
 	else
 		m_DemoRecorder.Start(Storage(),  m_pConsole, aFilename, GameClient()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
-		
+
 	return m_aCurrentMap;
 }
 
-void CClient::GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
+void CClient::Ghost_GetPath(char *pBuf, int Size, int Time)
 {
 	// check the player name
 	char aName[MAX_NAME_LENGTH];
@@ -2170,24 +2133,27 @@ void CClient::GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int
 			aName[i] = '%';
 	}
 
+	if(Time < 0)
+		str_format(pBuf, Size, "ghosts/%s_%08x_%s_tmp.gho", m_aCurrentMap, m_CurrentMapCrc, aName);
+	else
+		str_format(pBuf, Size, "ghosts/%s_%08x_%s_%d.gho", m_aCurrentMap, m_CurrentMapCrc, aName, Time);
+}
+
+void CClient::GhostRecorder_Start()
+{
 	char aFilename[128];
-	str_format(aFilename, sizeof(aFilename), "ghosts/%s_%s_%08x_tmp.gho", GetCurrentMap(), aName, GetCurrentMapCrc());
-	m_GhostRecorder.Start(Storage(), m_pConsole, aFilename, GetCurrentMap(), GetCurrentMapCrc(), g_Config.m_PlayerName, pSkinName, UseCustomColor, ColorBody, ColorFeet);
+	Ghost_GetPath(aFilename, sizeof(aFilename));
+	m_GhostRecorder.Start(Storage(), m_pConsole, aFilename, m_aCurrentMap, m_CurrentMapCrc, g_Config.m_PlayerName);
 }
 
-void CClient::GhostRecorder_Stop(float Time)
+bool CClient::GhostLoader_Load(const char *pFilename)
 {
-	m_GhostRecorder.Stop(Time);
+	return m_GhostLoader.Load(Storage(), m_pConsole, pFilename, m_aCurrentMap, m_CurrentMapCrc) == 0;
 }
 
-bool CClient::GhostIsRecording()
+bool CClient::GhostLoader_GetGhostInfo(const char *pFilename, class CGhostHeader *pGhostHeader)
 {
-	return m_GhostRecorder.IsRecording();
-}
-
-void CClient::GhostRecorder_AddInfo(IGhostRecorder::CGhostCharacter *pPlayer)
-{
-	m_GhostRecorder.AddInfos(pPlayer);
+	return m_GhostLoader.GetGhostInfo(Storage(), pFilename, pGhostHeader, m_aCurrentMap, m_CurrentMapCrc);
 }
 
 const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
