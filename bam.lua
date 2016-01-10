@@ -293,10 +293,10 @@ function build(settings)
 
 	if string.find(settings.config_name, "teerace") then
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, server_link_other, json)
+			game_shared, game_server, zlib, server_link_other, json, httpparser)
 	else
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, server_link_other)
+			game_shared, game_server, zlib, server_link_other, httpparser)
 	end
 
 	serverlaunch = {}
