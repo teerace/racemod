@@ -136,27 +136,13 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		if(!Error)
 			pUser->m_GlobalRank = str_toint(pResponse->GetBody());
 
-		if(pUser->m_GlobalRank)
-		{
-			CWebUserRankData *pNewData = new CWebUserRankData();
-			mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
+		CWebUserRankData *pNewData = new CWebUserRankData();
+		mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
 
-			char aURI[128];
-			str_format(aURI, sizeof(aURI), "users/map_rank/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
-			SendRequest(pRequest, WEB_USER_RANK_MAP, pNewData);
-		}
-		else if(pUser->m_PrintRank)
-		{
-			if(pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID))
-				GameServer()->SendChatTarget(pUser->m_ClientID, "You are not globally ranked yet.");
-			else
-			{
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "%s is not globally ranked yet.", pUser->m_aName);
-				GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
-			}
-		}
+		char aURI[128];
+		str_format(aURI, sizeof(aURI), "users/map_rank/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
+		CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
+		SendRequest(pRequest, WEB_USER_RANK_MAP, pNewData);
 	}
 	else if(Type == WEB_USER_RANK_MAP)
 	{
@@ -182,15 +168,38 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 		if(GameServer()->m_apPlayers[pUser->m_ClientID])
 		{
 			bool Own = pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID);
-			if(Own && GlobalRank && MapRank)
+			if(Own && MapRank)
 				GameServer()->Score()->PlayerData(pUser->m_ClientID)->Set(Run.m_Time, Run.m_aCpTime);
 
 			if(pUser->m_PrintRank)
 			{
 				char aBuf[256];
-				if(!MapRank)
+				if(!MapRank && !GlobalRank)
+				{
+					// do not send the rank to everyone if the player is not ranked at all
+					if(Own)
+						GameServer()->SendChatTarget(pUser->m_ClientID, "You are neither globally ranked nor on this map yet.");
+					else
+					{
+						str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", pUser->m_aName);
+						GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
+					}
+
+					return; // we don't need the rest of this function here!
+				}
+				else if(!MapRank)
 					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
 						pUser->m_aName, GlobalRank, Server()->ClientName(pUser->m_ClientID));
+				else if(!GlobalRank)
+				{
+					if(Run.m_Time < 60.0f)
+						str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %.3f (%s)",
+							pUser->m_aName, MapRank, Run.m_Time, Server()->ClientName(pUser->m_ClientID));
+					else
+						str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %02d:%06.3f (%s)",
+							pUser->m_aName, MapRank, (int)Run.m_Time/60,
+							fmod(Run.m_Time, 60), Server()->ClientName(pUser->m_ClientID));
+				}
 				else
 				{
 					if(Run.m_Time < 60.0f)
