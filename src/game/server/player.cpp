@@ -3,7 +3,6 @@
 #include <new>
 #include <stdio.h>
 #include <engine/shared/config.h>
-
 #include "player.h"
 
 

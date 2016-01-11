@@ -75,7 +75,7 @@ function Dat2c(datafile, sourcefile, arrayname)
 	AddJob(
 		sourcefile,
 		"dat2c " .. PathFilename(sourcefile) .. " = " .. PathFilename(datafile),
-		Script("scripts/dat2c.py")..  "\" " .. sourcefile .. " " .. datafile .. " " .. arrayname
+		Script("scripts/dat2c.py").. "\" " .. sourcefile .. " " .. datafile .. " " .. arrayname
 	)
 	AddDependency(sourcefile, datafile)
 	return sourcefile
@@ -87,7 +87,7 @@ function ContentCompile(action, output)
 		output,
 		action .. " > " .. output,
 		--Script("datasrc/compile.py") .. "\" ".. Path(output) .. " " .. action
-		Script("datasrc/compile.py") .. " " .. action ..  " > " .. Path(output)
+		Script("datasrc/compile.py") .. " " .. action .. " > " .. Path(output)
 	)
 	AddDependency(output, Path("datasrc/content.py")) -- do this more proper
 	AddDependency(output, Path("datasrc/network.py"))
@@ -145,7 +145,7 @@ function build(settings)
 	
 	--settings.objdir = Path("objs")
 	settings.cc.Output = Intermediate_Output
-	
+
 	if config.compiler.driver == "cl" then
 		settings.cc.flags:Add("/wd4244")
 	else
@@ -169,9 +169,9 @@ function build(settings)
 	-- set some platform specific settings
 	settings.cc.includes:Add("src")
 	settings.cc.includes:Add("other/mysql/include")
-		
-	if family == "unix" then		
-   		if platform == "macosx" then
+
+	if family == "unix" then
+		if platform == "macosx" then
 			settings.link.frameworks:Add("Carbon")
 			settings.link.frameworks:Add("AppKit")
 		else
@@ -218,8 +218,8 @@ function build(settings)
 			server_settings.link.libs:Add("mysqlcppconn-static")
 			server_settings.link.libs:Add("mysqlclient")
 		end
-		
-   		if platform == "macosx" then
+
+		if platform == "macosx" then
 			client_settings.link.frameworks:Add("OpenGL")
 			client_settings.link.frameworks:Add("AGL")
 			client_settings.link.frameworks:Add("Carbon")
@@ -584,98 +584,102 @@ if platform == "macosx" then
 
 	DefaultTarget("game_debug_x86")
 	
-	if arch == "ia32" then
-		PseudoTarget("release", ppc_r, x86_r)
-		PseudoTarget("sql_release", sql_ppc_r, sql_x86_r)
-		PseudoTarget("teerace_release", teerace_ppc_r, teerace_x86_r)
-		PseudoTarget("teerace_sql_release", teerace_sql_ppc_r, teerace_sql_x86_r)
-		PseudoTarget("debug", ppc_d, x86_d)
-		PseudoTarget("sql_debug", sql_ppc_d, sql_x86_d)
-		PseudoTarget("teerace_debug", teerace_ppc_d, teerace_x86_d)
-		PseudoTarget("teerace_sql_debug", teerace_sql_ppc_d, teerace_sql_x86_d)
-		PseudoTarget("server_release", "server_release_x86", "server_release_ppc")
-		PseudoTarget("server_sql_release", "server_sql_release_x86", "server_sql_release_ppc")
-		PseudoTarget("server_teerace_release", "server_teerace_release_x86", "server_teerace_release_ppc")
-		PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_x86", "server_teerace_sql_release_ppc")
-		PseudoTarget("server_debug", "server_debug_x86", "server_debug_ppc")
-		PseudoTarget("server_sql_debug", "server_sql_debug_x86", "server_sql_debug_ppc")
-		PseudoTarget("server_teerace_debug", "server_teerace_debug_x86", "server_teerace_debug_ppc")
-		PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_x86", "server_teerace_sql_debug_ppc")
-		PseudoTarget("client_release", "client_release_x86", "client_release_ppc")
-		PseudoTarget("client_debug", "client_debug_x86", "client_debug_ppc")
-	elseif arch == "amd64" then
-		PseudoTarget("release", ppc_r, x86_r, x86_64_r)
-		PseudoTarget("sql_release", sql_ppc_r, sql_x86_r, sql_x86_64_r)
-		PseudoTarget("teerace_release", teerace_ppc_r, teerace_x86_r, teerace_x86_64_r)
-		PseudoTarget("teerace_sql_release", teerace_sql_ppc_r, teerace_sql_x86_r, teerace_sql_x86_64_r)
-		PseudoTarget("debug", ppc_d, x86_d, x86_64_d)
-		PseudoTarget("sql_debug", sql_ppc_d, sql_x86_d, sql_x86_64_d)
-		PseudoTarget("teerace_debug", teerace_ppc_d, teerace_x86_d, teerace_x86_64_d)
-		PseudoTarget("teerace_sql_debug", teerace_sql_ppc_d, teerace_sql_x86_d, teerace_sql_x86_64_d)
-		PseudoTarget("server_release", "server_release_x86", "server_release_x86_64", "server_release_ppc")
-		PseudoTarget("server_sql_release", "server_sql_release_x86", "server_sql_release_x86_64", "server_sql_release_ppc")
-		PseudoTarget("server_teerace_release", "server_teerace_release_x86", "server_teerace_release_x86_64", "server_teerace_release_ppc")
-		PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_x86", "server_teerace_sql_release_x86_64", "server_teerace_sql_release_ppc")
-		PseudoTarget("server_debug", "server_debug_x86", "server_release_x86_64", "server_debug_ppc")
-		PseudoTarget("server_sql_debug", "server_sql_debug_x86", "server_sql_debug_x86_64", "server_sql_debug_ppc")
-		PseudoTarget("server_teerace_debug", "server_teerace_debug_x86", "server_teerace_debug_x86_64", "server_teerace_debug_ppc")
-		PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_x86", "server_teerace_sql_debug_x86_64", "server_teerace_sql_debug_ppc")
-		PseudoTarget("client_release", "client_release_x86", "server_release_x86_64", "client_release_ppc")
-		PseudoTarget("client_debug", "client_debug_x86", "server_release_x86_64", "client_debug_ppc")
 	if config.macosxppc.value == 1 then
 		if arch == "ia32" then
 			PseudoTarget("release", ppc_r, x86_r)
+			PseudoTarget("sql_release", sql_ppc_r, sql_x86_r)
+			PseudoTarget("teerace_release", teerace_ppc_r, teerace_x86_r)
+			PseudoTarget("teerace_sql_release", teerace_sql_ppc_r, teerace_sql_x86_r)
 			PseudoTarget("debug", ppc_d, x86_d)
+			PseudoTarget("sql_debug", sql_ppc_d, sql_x86_d)
+			PseudoTarget("teerace_debug", teerace_ppc_d, teerace_x86_d)
+			PseudoTarget("teerace_sql_debug", teerace_sql_ppc_d, teerace_sql_x86_d)
 			PseudoTarget("server_release", "server_release_ppc", "server_release_x86")
+			PseudoTarget("server_sql_release", "server_sql_release_ppc", "server_sql_release_x86")
+			PseudoTarget("server_teerace_release", "server_teerace_release_ppc", "server_teerace_release_x86")
+			PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_ppc", "server_teerace_sql_release_x86")
 			PseudoTarget("server_debug", "server_debug_ppc", "server_debug_x86")
+			PseudoTarget("server_sql_debug", "server_sql_debug_ppc", "server_sql_debug_x86")
+			PseudoTarget("server_teerace_debug", "server_teerace_debug_ppc", "server_teerace_debug_x86")
+			PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_ppc", "server_teerace_sql_debug_x86")
 			PseudoTarget("client_release", "client_release_ppc", "client_release_x86")
 			PseudoTarget("client_debug", "client_debug_ppc", "client_debug_x86")
 		elseif arch == "amd64" then
 			PseudoTarget("release", ppc_r, x86_r, x86_64_r)
+			PseudoTarget("sql_release", sql_ppc_r, sql_x86_r, sql_x86_64_r)
+			PseudoTarget("teerace_release", teerace_ppc_r, teerace_x86_r, teerace_x86_64_r)
+			PseudoTarget("teerace_sql_release", teerace_sql_ppc_r, teerace_sql_x86_r, teerace_sql_x86_64_r)
 			PseudoTarget("debug", ppc_d, x86_d, x86_64_d)
+			PseudoTarget("sql_debug", sql_ppc_d, sql_x86_d, sql_x86_64_d)
+			PseudoTarget("teerace_debug", teerace_ppc_d, teerace_x86_d, teerace_x86_64_d)
+			PseudoTarget("teerace_sql_debug", teerace_sql_ppc_d, teerace_sql_x86_d, teerace_sql_x86_64_d)
 			PseudoTarget("server_release", "server_release_ppc", "server_release_x86", "server_release_x86_64")
+			PseudoTarget("server_sql_release", "server_sql_release_ppc", "server_sql_release_x86", "server_sql_release_x86_64")
+			PseudoTarget("server_teerace_release", "server_teerace_release_ppc", "server_teerace_release_x86", "server_teerace_release_x86_64")
+			PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_ppc", "server_teerace_sql_release_x86", "server_teerace_sql_release_x86_64")
 			PseudoTarget("server_debug", "server_debug_ppc", "server_debug_x86", "server_debug_x86_64")
+			PseudoTarget("server_sql_debug", "server_sql_debug_ppc", "server_sql_debug_x86", "server_sql_debug_x86_64")
+			PseudoTarget("server_teerace_debug", "server_teerace_debug_ppc", "server_teerace_debug_x86", "server_teerace_debug_x86_64")
+			PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_ppc", "server_teerace_sql_debug_x86", "server_teerace_sql_debug_x86_64")
 			PseudoTarget("client_release", "client_release_ppc", "client_release_x86", "client_release_x86_64")
 			PseudoTarget("client_debug", "client_debug_ppc", "client_debug_x86", "client_debug_x86_64")
 		else
 			PseudoTarget("release", ppc_r)
+			PseudoTarget("sql_release", sql_ppc_r)
+			PseudoTarget("teerace_release", teerace_ppc_r)
+			PseudoTarget("teerace_sql_release", teerace_sql_ppc_r)
 			PseudoTarget("debug", ppc_d)
+			PseudoTarget("sql_debug", sql_ppc_d)
+			PseudoTarget("teerace_debug", teerace_ppc_d)
+			PseudoTarget("teerace_sql_debug", teerace_sql_ppc_d)
 			PseudoTarget("server_release", "server_release_ppc")
+			PseudoTarget("server_sql_release", "server_sql_release_ppc")
+			PseudoTarget("server_teerace_release", "server_teerace_release_ppc")
+			PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_ppc")
 			PseudoTarget("server_debug", "server_debug_ppc")
+			PseudoTarget("server_sql_debug", "server_sql_debug_ppc")
+			PseudoTarget("server_teerace_debug", "server_teerace_debug_ppc")
+			PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_ppc")
 			PseudoTarget("client_release", "client_release_ppc")
 			PseudoTarget("client_debug", "client_debug_ppc")
 		end
 	else
-		PseudoTarget("release", ppc_r)
-		PseudoTarget("sql_release", sql_ppc_r)
-		PseudoTarget("teerace_release", teerace_ppc_r)
-		PseudoTarget("teerace_sql_release", teerace_sql_ppc_r)
-		PseudoTarget("debug", ppc_d)
-		PseudoTarget("sql_debug", sql_ppc_d)
-		PseudoTarget("teerace_debug", teerace_ppc_d)
-		PseudoTarget("teerace_sql_debug", teerace_sql_ppc_d)
-		PseudoTarget("server_release", "server_release_ppc")
-		PseudoTarget("server_sql_release", "server_sql_release_ppc")
-		PseudoTarget("server_teerace_release", "server_teerace_release_ppc")
-		PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_ppc")
-		PseudoTarget("server_debug", "server_debug_ppc")
-		PseudoTarget("server_sql_debug", "server_sql_debug_ppc")
-		PseudoTarget("server_teerace_debug", "server_teerace_debug_ppc")
-		PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_ppc")
-		PseudoTarget("client_release", "client_release_ppc")
-		PseudoTarget("client_debug", "client_debug_ppc")
 		if arch == "ia32" then
 			PseudoTarget("release", x86_r)
+			PseudoTarget("sql_release", sql_x86_r)
+			PseudoTarget("teerace_release", teerace_x86_r)
+			PseudoTarget("teerace_sql_release", teerace_sql_x86_r)
 			PseudoTarget("debug", x86_d)
+			PseudoTarget("sql_debug", sql_x86_d)
+			PseudoTarget("teerace_debug", teerace_x86_d)
+			PseudoTarget("teerace_sql_debug", teerace_sql_x86_d)
 			PseudoTarget("server_release", "server_release_x86")
+			PseudoTarget("server_sql_release", "server_sql_release_x86")
+			PseudoTarget("server_teerace_release", "server_teerace_release_x86")
+			PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_x86")
 			PseudoTarget("server_debug", "server_debug_x86")
+			PseudoTarget("server_sql_debug", "server_sql_debug_x86")
+			PseudoTarget("server_teerace_debug", "server_teerace_debug_x86")
+			PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_x86")
 			PseudoTarget("client_release", "client_release_x86")
 			PseudoTarget("client_debug", "client_debug_x86")
 		elseif arch == "amd64" then
 			PseudoTarget("release", x86_r, x86_64_r)
+			PseudoTarget("sql_release", sql_x86_r, sql_x86_64_r)
+			PseudoTarget("teerace_release", _ppc_r, teerace_x86_r, teerace_x86_64_r)
+			PseudoTarget("teerace_sql_release", teerace_sql_x86_r, teerace_sql_x86_64_r)
 			PseudoTarget("debug", x86_d, x86_64_d)
+			PseudoTarget("sql_debug", sql_x86_d, sql_x86_64_d)
+			PseudoTarget("teerace_debug", teerace_x86_d, teerace_x86_64_d)
+			PseudoTarget("teerace_sql_debug", teerace_sql_x86_d, teerace_sql_x86_64_d)
 			PseudoTarget("server_release", "server_release_x86", "server_release_x86_64")
+			PseudoTarget("server_sql_release", "server_sql_release_x86", "server_sql_release_x86_64")
+			PseudoTarget("server_teerace_release", "server_teerace_release_x86", "server_teerace_release_x86_64")
+			PseudoTarget("server_teerace_sql_release", "server_teerace_sql_release_x86", "server_teerace_sql_release_x86_64")
 			PseudoTarget("server_debug", "server_debug_x86", "server_debug_x86_64")
+			PseudoTarget("server_sql_debug", "server_sql_debug_x86", "server_sql_debug_x86_64")
+			PseudoTarget("server_teerace_debug", "server_teerace_debug_x86", "server_teerace_debug_x86_64")
+			PseudoTarget("server_teerace_sql_debug", "server_teerace_sql_debug_x86", "server_teerace_sql_debug_x86_64")
 			PseudoTarget("client_release", "client_release_x86", "client_release_x86_64")
 			PseudoTarget("client_debug", "client_debug_x86", "client_debug_x86_64")
 		end

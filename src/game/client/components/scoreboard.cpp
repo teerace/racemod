@@ -5,14 +5,17 @@
 #include <engine/textrender.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
+
 #include <game/generated/client_data.h>
 #include <game/generated/protocol.h>
+
 #include <game/localization.h>
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/motd.h>
+
 #include "scoreboard.h"
 
 
@@ -89,7 +92,7 @@ void CScoreboard::RenderSpectators(float x, float y, float w)
 	Graphics()->SetColor(0,0,0,0.5f);
 	RenderTools()->DrawRoundRect(x, y, w, h, 10.0f);
 	Graphics()->QuadsEnd();
-	
+
 	// Headline
 	y += 10.0f;
 	TextRender()->Text(0, x+10.0f, y, 28.0f, Localize("Spectators"), w-20.0f);
@@ -110,7 +113,6 @@ void CScoreboard::RenderSpectators(float x, float y, float w)
 		str_append(aBuffer, m_pClient->m_aClients[pInfo->m_ClientID].m_aName, sizeof(aBuffer));
 		Multiple = true;
 	}
-	
 	CTextCursor Cursor;
 	TextRender()->SetCursor(&Cursor, x+10.0f, y, 22.0f, TEXTFLAG_RENDER);
 	Cursor.m_LineWidth = w-20.0f;
@@ -122,9 +124,9 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 {
 	if(Team == TEAM_SPECTATORS)
 		return;
-	
+
 	float h = 760.0f;
-	
+
 	// background
 	Graphics()->BlendNormal();
 	Graphics()->TextureSet(-1);
@@ -143,7 +145,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			pTitle = Localize("Score board");
 	}
 	TextRender()->Text(0, x+20.0f, y, TitleFontsize, pTitle, -1);
-	
+
 	char aBuf[128] = {0};
 	if(m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_TEAMS)
 	{
@@ -169,7 +171,6 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 				str_format(aBuf, sizeof(aBuf), "%d", Score);
 		}
 	}
-
 	float tw = TextRender()->TextWidth(0, TitleFontsize, aBuf, -1);
 	TextRender()->Text(0, x+w-tw-20.0f, y, TitleFontsize, aBuf, -1);
 
@@ -232,7 +233,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		const CNetObj_PlayerInfo *pInfo = m_pClient->m_Snap.m_paInfoByScore[i];
 		if(!pInfo || pInfo->m_Team != Team)
 			continue;
-		
+
 		// background so it's easy to find the local player or the followed one in spectator mode
 		if(pInfo->m_Local || (m_pClient->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientID == m_pClient->m_Snap.m_SpecInfo.m_SpectatorID))
 		{

@@ -836,7 +836,17 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 			pPlayer->m_LastChat = Server()->Tick();
 
-			SendChat(ClientID, Team, pMsg->m_pMessage);
+			if(pMsg->m_pMessage[0] == '/')
+			{
+				m_ChatConsoleClientID = ClientID;
+				ChatConsole()->ExecuteLine(pMsg->m_pMessage + 1);
+				m_ChatConsoleClientID = -1;
+			}
+			else
+			{
+				SendChat(ClientID, Team, pMsg->m_pMessage);
+			}
+
 		}
 		else if(MsgID == NETMSGTYPE_CL_CALLVOTE)
 		{
@@ -1086,6 +1096,27 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			pPlayer->m_TeeInfos.m_ColorBody = pMsg->m_ColorBody;
 			pPlayer->m_TeeInfos.m_ColorFeet = pMsg->m_ColorFeet;
 			m_pController->OnPlayerInfoChange(pPlayer);
+
+#if defined(CONF_TEERACE)
+			if (m_pWebapp && Server()->GetUserID(ClientID) > 0)
+			{
+				Json::Value Userdata;
+				Json::FastWriter Writer;
+				Userdata["skin_name"] = pMsg->m_pSkin;
+				if (pMsg->m_UseCustomColor)
+				{
+					Userdata["body_color"] = HslToRgb(pMsg->m_ColorBody);
+					Userdata["feet_color"] = HslToRgb(pMsg->m_ColorFeet);
+				}
+				std::string Json = Writer.write(Userdata);
+
+				char aURI[128];
+				str_format(aURI, sizeof(aURI), "users/skin/%d/", Server()->GetUserID(ClientID));
+				CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_PUT);
+				pRequest->SetBody(Json.c_str(), Json.length());
+				m_pWebapp->SendRequest(pRequest, WEB_USER_UPDATESKIN);
+			}
+#endif
 		}
 		else if (MsgID == NETMSGTYPE_CL_EMOTICON && !m_World.m_Paused)
 		{
@@ -1100,11 +1131,47 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if (MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
 		{
-			if(pPlayer->m_LastKill && pPlayer->m_LastKill+Server()->TickSpeed()*3 > Server()->Tick())
+			if (pPlayer->m_LastKill && pPlayer->m_LastKill + Server()->TickSpeed() / 2 > Server()->Tick())
 				return;
 
 			pPlayer->m_LastKill = Server()->Tick();
 			pPlayer->KillCharacter(WEAPON_SELF);
+			pPlayer->m_RespawnTick = Server()->Tick();
+		}
+		else if (MsgID == NETMSGTYPE_CL_ISRACE)
+		{
+			pPlayer->m_IsUsingRaceClient = true;
+			if (!g_Config.m_SvShowTimes)
+				return;
+
+			SendRecord(ClientID);
+
+			// send time of all players
+			for (int i = 0; i < MAX_CLIENTS; i++)
+			{
+				if (m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
+				{
+					char aBuf[16];
+					str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurTime*1000.0f); // damn ugly but the only way i know to do it
+					int TimeToSend;
+					sscanf(aBuf, "%d", &TimeToSend);
+					CNetMsg_Sv_PlayerTime Msg;
+					Msg.m_Time = TimeToSend;
+					Msg.m_ClientID = i;
+					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
+				}
+			}
+		}
+		else if (MsgID == NETMSGTYPE_CL_RACESHOWOTHERS)
+		{
+			if (!g_Config.m_SvShowOthers && !Server()->IsAuthed(ClientID))
+				return;
+			if (pPlayer->m_Last_ShowOthers && pPlayer->m_Last_ShowOthers + Server()->TickSpeed() / 2 > Server()->Tick())
+				return;
+
+			pPlayer->m_Last_ShowOthers = Server()->Tick();
+			CNetMsg_Cl_RaceShowOthers *pMsg = (CNetMsg_Cl_RaceShowOthers *)pRawMsg;
+			pPlayer->m_ShowOthers = (bool)pMsg->m_Active;
 		}
 	}
 	else
@@ -1206,86 +1273,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			CNetMsg_Sv_ReadyToEnter m;
 			Server()->SendPackMsg(&m, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID);
 		}
-
-#if defined(CONF_TEERACE)
-		if(m_pWebapp && Server()->GetUserID(ClientID) > 0)
-		{
-			Json::Value Userdata;
-			Json::FastWriter Writer;
-			Userdata["skin_name"] = pMsg->m_pSkin;
-			if(pMsg->m_UseCustomColor)
-			{
-				Userdata["body_color"] = HslToRgb(pMsg->m_ColorBody);
-				Userdata["feet_color"] = HslToRgb(pMsg->m_ColorFeet);
-			}
-			std::string Json = Writer.write(Userdata);
-	
-			char aURI[128];
-			str_format(aURI, sizeof(aURI), "users/skin/%d/", Server()->GetUserID(ClientID));
-			CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_PUT);
-			pRequest->SetBody(Json.c_str(), Json.length());
-			m_pWebapp->SendRequest(pRequest, WEB_USER_UPDATESKIN);
-		}
-#endif
-	}
-	else if (MsgID == NETMSGTYPE_CL_EMOTICON && !m_World.m_Paused)
-	{
-		CNetMsg_Cl_Emoticon *pMsg = (CNetMsg_Cl_Emoticon *)pRawMsg;
-
-		if(g_Config.m_SvSpamprotection && pPlayer->m_LastEmote && pPlayer->m_LastEmote+Server()->TickSpeed()*3 > Server()->Tick())
-			return;
-
-		pPlayer->m_LastEmote = Server()->Tick();
-
-		SendEmoticon(ClientID, pMsg->m_Emoticon);
-	}
-	else if (MsgID == NETMSGTYPE_CL_KILL && !m_World.m_Paused)
-	{
-		if(pPlayer->m_LastKill && pPlayer->m_LastKill+Server()->TickSpeed()/2 > Server()->Tick())
-			return;
-
-		pPlayer->m_LastKill = Server()->Tick();
-		pPlayer->KillCharacter(WEAPON_SELF);
-		pPlayer->m_RespawnTick = Server()->Tick();
-	}
-	else if (MsgID == NETMSGTYPE_CL_ISRACE)
-	{
-		pPlayer->m_IsUsingRaceClient = true;
-		
-		if(!g_Config.m_SvShowTimes)
-			return;
-
-		SendRecord(ClientID);
-
-		// send time of all players
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
-			{
-				char aBuf[16];
-				str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurTime*1000.0f); // damn ugly but the only way i know to do it
-				int TimeToSend;
-				sscanf(aBuf, "%d", &TimeToSend);
-				CNetMsg_Sv_PlayerTime Msg;
-				Msg.m_Time = TimeToSend;
-				Msg.m_ClientID = i;
-				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
-			}
-		}
-	}
-	else if (MsgID == NETMSGTYPE_CL_RACESHOWOTHERS)
-	{
-		if(!g_Config.m_SvShowOthers && !Server()->IsAuthed(ClientID))
-			return;
-				
-		if(pPlayer->m_Last_ShowOthers && pPlayer->m_Last_ShowOthers+Server()->TickSpeed()/2 > Server()->Tick())
-			return;
-		
-		pPlayer->m_Last_ShowOthers = Server()->Tick();
-		
-		CNetMsg_Cl_RaceShowOthers *pMsg = (CNetMsg_Cl_RaceShowOthers *)pRawMsg;
-		
-		pPlayer->m_ShowOthers = (bool)pMsg->m_Active;
 	}
 }
 

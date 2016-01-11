@@ -62,7 +62,6 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 {
 	m_EmoteStop = -1;
 	m_LastAction = -1;
-	m_ActiveWeapon = WEAPON_GUN;
 	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastNoAmmoSound = -1;
 	m_LastWeapon = WEAPON_HAMMER;
@@ -760,8 +759,9 @@ void CCharacter::TickDefered()
 	if(Events&COREEVENT_GROUND_JUMP) GameServer()->CreateSound(m_Pos, SOUND_PLAYER_JUMP, Mask);
 
 	if(Events&COREEVENT_HOOK_ATTACH_PLAYER) GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_PLAYER, CmaskRace(GameServer(), m_pPlayer->GetCID()));
-	if(Events&COREEVENT_HOOK_ATTACH_GROUND)	GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_GROUND, Mask);
+	if(Events&COREEVENT_HOOK_ATTACH_GROUND) GameServer()->CreateSound(m_Pos, SOUND_HOOK_ATTACH_GROUND, Mask);
 	if(Events&COREEVENT_HOOK_HIT_NOHOOK) GameServer()->CreateSound(m_Pos, SOUND_HOOK_NOATTACH, Mask);
+
 
 	if(m_pPlayer->GetTeam() == TEAM_SPECTATORS)
 	{
