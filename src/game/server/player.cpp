@@ -282,7 +282,8 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 
 	m_Team = Team;
 	m_LastActionTick = Server()->Tick();
-	
+	m_SpectatorID = SPEC_FREEVIEW;
+
 	//m_Score = 0;
 	m_ScoreStartTick = Server()->Tick();
 	// we got to wait 0.5 secs before respawning

@@ -54,6 +54,7 @@ public:
 	struct CPlaybackInfo
 	{
 		CDemoHeader m_Header;
+		CTimelineMarkers m_TimelineMarkers;
 
 		IDemoPlayer::CInfo m_Info;
 
