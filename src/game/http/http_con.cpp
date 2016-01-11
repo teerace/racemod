@@ -24,7 +24,9 @@ CHttpConnection::~CHttpConnection()
 bool CHttpConnection::Create(NETADDR Addr, int Type)
 {
 	m_Addr = Addr;
-	m_Socket = net_tcp_create(m_Addr);
+	NETADDR BindAddr = { 0 };
+	BindAddr.type = NETTYPE_IPV4;
+	m_Socket = net_tcp_create(BindAddr);
 	if(m_Socket.type == NETTYPE_INVALID)
 		return false;
 
