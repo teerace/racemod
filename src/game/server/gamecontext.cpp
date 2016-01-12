@@ -1787,6 +1787,13 @@ void CGameContext::ConMaplist(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
+void CGameContext::ConReloadMaplist(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(pSelf->m_pWebapp)
+		pSelf->m_pWebapp->LoadMapList();
+}
+
 void CGameContext::ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
@@ -1928,6 +1935,7 @@ void CGameContext::OnConsoleInit()
 #if defined(CONF_TEERACE)
 	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "Checks if the webapp is online");
 	Console()->Register("maplist", "?i", CFGFLAG_SERVER, ConMaplist, this, "Shows the current map list with map ID's");
+	Console()->Register("reload_maplist", "", CFGFLAG_SERVER, ConReloadMaplist, this, "Reloads the map list");
 	Console()->Register("update_map_votes", "?i", CFGFLAG_SERVER, ConUpdateMapVote, this, "Updates the map votes and stores it into the config");
 #endif
 }

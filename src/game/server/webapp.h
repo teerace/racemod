@@ -13,7 +13,16 @@ public:
 	class CMapInfo
 	{
 	public:
-		CMapInfo() { m_ID = -1; }
+		enum
+		{
+			MAPSTATE_NONE,
+			MAPSTATE_INFO_MISSING,
+			MAPSTATE_FILE_MISSING,
+			MAPSTATE_DOWNLOADING,
+			MAPSTATE_COMPLETE
+		};
+		CMapInfo() : m_State(MAPSTATE_NONE), m_ID(-1) { }
+		int m_State;
 		int m_RunCount;
 		int m_ID;
 		char m_aName[128];
@@ -51,6 +60,7 @@ public:
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
 	int GetMapCount() { return m_lMapList.size(); }
+	void LoadMapList();
 	void OnInit();
 	void Tick();
 
@@ -79,7 +89,7 @@ private:
 	};
 	array<CUpload> m_lUploads;
 
-	int m_NumDownloadingMaps;
+	int m_LastMapListLoad;
 	sorted_array<CMapInfo> m_lMapList;
 	CMapInfo m_CurrentMap;
 	

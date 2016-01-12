@@ -80,6 +80,7 @@ class CGameContext : public IGameServer
 #if defined(CONF_TEERACE)
 	static void ConPing(IConsole::IResult *pResult, void *pUserData);
 	static void ConMaplist(IConsole::IResult *pResult, void *pUserData);
+	static void ConReloadMaplist(IConsole::IResult *pResult, void *pUserData);
 	static void ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData);
 #endif
 

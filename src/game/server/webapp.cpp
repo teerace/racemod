@@ -70,7 +70,7 @@ void CServerWebapp::Upload(CGameContext *pGameServer, const char *pFilename, con
 }
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-	: m_pGameServer(pGameServer), m_pServer(pGameServer->Server()), m_NumDownloadingMaps(0)
+	: m_pGameServer(pGameServer), m_pServer(pGameServer->Server()), m_LastMapListLoad(-1)
 {
 	// load maps
 	m_pServer->Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
@@ -325,11 +325,6 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 	if(Error)
 		return;
 
-	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, "/maps/list/");
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-	pInfo->SetCallback(OnMapList, pGameServer);
-	pServer->SendHttp(pInfo, pRequest);
-
 	Json::Value JsonData;
 	Json::Reader Reader;
 	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
@@ -375,9 +370,6 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 		const char *pPath = "/maps/teerace/%s.map";
 		bool Change = false;
 
-		// TODO: find a better solution
-		bool NewDownload = pWebapp->m_NumDownloadingMaps == 0;
-
 		for(unsigned int i = 0; i < JsonData.size(); i++)
 		{
 			Json::Value Map = JsonData[i];
@@ -387,38 +379,46 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 			CMapInfo Info;
 			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
 			sscanf(Map["crc"].asCString(), "%08x", &Info.m_Crc);
-
-			if(Map["get_best_score"].type() && !str_comp(Info.m_aName, g_Config.m_SvMap))
-			{
-				float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
-				float aCheckpointTimes[25] = { 0.0f };
-				Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
-				for(unsigned int j = 0; j < Checkpoint.size(); j++)
-					aCheckpointTimes[j] = str_tofloat(Checkpoint[j].asCString());
-				pGameServer->Score()->GetRecord()->Set(Time, aCheckpointTimes);
-			}
+			Info.m_ID = Map["id"].asInt();
+			Info.m_RunCount = Map["run_count"].asInt();
+			Info.m_MapType = Map["get_map_type"].asInt();
+			str_copy(Info.m_aURL, Map["get_download_url"].asCString(), sizeof(Info.m_aURL));
+			str_copy(Info.m_aAuthor, Map["author"].asCString(), sizeof(Info.m_aAuthor));
 
 			array<CMapInfo>::range r = find_linear(pWebapp->m_lMapList.all(), Info);
-			if(r.empty() || r.front().m_Crc != Info.m_Crc)
+			if(r.empty()) // new entry
 			{
-				if(NewDownload)
-				{
-					str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-					Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
-					pWebapp->m_NumDownloadingMaps++;
-					if(!r.empty())
-						pWebapp->m_lMapList.remove(r.front());
-				}
+				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+				pWebapp->m_lMapList.add(Info);
+				dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+
+				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+				Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
 			}
-			else if(r.front().m_ID == -1)
+			else if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
 			{
-				r.front().m_ID = Map["id"].asInt();
-				r.front().m_RunCount = Map["run_count"].asInt();
-				r.front().m_MapType = Map["get_map_type"].asInt();
-				str_copy(r.front().m_aURL, Map["get_download_url"].asCString(), sizeof(r.front().m_aURL));
-				str_copy(r.front().m_aAuthor, Map["author"].asCString(), sizeof(r.front().m_aAuthor));
-				dbg_msg("webapp", "added map info: '%s' (%d)", r.front().m_aName, r.front().m_ID);
-				Change = true;
+				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+				r.front() = Info;
+				dbg_msg("webapp", "updated map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+
+				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+				Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
+			}
+			else if(r.front().m_Crc == Info.m_Crc) // we already have this 
+			{
+				if(r.front().m_State == CMapInfo::MAPSTATE_INFO_MISSING)
+				{
+					Info.m_State = CMapInfo::MAPSTATE_COMPLETE;
+					r.front() = Info;
+					dbg_msg("webapp", "added map info: '%s' (%d)", r.front().m_aName, r.front().m_ID);
+					Change = true;
+				}
+				else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
+				{
+					r.front().m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+					str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+					Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
+				}
 			}
 		}
 
@@ -448,8 +448,6 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 		pGameServer->Server()->Storage()->RemoveFile(pRes->GetPath(), IStorage::TYPE_SAVE);
 		dbg_msg("webapp", "could not download map: '%s'", pRes->GetPath());
 	}
-
-	pGameServer->Webapp()->m_NumDownloadingMaps--;
 }
 
 void CServerWebapp::OnRunPost(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -512,9 +510,30 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename)
 	Info.m_Crc = DataFile.Crc();
 	DataFile.Close();
 	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName),str_length(pFilename)-3));
-	dbg_msg("", "added map: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-	int Num = m_lMapList.add(Info);
-	return &m_lMapList[Num];
+
+	array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
+	if(r.empty()) // new entry
+	{
+		Info.m_State = CMapInfo::MAPSTATE_INFO_MISSING;
+		int Num = m_lMapList.add(Info);
+		dbg_msg("", "added map: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+		return &m_lMapList[Num];
+	}
+	else if(r.front().m_State == CMapInfo::MAPSTATE_DOWNLOADING) // entry already exists
+	{
+		if(r.front().m_Crc == Info.m_Crc)
+		{
+			r.front().m_State = CMapInfo::MAPSTATE_COMPLETE;
+			dbg_msg("", "added map: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+			m_lMapList.sort_range();
+			AddMapVotes();
+			return &r.front();
+		}
+		// something went wrong
+		r.front().m_State = CMapInfo::MAPSTATE_FILE_MISSING;
+	}
+	Server()->Storage()->RemoveFile(aFile, IStorage::TYPE_SAVE);
+	return 0;
 }
 
 void CServerWebapp::OnInit()
@@ -522,7 +541,7 @@ void CServerWebapp::OnInit()
 	m_CurrentMap.m_ID = -1;
 	str_copy(m_CurrentMap.m_aName, g_Config.m_SvMap, sizeof(m_CurrentMap.m_aName));
 	array<CMapInfo>::range r = find_linear(m_lMapList.all(), m_CurrentMap);
-	if(!r.empty())
+	if(!r.empty() && r.front().m_State == CMapInfo::MAPSTATE_COMPLETE)
 	{
 		m_CurrentMap = r.front();
 		dbg_msg("webapp", "current map: '%s' (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
@@ -544,6 +563,21 @@ void CServerWebapp::Tick()
 			i--; // since one item was removed
 		}
 	}
+
+	// load maplist every 20 minutes
+	if(m_LastMapListLoad == -1 || m_LastMapListLoad + Server()->TickSpeed() * 60 * 20 < Server()->Tick())
+	{
+		LoadMapList();
+		m_LastMapListLoad = Server()->Tick();
+	}
+}
+
+void CServerWebapp::LoadMapList()
+{
+	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, "/maps/list/");
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo->SetCallback(OnMapList, GameServer());
+	Server()->SendHttp(pInfo, pRequest);
 }
 
 void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime)
@@ -553,12 +587,12 @@ void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const cha
 
 void CServerWebapp::AddMapVotes()
 {
-	if(g_Config.m_WaAutoAddMaps)
+	if(g_Config.m_WaAutoAddMaps && m_CurrentMap.m_ID != -1)
 	{
 		for(int i = 0; i < m_lMapList.size(); i++)
 		{
 			CMapInfo *pMapInfo = &m_lMapList[i];
-			if(m_CurrentMap.m_ID != -1 && pMapInfo->m_ID != -1 && m_CurrentMap.m_MapType == pMapInfo->m_MapType)
+			if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE && m_CurrentMap.m_MapType == pMapInfo->m_MapType)
 			{
 				char aVoteDescription[128];
 				if(str_find(g_Config.m_WaVoteDescription, "%s"))
