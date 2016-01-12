@@ -7,13 +7,16 @@
 #include <base/tl/sorted_array.h>
 #include <engine/shared/packer.h>
 #include <engine/shared/config.h>
+#include <engine/shared/http.h>
 #include <engine/map.h>
 #include <engine/console.h>
 #include <engine/storage.h>
-#include "gamecontext.h"
+#include <game/teerace.h>
 #include <game/version.h>
 #include <game/collision.h>
 #include <game/gamecore.h>
+
+#include "gamecontext.h"
 
 /* no need for this
 #include "gamemodes/dm.h"
@@ -29,9 +32,10 @@
 #include "score/sql_score.h"
 #endif
 #if defined(CONF_TEERACE)
-#include "score/wa_score.h"
 #include <engine/external/json/writer.h>
+#include "score/wa_score.h"
 #include "webapp.h"
+#include "data.h"
 #endif
 
 enum
@@ -466,7 +470,6 @@ void CGameContext::OnTick()
 #if defined(CONF_TEERACE)
 	if(m_pWebapp)
 	{
-		m_pWebapp->Update();
 		m_pWebapp->Tick();
 		if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60 < Server()->Tick())
 		{
@@ -502,9 +505,11 @@ void CGameContext::OnTick()
 
 			std::string Json = Writer.write(Data);
 			
-			CRequest *pRequest = m_pWebapp->CreateRequest("ping/", CRequest::HTTP_POST);
-			pRequest->SetBody(Json.c_str(), Json.length());
-			m_pWebapp->SendRequest(pRequest, WEB_PING_PING);
+			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/ping/");
+			pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+			pInfo->SetCallback(CServerWebapp::OnPingPing, this);
+			m_pServer->SendHttp(pInfo, pRequest);
 			
 			m_LastPing = Server()->Tick();
 		}
@@ -634,13 +639,15 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmd
 			Data["api_token"] = m_aToken;
 			std::string Json = Writer.write(Data);
 
-			CWebUserAuthData *pUserData = new CWebUserAuthData();
+			CWebUserAuthData *pUserData = new CWebUserAuthData(this);
 			pUserData->m_ClientID = ClientID;
 			pUserData->m_SendRconCmds = SendRconCmds;
 
-			CRequest *pRequest = m_pWebapp->CreateRequest("users/auth_token/", CRequest::HTTP_POST);
-			pRequest->SetBody(Json.c_str(), Json.length());
-			m_pWebapp->SendRequest(pRequest, WEB_USER_AUTH, pUserData);
+			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/auth_token/");
+			pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+			pInfo->SetCallback(CServerWebapp::OnUserAuth, pUserData);
+			m_pServer->SendHttp(pInfo, pRequest);
 		}
 	}
 }
@@ -723,10 +730,12 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 		std::string Json = Writer.write(Post);
 
 		char aURI[128];
-		str_format(aURI, sizeof(aURI), "users/playtime/%d/", UserID);
-		CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_PUT);
-		pRequest->SetBody(Json.c_str(), Json.length());
-		m_pWebapp->SendRequest(pRequest, WEB_USER_PLAYTIME);
+		str_format(aURI, sizeof(aURI), "/users/playtime/%d/", UserID);
+		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_PUT, aURI);
+		pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+		//pInfo->SetCallback(CServerWebapp::OnUserPlaytime, this);
+		m_pServer->SendHttp(pInfo, pRequest);
 	}
 #endif
 	AbortVoteKickOnDisconnect(ClientID);
@@ -1111,10 +1120,12 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				std::string Json = Writer.write(Userdata);
 
 				char aURI[128];
-				str_format(aURI, sizeof(aURI), "users/skin/%d/", Server()->GetUserID(ClientID));
-				CRequest *pRequest = m_pWebapp->CreateRequest(aURI, CRequest::HTTP_PUT);
-				pRequest->SetBody(Json.c_str(), Json.length());
-				m_pWebapp->SendRequest(pRequest, WEB_USER_UPDATESKIN);
+				str_format(aURI, sizeof(aURI), "/users/skin/%d/", Server()->GetUserID(ClientID));
+				CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_PUT, aURI);
+				pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+				//pInfo->SetCallback(CServerWebapp::OnUserUpdateSkin, this);
+				m_pServer->SendHttp(pInfo, pRequest);
 			}
 #endif
 		}

@@ -144,6 +144,8 @@ public:
 	CNetServer m_NetServer;
 	CEcon m_Econ;
 	CServerBan m_ServerBan;
+	CHttpClient m_HttpClient;
+
 
 	IEngineMap *m_pMap;
 
@@ -212,6 +214,8 @@ public:
 
 	static int NewClientCallback(int ClientID, void *pUser);
 	static int DelClientCallback(int ClientID, const char *pReason, void *pUser);
+
+	virtual void SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest);
 
 	void SendMap(int ClientID);
 	void SendConnectionReady(int ClientID);

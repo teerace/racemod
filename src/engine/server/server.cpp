@@ -19,6 +19,7 @@
 #include <engine/shared/demo.h>
 #include <engine/shared/econ.h>
 #include <engine/shared/filecollection.h>
+#include <engine/shared/http.h>
 #include <engine/shared/mapchecker.h>
 #include <engine/shared/netban.h>
 #include <engine/shared/network.h>
@@ -778,6 +779,11 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	return 0;
 }
 
+void CServer::SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest)
+{
+	m_HttpClient.Send(pInfo, pRequest);
+}
+
 void CServer::SendMap(int ClientID)
 {
 	CMsgPacker Msg(NETMSG_MAP_CHANGE);
@@ -1254,6 +1260,8 @@ void CServer::PumpNetwork()
 
 	m_ServerBan.Update();
 	m_Econ.Update();
+
+	m_HttpClient.Update();
 }
 
 #if defined(CONF_TEERACE)
@@ -1485,6 +1493,8 @@ int CServer::Run()
 	m_NetServer.SetCallbacks(NewClientCallback, DelClientCallback, this);
 
 	m_Econ.Init(Console(), &m_ServerBan);
+
+	m_HttpClient.Init(Kernel()->RequestInterface<IEngine>());
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "server name is '%s'", g_Config.m_SvName);

@@ -6,228 +6,292 @@
 #include <base/tl/algorithm.h>
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
+#include <engine/shared/http.h>
 #include <engine/external/json/reader.h>
 #include <engine/storage.h>
 
+#include <game/teerace.h>
 #include <game/version.h>
-
-#include <game/http/response.h>
 
 #include "score/wa_score.h"
 #include "gamecontext.h"
 #include "webapp.h"
+#include "data.h"
+
+CBufferRequest *CServerWebapp::CreateAuthedApiRequest(int Method, const char *pURI)
+{
+	CBufferRequest *pRequest = ITeerace::CreateApiRequest(Method, pURI);
+	RegisterFields(pRequest);
+	return pRequest;
+}
+
+void CServerWebapp::RegisterFields(IRequest *pRequest)
+{
+	pRequest->AddField("API-AUTH", g_Config.m_WaApiKey);
+	pRequest->AddField("API-GAMESERVER-VERSION", TEERACE_GAMESERVER_VERSION);
+}
+
+void CServerWebapp::CheckStatusCode(IConsole *pConsole, int Status)
+{
+	if(Status == 432)
+	{
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp",
+			"This server is outdated and cannot fully cooperate with Teerace, hence its support is currently disabled. Please notify the server administrator.");
+	}
+	if(Status == 403)
+	{
+		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp",
+			"This server was denied access to Teerace network. Please notify the server administator.");
+	}
+}
+
+void CServerWebapp::Download(CGameContext *pGameServer, const char *pFilename, const char *pURI, FHttpCallback pfnCallback)
+{
+	IOHANDLE File = pGameServer->Server()->Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	CBufferRequest *pRequest = new CBufferRequest(IRequest::HTTP_GET, pURI);
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host(), File, pFilename);
+	pInfo->SetCallback(pfnCallback, pGameServer);
+	pInfo->SetPriority(HTTP_PRIORITY_LOW);
+	pGameServer->Server()->SendHttp(pInfo, pRequest);
+}
+
+void CServerWebapp::Upload(CGameContext *pGameServer, const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback)
+{
+	CWebUploadData *pUserData = new CWebUploadData(pGameServer);
+	str_copy(pUserData->m_aFilename, pFilename, sizeof(pUserData->m_aFilename));
+	IOHANDLE File = pGameServer->Server()->Storage()->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_SAVE);
+	CFileRequest *pRequest = ITeerace::CreateApiUpload(pURI);
+	RegisterFields(pRequest);
+	pRequest->SetFile(File, pFilename, pUploadName);
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo->SetCallback(pfnCallback, pUserData);
+	pInfo->SetPriority(HTTP_PRIORITY_LOW);
+	pGameServer->Server()->SendHttp(pInfo, pRequest);
+}
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-: IWebapp(pGameServer->Server()->Storage()),
-  m_pGameServer(pGameServer),
-  m_pServer(pGameServer->Server())
+	: m_pGameServer(pGameServer), m_pServer(pGameServer->Server()), m_NumDownloadingMaps(0)
 {
 	// load maps
-	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
+	m_pServer->Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 	m_lUploads.clear();
 }
 
-void CServerWebapp::RegisterFields(CRequest *pRequest, bool Api)
+void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	if(Api)
+	CWebUserAuthData *pUser = (CWebUserAuthData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	IServer *pServer = pGameServer->Server();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	int ClientID = pUser->m_ClientID;
+	if(pGameServer->m_apPlayers[ClientID])
 	{
-		pRequest->AddField("API-AUTH", g_Config.m_WaApiKey);
-		pRequest->AddField("API-GAMESERVER-VERSION", TEERACE_GAMESERVER_VERSION);
+		if(Error)
+		{
+			pGameServer->SendChatTarget(ClientID, "unknown error");
+			delete pUser;
+			return;
+		}
+
+		int SendRconCmds = pUser->m_SendRconCmds;
+		int UserID = 0;
+
+		Json::Value JsonData;
+		Json::Reader Reader;
+		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+		if(str_comp(pBody, "false") != 0 && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+			UserID = JsonData["id"].asInt();
+
+		if(UserID > 0)
+		{
+			char aBuf[512];
+			str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pServer->ClientName(ClientID), JsonData["username"].asCString());
+			pGameServer->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+			pServer->SetUserID(ClientID, UserID);
+			pServer->SetUserName(ClientID, JsonData["username"].asCString());
+
+			// auth staff members
+			if(JsonData["is_staff"].asBool())
+				pServer->StaffAuth(ClientID, SendRconCmds);
+
+			((CWebappScore*)pGameServer->Score())->LoadScore(ClientID, true);
+		}
+		else
+		{
+			pGameServer->SendChatTarget(ClientID, "wrong username and/or password");
+		}
 	}
+	delete pUser;
 }
 
-void CServerWebapp::OnResponse(CHttpConnection *pCon)
+void CServerWebapp::OnUserFind(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	int Type = pCon->Type();
-	CResponse *pResponse = pCon->Response();
-	bool Error = pCon->Error() || pResponse->StatusCode() != 200;
+	CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	IServer *pServer = pGameServer->Server();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
 
-	// server outdated
-	if(pResponse->StatusCode() == 432)
-	{
-		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp", "This server is outdated and cannot fully cooperate with Teerace, hence its support is currently disabled. Please notify the server administrator.");
-		return;
-	}
-	else if(pResponse->StatusCode() == 403)
-	{
-		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp", "This server was denied access to Teerace network. Please notify the server administator.");
-		return;
-	}
+	pUser->m_UserID = 0;
 
 	Json::Value JsonData;
 	Json::Reader Reader;
-	bool Json = false;
-	if(!Error && !pResponse->IsFile())
-		Json = Reader.parse(pResponse->GetBody(), pResponse->GetBody()+pResponse->Size(), JsonData);
+	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+		pUser->m_UserID = JsonData["id"].asInt();
 
-	// TODO: add event listener (server and client)
-	if(Type == WEB_USER_AUTH)
+	if(pUser->m_UserID > 0)
 	{
-		CWebUserAuthData *pUser = (CWebUserAuthData*)pCon->UserData();
-		int ClientID = pUser->m_ClientID;
-		if(GameServer()->m_apPlayers[ClientID])
+		str_copy(pUser->m_aName, JsonData["username"].asCString(), sizeof(pUser->m_aName));
+
+		char aURI[128];
+		str_format(aURI, sizeof(aURI), "/users/rank/%d/", pUser->m_UserID);
+		CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+		pInfo->SetCallback(OnUserRankGlobal, pUser);  // do not delete userdata here
+		pServer->SendHttp(pInfo, pRequest);
+	}
+	else if(pUser->m_PrintRank)
+	{
+		if(pGameServer->m_apPlayers[pUser->m_ClientID])
 		{
-			if(Error)
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pUser->m_aName);
+			pGameServer->SendChatTarget(pUser->m_ClientID, aBuf);
+		}
+		delete pUser;
+	}
+}
+
+void CServerWebapp::OnUserRankGlobal(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	IServer *pServer = pGameServer->Server();
+	CServerWebapp *pWebapp = pGameServer->Webapp();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	pUser->m_GlobalRank = 0;
+	if(!Error)
+		pUser->m_GlobalRank = str_toint(((CBufferResponse*)pResponse)->GetBody());
+
+	char aURI[128];
+	str_format(aURI, sizeof(aURI), "/users/map_rank/%d/%d/", pUser->m_UserID, pWebapp->CurrentMap()->m_ID);
+	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo->SetCallback(OnUserRankMap, pUser); // do not delete userdata here
+	pServer->SendHttp(pInfo, pRequest);
+}
+
+void CServerWebapp::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CWebUserRankData *pUser = (CWebUserRankData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	IServer *pServer = pGameServer->Server();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	int GlobalRank = pUser->m_GlobalRank;
+	int MapRank = 0;
+	CPlayerData Run;
+
+	Json::Value JsonData;
+	Json::Reader Reader;
+	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+	{
+		MapRank = JsonData["position"].asInt();
+		if(MapRank)
+		{
+			float Time = str_tofloat(JsonData["bestrun"]["time"].asCString());
+			float aCheckpointTimes[25] = { 0.0f };
+			Json::Value Checkpoint = JsonData["bestrun"]["checkpoints_list"];
+			for(unsigned int i = 0; i < Checkpoint.size(); i++)
+				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
+			Run.Set(Time, aCheckpointTimes);
+		}
+	}
+
+	if(pGameServer->m_apPlayers[pUser->m_ClientID])
+	{
+		bool Own = pUser->m_UserID == pServer->GetUserID(pUser->m_ClientID);
+		if(Own && MapRank)
+			pGameServer->Score()->PlayerData(pUser->m_ClientID)->Set(Run.m_Time, Run.m_aCpTime);
+
+		if(pUser->m_PrintRank)
+		{
+			char aBuf[256];
+			if(!MapRank && !GlobalRank)
 			{
-				GameServer()->SendChatTarget(ClientID, "unknown error");
-				return;
+				// do not send the rank to everyone if the player is not ranked at all
+				if(Own)
+					pGameServer->SendChatTarget(pUser->m_ClientID, "You are neither globally ranked nor on this map yet.");
+				else
+				{
+					str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", pUser->m_aName);
+					pGameServer->SendChatTarget(pUser->m_ClientID, aBuf);
+				}
+
+				delete pUser;
+				return; // we don't need the rest of this function here!
 			}
-
-			int SendRconCmds = pUser->m_SendRconCmds;
-			int UserID = 0;
-			
-			if(str_comp(pResponse->GetBody(), "false") != 0 && Json)
-				UserID = JsonData["id"].asInt();
-			
-			if(UserID > 0)
+			else if(!MapRank)
 			{
-				char aBuf[512];
-				str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", Server()->ClientName(ClientID), JsonData["username"].asCString());
-				GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-				Server()->SetUserID(ClientID, UserID);
-				Server()->SetUserName(ClientID, JsonData["username"].asCString());
-				
-				// auth staff members
-				if(JsonData["is_staff"].asBool())
-					Server()->StaffAuth(ClientID, SendRconCmds);
-
-				((CWebappScore*)GameServer()->Score())->LoadScore(ClientID, true);
+				str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
+					pUser->m_aName, GlobalRank, pServer->ClientName(pUser->m_ClientID));
+			}
+			else if(!GlobalRank)
+			{
+				if(Run.m_Time < 60.0f)
+					str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %.3f (%s)",
+						pUser->m_aName, MapRank, Run.m_Time, pServer->ClientName(pUser->m_ClientID));
+				else
+					str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %02d:%06.3f (%s)",
+						pUser->m_aName, MapRank, (int)Run.m_Time / 60,
+						fmod(Run.m_Time, 60), pServer->ClientName(pUser->m_ClientID));
 			}
 			else
 			{
-				GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
-			}
-		}
-	}
-	else if(Type == WEB_USER_FIND)
-	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pCon->UserData();
-		pUser->m_UserID = 0;
-		
-		if(!Error && Json)
-			pUser->m_UserID = JsonData["id"].asInt();
-
-		if(pUser->m_UserID)
-		{
-			str_copy(pUser->m_aName, JsonData["username"].asCString(), sizeof(pUser->m_aName));
-			CWebUserRankData *pNewData = new CWebUserRankData();
-			mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
-
-			char aURI[128];
-			str_format(aURI, sizeof(aURI), "users/rank/%d/", pUser->m_UserID);
-			CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
-			SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pNewData);
-		}
-		else if(pUser->m_PrintRank)
-		{
-			if(GameServer()->m_apPlayers[pUser->m_ClientID])
-			{
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pUser->m_aName);
-				GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
-			}
-		}
-	}
-	else if(Type == WEB_USER_RANK_GLOBAL)
-	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pCon->UserData();
-		pUser->m_GlobalRank = 0;
-
-		if(!Error)
-			pUser->m_GlobalRank = str_toint(pResponse->GetBody());
-
-		CWebUserRankData *pNewData = new CWebUserRankData();
-		mem_copy(pNewData, pUser, sizeof(CWebUserRankData));
-
-		char aURI[128];
-		str_format(aURI, sizeof(aURI), "users/map_rank/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-		CRequest *pRequest = CreateRequest(aURI, CRequest::HTTP_GET);
-		SendRequest(pRequest, WEB_USER_RANK_MAP, pNewData);
-	}
-	else if(Type == WEB_USER_RANK_MAP)
-	{
-		CWebUserRankData *pUser = (CWebUserRankData*)pCon->UserData();
-		int GlobalRank = pUser->m_GlobalRank;
-		int MapRank = 0;
-		CPlayerData Run;
-
-		if(!Error && Json)
-		{
-			MapRank = JsonData["position"].asInt();
-			if(MapRank)
-			{
-				float Time = str_tofloat(JsonData["bestrun"]["time"].asCString());
-				float aCheckpointTimes[25] = {0.0f};
-				Json::Value Checkpoint = JsonData["bestrun"]["checkpoints_list"];
-				for(unsigned int i = 0; i < Checkpoint.size(); i++)
-					aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
-				Run.Set(Time, aCheckpointTimes);
-			}
-		}
-
-		if(GameServer()->m_apPlayers[pUser->m_ClientID])
-		{
-			bool Own = pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID);
-			if(Own && MapRank)
-				GameServer()->Score()->PlayerData(pUser->m_ClientID)->Set(Run.m_Time, Run.m_aCpTime);
-
-			if(pUser->m_PrintRank)
-			{
-				char aBuf[256];
-				if(!MapRank && !GlobalRank)
-				{
-					// do not send the rank to everyone if the player is not ranked at all
-					if(Own)
-						GameServer()->SendChatTarget(pUser->m_ClientID, "You are neither globally ranked nor on this map yet.");
-					else
-					{
-						str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", pUser->m_aName);
-						GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
-					}
-
-					return; // we don't need the rest of this function here!
-				}
-				else if(!MapRank)
-					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
-						pUser->m_aName, GlobalRank, Server()->ClientName(pUser->m_ClientID));
-				else if(!GlobalRank)
-				{
-					if(Run.m_Time < 60.0f)
-						str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %.3f (%s)",
-							pUser->m_aName, MapRank, Run.m_Time, Server()->ClientName(pUser->m_ClientID));
-					else
-						str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %02d:%06.3f (%s)",
-							pUser->m_aName, MapRank, (int)Run.m_Time/60,
-							fmod(Run.m_Time, 60), Server()->ClientName(pUser->m_ClientID));
-				}
+				if(Run.m_Time < 60.0f)
+					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
+						pUser->m_aName, GlobalRank, MapRank, Run.m_Time, pServer->ClientName(pUser->m_ClientID));
 				else
-				{
-					if(Run.m_Time < 60.0f)
-						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
-							pUser->m_aName, GlobalRank, MapRank, Run.m_Time, Server()->ClientName(pUser->m_ClientID));
-					else
-						str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
-							pUser->m_aName, GlobalRank, MapRank, (int)Run.m_Time/60,
-							fmod(Run.m_Time, 60), Server()->ClientName(pUser->m_ClientID));
-				}
-				
-				if(g_Config.m_SvShowTimes)
-					GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-				else
-					GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
+					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
+						pUser->m_aName, GlobalRank, MapRank, (int)Run.m_Time / 60,
+						fmod(Run.m_Time, 60), pServer->ClientName(pUser->m_ClientID));
 			}
+
+			if(g_Config.m_SvShowTimes)
+				pGameServer->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+			else
+				pGameServer->SendChatTarget(pUser->m_ClientID, aBuf);
 		}
 	}
-	else if(Type == WEB_USER_TOP && Json && !Error)
+	delete pUser;
+}
+
+void CServerWebapp::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CWebUserTopData *pUser = (CWebUserTopData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	Json::Value JsonData;
+	Json::Reader Reader;
+	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
 	{
-		CWebUserTopData *pUser = (CWebUserTopData*)pCon->UserData();
 		int ClientID = pUser->m_ClientID;
-		if(GameServer()->m_apPlayers[ClientID])
+		if(pGameServer->m_apPlayers[ClientID])
 		{
 			char aBuf[256];
 			float LastTime = 0.0f;
 			int SameTimeCount = 0;
-			GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
+			pGameServer->SendChatTarget(ClientID, "----------- Top 5 -----------");
 			for(unsigned int i = 0; i < JsonData.size() && i < 5; i++)
 			{
 				Json::Value Run = JsonData[i];
@@ -239,54 +303,81 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 					SameTimeCount = 0;
 
 				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-					i+pUser->m_StartRank-SameTimeCount, Run["run"]["user"]["username"].asCString(),(int)Time/60, fmod(Time, 60));
-				GameServer()->SendChatTarget(ClientID, aBuf);
+					i + pUser->m_StartRank - SameTimeCount, Run["run"]["user"]["username"].asCString(), (int)Time / 60, fmod(Time, 60));
+				pGameServer->SendChatTarget(ClientID, aBuf);
 
 				LastTime = Time;
 			}
-			GameServer()->SendChatTarget(ClientID, "------------------------------");
+			pGameServer->SendChatTarget(ClientID, "------------------------------");
 		}
 	}
-	else if(Type == WEB_PING_PING)
+	delete pUser;
+}
+
+void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CGameContext *pGameServer = (CGameContext*)pUserData;
+	IServer *pServer = pGameServer->Server();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	dbg_msg("webapp", "webapp is%s online", Error ? " not" : "");
+	if(Error)
+		return;
+
+	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, "/maps/list/");
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo->SetCallback(OnMapList, pGameServer);
+	pServer->SendHttp(pInfo, pRequest);
+
+	Json::Value JsonData;
+	Json::Reader Reader;
+	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+	if(Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
 	{
-		bool Online = !Error;
-		dbg_msg("webapp", "webapp is%s online", Online ? "" : " not");
-		if(Online)
+		Json::Value Awards = JsonData["awards"];
+		for(unsigned int i = 0; i < Awards.size(); i++)
 		{
-			CRequest *pRequest = CreateRequest("maps/list/", CRequest::HTTP_GET);
-			SendRequest(pRequest, WEB_MAP_LIST);
+			Json::Value Award = Awards[i];
+			int UserID = Award["user_id"].isInt() ? Award["user_id"].asInt() : 0;
 
-			if(Json)
+			if(!UserID)
+				return;
+
+			// show awards to everyone only if the player is there
+			for(int j = 0; j < MAX_CLIENTS; j++)
 			{
-				Json::Value Awards = JsonData["awards"];
-				for(unsigned int i = 0; i < Awards.size(); i++)
-				{
-					Json::Value Award = Awards[i];
-					int UserID = Award["user_id"].isInt() ? Award["user_id"].asInt() : 0;
+				if(UserID != pServer->GetUserID(j))
+					continue;
 
-					if(!UserID)
-						return;
-
-					// show awards to everyone only if the player is there
-					for(int j = 0; j < MAX_CLIENTS; j++)
-					{
-						if(UserID != Server()->GetUserID(j))
-							continue;
-
-						char aBuf[256];
-						str_format(aBuf, sizeof(aBuf), "%s achieved award \"%s\".", Server()->ClientName(j), Award["name"].asCString());
-						GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-					}
-				}
+				char aBuf[256];
+				str_format(aBuf, sizeof(aBuf), "%s achieved award \"%s\".", pServer->ClientName(j), Award["name"].asCString());
+				pGameServer->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 			}
 		}
 	}
-	else if(Type == WEB_MAP_LIST && Json && !Error)
+}
+
+void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CGameContext *pGameServer = (CGameContext*)pUserData;
+	IServer *pServer = pGameServer->Server();
+	CServerWebapp *pWebapp = pGameServer->Webapp();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	Json::Value JsonData;
+	Json::Reader Reader;
+	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
 	{
 		char aFilename[256];
-		const char *pPath = "maps/teerace/%s.map";
+		const char *pPath = "/maps/teerace/%s.map";
 		bool Change = false;
-		
+
+		// TODO: find a better solution
+		bool NewDownload = pWebapp->m_NumDownloadingMaps == 0;
+
 		for(unsigned int i = 0; i < JsonData.size(); i++)
 		{
 			Json::Value Map = JsonData[i];
@@ -296,24 +387,28 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 			CMapInfo Info;
 			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
 			sscanf(Map["crc"].asCString(), "%08x", &Info.m_Crc);
-			
+
 			if(Map["get_best_score"].type() && !str_comp(Info.m_aName, g_Config.m_SvMap))
 			{
 				float Time = str_tofloat(Map["get_best_score"]["time"].asCString());
-				float aCheckpointTimes[25] = {0.0f};
+				float aCheckpointTimes[25] = { 0.0f };
 				Json::Value Checkpoint = Map["get_best_score"]["checkpoints_list"];
 				for(unsigned int j = 0; j < Checkpoint.size(); j++)
 					aCheckpointTimes[j] = str_tofloat(Checkpoint[j].asCString());
-				GameServer()->Score()->GetRecord()->Set(Time, aCheckpointTimes);
+				pGameServer->Score()->GetRecord()->Set(Time, aCheckpointTimes);
 			}
 
-			array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
+			array<CMapInfo>::range r = find_linear(pWebapp->m_lMapList.all(), Info);
 			if(r.empty() || r.front().m_Crc != Info.m_Crc)
 			{
-				str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
-				Download(aFilename, Map["get_download_url"].asCString(), WEB_DOWNLOAD_MAP);
-				if(!r.empty())
-					m_lMapList.remove(r.front());
+				if(NewDownload)
+				{
+					str_format(aFilename, sizeof(aFilename), pPath, Map["name"].asCString());
+					Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
+					pWebapp->m_NumDownloadingMaps++;
+					if(!r.empty())
+						pWebapp->m_lMapList.remove(r.front());
+				}
 			}
 			else if(r.front().m_ID == -1)
 			{
@@ -322,56 +417,78 @@ void CServerWebapp::OnResponse(CHttpConnection *pCon)
 				r.front().m_MapType = Map["get_map_type"].asInt();
 				str_copy(r.front().m_aURL, Map["get_download_url"].asCString(), sizeof(r.front().m_aURL));
 				str_copy(r.front().m_aAuthor, Map["author"].asCString(), sizeof(r.front().m_aAuthor));
-				dbg_msg("webapp", "added map info: %s (%d)", r.front().m_aName, r.front().m_ID);
+				dbg_msg("webapp", "added map info: '%s' (%d)", r.front().m_aName, r.front().m_ID);
 				Change = true;
 			}
 		}
 
 		if(Change)
 		{
-			m_lMapList.sort_range();
-			OnInit();
+			pWebapp->m_lMapList.sort_range();
+			pWebapp->OnInit();
 		}
 	}
-	else if(Type == WEB_DOWNLOAD_MAP)
-	{
-		if(!Error)
-		{
-			CMapInfo *pInfo = AddMap(pResponse->GetFilename());
-			if(pInfo && str_comp(pInfo->m_aName, g_Config.m_SvMap) == 0)
-				Server()->ReloadMap();
-		}
-		else
-		{
-			Storage()->RemoveFile(pResponse->GetPath(), IStorage::TYPE_SAVE);
-			dbg_msg("webapp", "could not download map: %s", pResponse->GetFilename());
-		}
-	}
-	else if(Type == WEB_RUN_POST)
-	{
-		CWebRunData *pUser = (CWebRunData*)pCon->UserData();
-		if(pUser->m_Tick > -1)
-		{
-			char aFilename[256];
-			char aURL[128];
+}
 
-			str_format(aFilename, sizeof(aFilename), "demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
-			str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			AddUpload(aFilename, aURL, "demo_file", WEB_UPLOAD_DEMO, time_get()+time_freq()*2);
+void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CFileResponse *pRes = (CFileResponse*)pResponse;
+	CGameContext *pGameServer = (CGameContext*)pUserData;
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
 
-			str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
-			str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, CurrentMap()->m_ID);
-			AddUpload(aFilename, aURL, "ghost_file", WEB_UPLOAD_GHOST);
-		}
-	}
-	else if(Type == WEB_UPLOAD_DEMO || Type == WEB_UPLOAD_GHOST)
+	if(!Error)
 	{
-		if(!Error)
-			dbg_msg("webapp", "uploaded file: %s", pCon->Request()->GetFilename());
-		else
-			dbg_msg("webapp", "could not upload file: %s", pCon->Request()->GetFilename());
-		Storage()->RemoveFile(pCon->Request()->GetPath(), IStorage::TYPE_SAVE);
+		CMapInfo *pInfo = pGameServer->Webapp()->AddMap(pRes->GetFilename());
+		if(pInfo && str_comp(pInfo->m_aName, g_Config.m_SvMap) == 0)
+			pGameServer->Server()->ReloadMap();
 	}
+	else
+	{
+		pGameServer->Server()->Storage()->RemoveFile(pRes->GetPath(), IStorage::TYPE_SAVE);
+		dbg_msg("webapp", "could not download map: '%s'", pRes->GetPath());
+	}
+
+	pGameServer->Webapp()->m_NumDownloadingMaps--;
+}
+
+void CServerWebapp::OnRunPost(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CWebRunData *pUser = (CWebRunData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	CServerWebapp *pWebapp = pGameServer->Webapp();
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	if(!Error && pUser->m_Tick > -1)
+	{
+		char aFilename[256];
+		char aURL[128];
+
+		str_format(aFilename, sizeof(aFilename), "/demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+		str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, pWebapp->CurrentMap()->m_ID);
+		pWebapp->AddUpload(aFilename, aURL, "demo_file", OnUploadFile, time_get() + time_freq() * 2);
+
+		str_format(aFilename, sizeof(aFilename), "/ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
+		str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, pWebapp->CurrentMap()->m_ID);
+		pWebapp->AddUpload(aFilename, aURL, "ghost_file", OnUploadFile);
+	}
+	delete pUser;
+}
+
+void CServerWebapp::OnUploadFile(IResponse *pResponse, bool ConnError, void *pUserData)
+{
+	CWebUploadData *pUser = (CWebUploadData*)pUserData;
+	CGameContext *pGameServer = pUser->m_pGameServer;
+	bool Error = ConnError || pResponse->StatusCode() != 200;
+	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+
+	if(!Error)
+		dbg_msg("webapp", "uploaded file: '%s'", pUser->m_aFilename);
+	else
+		dbg_msg("webapp", "could not upload file: '%s'", pUser->m_aFilename);
+	pGameServer->Server()->Storage()->RemoveFile(pUser->m_aFilename, IStorage::TYPE_SAVE);
+	delete pUser;
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)
@@ -395,7 +512,7 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename)
 	Info.m_Crc = DataFile.Crc();
 	DataFile.Close();
 	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName),str_length(pFilename)-3));
-	dbg_msg("", "added map: %s (%08x)", Info.m_aName, Info.m_Crc);
+	dbg_msg("", "added map: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 	int Num = m_lMapList.add(Info);
 	return &m_lMapList[Num];
 }
@@ -408,7 +525,7 @@ void CServerWebapp::OnInit()
 	if(!r.empty())
 	{
 		m_CurrentMap = r.front();
-		dbg_msg("webapp", "current map: %s (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
+		dbg_msg("webapp", "current map: '%s' (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
 
 		// add votes
 		AddMapVotes();
@@ -422,16 +539,16 @@ void CServerWebapp::Tick()
 	{
 		if(m_lUploads[i].m_StartTime <= time_get())
 		{
-			Upload(m_lUploads[i].m_aFilename, m_lUploads[i].m_aURL, m_lUploads[i].m_aUploadname, m_lUploads[i].m_Type);
+			Upload(GameServer(), m_lUploads[i].m_aFilename, m_lUploads[i].m_aURL, m_lUploads[i].m_aUploadname, m_lUploads[i].m_pfnCallback);
 			m_lUploads.remove_index_fast(i);
 			i--; // since one item was removed
 		}
 	}
 }
 
-void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const char *pUploadName, int Type, int64 StartTime)
+void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime)
 {
-	m_lUploads.add(CUpload(pFilename, pURL, pUploadName, Type, StartTime));
+	m_lUploads.add(CUpload(pFilename, pURL, pUploadName, pfnCallback, StartTime));
 }
 
 void CServerWebapp::AddMapVotes()
