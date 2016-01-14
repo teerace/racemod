@@ -85,7 +85,6 @@ public:
 
 	// networking
 	virtual void EnterGame() = 0;
-	virtual bool CheckHost(const char* pAddressStr, NETADDR *pReturnAddr) = 0;
 
 	//
 	virtual int MapDownloadAmount() = 0;
@@ -120,6 +119,8 @@ public:
 	virtual void SnapSetStaticsize(int ItemType, int Size) = 0;
 
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags) = 0;
+	
+	virtual void SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest) = 0;
 
 	template<class T>
 	int SendPackMsg(T *pMsg, int Flags)

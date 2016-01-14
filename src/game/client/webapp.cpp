@@ -1,11 +1,8 @@
 /* CClientWebapp Class by Sushi and Redix*/
-#include <base/tl/array.h>
-
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
-#include <engine/external/json/reader.h>
-
-#include <game/http/response.h>
+#include <engine/shared/http.h>
+#include <engine/external/json-parser/json.h>
 
 #include "gameclient.h"
 #include "webapp.h"
@@ -18,9 +15,7 @@ struct CCheckHostData
 	char m_aAddr[128];
 };
 
-CClientWebapp::CClientWebapp(CGameClient *pGameClient)
-: IWebapp(pGameClient->Storage()),
-  m_pClient(pGameClient)
+CClientWebapp::CClientWebapp()
 {
 	if(gs_CheckHostLock == 0)
 		gs_CheckHostLock = lock_create();
@@ -35,49 +30,57 @@ CClientWebapp::~CClientWebapp()
 	lock_release(gs_CheckHostLock);
 }
 
-void CClientWebapp::OnResponse(CHttpConnection *pCon)
+void CClientWebapp::OnApiToken(IResponse *pResponse, bool Error, void *pUserData)
 {
-	int Type = pCon->Type();
-	CResponse *pResponse = pCon->Response();
-	bool Error = pCon->Error() || pResponse->StatusCode() != 200;
+	CBufferResponse *pRes = (CBufferResponse*)pResponse;
+	CClientWebapp *pWebapp = (CClientWebapp*) pUserData;
+	bool Success = !Error && pRes->StatusCode() == 200;
 
-	Json::Value JsonData;
-	Json::Reader Reader;
-	bool Json = false;
-	if(!pCon->Error() && !pResponse->IsFile())
-		Json = Reader.parse(pResponse->GetBody(), pResponse->GetBody()+pResponse->Size(), JsonData);
-
-	// TODO: add event listener (server and client)
-	if(Type == WEB_API_TOKEN)
+	if(!Success || pRes->Size() != 24+2 || str_comp(pRes->GetBody(), "false") == 0)
+		pWebapp->m_ApiTokenError = true;
+	else
 	{
-		// TODO: better error messages
-		if(Error || str_comp(pResponse->GetBody(), "false") == 0 || pResponse->Size() != 24+2)
-			m_ApiTokenError = true;
-		else
-		{
-			m_ApiTokenError = false;
-			str_copy(g_Config.m_WaApiToken, pResponse->GetBody()+1, 24+1);
-		}
-		m_ApiTokenRequested = false;
+		pWebapp->m_ApiTokenError = false;
+		str_copy(g_Config.m_WaApiToken, pRes->GetBody()+1, 24+1);
 	}
-	else if(Type == WEB_SERVER_LIST)
-	{
-		if(!Error && Json)
-		{
-			for(unsigned int i = 0; i < JsonData.size(); i++)
-				CheckHost(JsonData[i].asCString());
-		}
-	}
+	pWebapp->m_ApiTokenRequested = false;
 }
 
-void CClientWebapp::CheckHost(const char* pAddr)
+void CClientWebapp::OnServerList(IResponse *pResponse, bool Error, void *pUserData)
 {
-	CCheckHostData *pTmp = new CCheckHostData();
-	pTmp->m_pClient = m_pClient;
-	str_copy(pTmp->m_aAddr, pAddr, sizeof(pTmp->m_aAddr));
+	CBufferResponse *pRes = (CBufferResponse*)pResponse;
+	CGameClient *pClient = (CGameClient*) pUserData;
+	bool Success = !Error && pRes->StatusCode() == 200;
+	if(!Success)
+		return;
 
-	void *LoadThread = thread_create(CheckHostThread, pTmp);
-	thread_detach(LoadThread);
+	json_settings JsonSettings;
+	mem_zero(&JsonSettings, sizeof(JsonSettings));
+	char aError[256];
+
+	json_value *pJsonData = json_parse_ex(&JsonSettings, pRes->GetBody(), pRes->Size(), aError);
+	if(!pJsonData)
+		dbg_msg("json", aError);
+	else
+	{
+		if(pJsonData->type == json_array)
+		{
+			for(unsigned i = 0; i < pJsonData->u.array.length; i++)
+			{
+				json_value *pJsonSrv = pJsonData->u.array.values[i];
+				if (pJsonSrv && pJsonSrv->type == json_string)
+				{
+					CCheckHostData *pTmp = new CCheckHostData();
+					pTmp->m_pClient = pClient;
+					str_copy(pTmp->m_aAddr, pJsonSrv->u.string.ptr, sizeof(pTmp->m_aAddr));
+
+					void *LoadThread = thread_create(CheckHostThread, pTmp);
+					thread_detach(LoadThread);
+				}
+			}
+		}
+		json_value_free(pJsonData);
+	}
 }
 
 void CClientWebapp::CheckHostThread(void *pUser)
@@ -87,7 +90,7 @@ void CClientWebapp::CheckHostThread(void *pUser)
 	CCheckHostData *pData = (CCheckHostData*)pUser;
 
 	NETADDR ServerAddress;
-	if(pData->m_pClient->Client()->CheckHost(pData->m_aAddr, &ServerAddress))
+	if(net_host_lookup(pData->m_aAddr, &ServerAddress, NETTYPE_IPV4) == 0)
 		pData->m_pClient->ServerBrowser()->AddTeerace(ServerAddress);
 
 	delete pData;

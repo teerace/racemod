@@ -3,26 +3,6 @@
 #ifndef ENGINE_CLIENT_CLIENT_H
 #define ENGINE_CLIENT_CLIENT_H
 
-
-#include <engine/console.h>
-#include <engine/editor.h>
-#include <engine/graphics.h>
-#include <engine/textrender.h>
-#include <engine/client.h>
-#include <engine/config.h>
-#include <engine/serverbrowser.h>
-#include <engine/sound.h>
-#include <engine/input.h>
-#include <engine/keys.h>
-#include <engine/map.h>
-#include <engine/masterserver.h>
-#include <engine/storage.h>
-
-#include <engine/shared/protocol.h>
-#include <engine/shared/demo.h>
-#include <engine/shared/ghost.h>
-#include <engine/shared/network.h>
-
 class CGraph
 {
 public:
@@ -92,12 +72,14 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	};
 
 	class CNetClient m_NetClient;
+	class CNetClient m_ContactClient;
 	class CDemoPlayer m_DemoPlayer;
 	class CDemoRecorder m_DemoRecorder;
 	class CGhostRecorder m_GhostRecorder;
 	class CServerBrowser m_ServerBrowser;
 	class CFriends m_Friends;
 	class CMapChecker m_MapChecker;
+	class CHttpClient m_HttpClient;
 
 	char m_aServerAddressStr[256];
 
@@ -196,8 +178,6 @@ class CClient : public IClient, public CDemoPlayer::IListner
 		class CHostLookup m_VersionServeraddr;
 	} m_VersionInfo;
 
-	semaphore m_GfxRenderSemaphore;
-	semaphore m_GfxStateSemaphore;
 	volatile int m_GfxState;
 	static void GraphicsThreadProxy(void *pThis) { ((CClient*)pThis)->GraphicsThread(); }
 	void GraphicsThread();
@@ -215,6 +195,8 @@ public:
 
 	// ----- send functions -----
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags);
+	
+	virtual void SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest);
 
 	int SendMsgEx(CMsgPacker *pMsg, int Flags, bool System=true);
 	void SendInfo();
@@ -247,7 +229,6 @@ public:
 	// called when the map is loaded and we should init for a new round
 	void OnEnterGame();
 	virtual void EnterGame();
-	virtual bool CheckHost(const char* pAddressStr, NETADDR *pReturnAddr);
 
 	virtual void Connect(const char *pAddress);
 	void DisconnectWithReason(const char *pReason);

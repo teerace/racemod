@@ -14,12 +14,14 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/config.h>
+#include <engine/shared/http.h>
 
 #include <game/generated/protocol.h>
 #include <game/generated/client_data.h>
 
 #include <game/localization.h>
 #include <game/version.h>
+#include <game/teerace.h> // helper
 #include "render.h"
 
 #include "webapp.h"
@@ -293,11 +295,13 @@ void CGameClient::OnInit()
 		m_aFlagPos[i] = vec2(-1, -1);
 
 	// init webapp
-	m_pWebapp = new CClientWebapp(this);
+	m_pWebapp = new CClientWebapp();
 
 	// get Teerace server list
-	CRequest *pRequest = m_pWebapp->CreateRequest("anonclient/servers/", CRequest::HTTP_GET);
-	m_pWebapp->SendRequest(pRequest, WEB_SERVER_LIST);
+	CBufferRequest *pRequest = ITeerace::CreateApiRequest(IRequest::HTTP_GET, "/anonclient/servers/");
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo->SetCallback(CClientWebapp::OnServerList, this);
+	Client()->SendHttp(pInfo, pRequest);
 }
 
 void CGameClient::DispatchInput()
@@ -489,15 +493,12 @@ void CGameClient::OnRender()
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->OnRender();
 
-	// run webapp tick
-	m_pWebapp->Update();
-
 	// clear new tick flags
 	m_NewTick = false;
 	m_NewPredictedTick = false;
 
 	// check if client info has to be resent
-	if(m_LastSendInfo && Client()->State() == IClient::STATE_ONLINE && m_Snap.m_LocalClientID >= 0 && !m_pMenus->IsActive() && m_LastSendInfo+time_freq()*5 < time_get())
+	if(m_LastSendInfo && Client()->State() == IClient::STATE_ONLINE && m_Snap.m_LocalClientID >= 0 && !m_pMenus->IsActive() && m_LastSendInfo+time_freq()*6 < time_get())
 	{
 		// resend if client info differs
 		if(str_comp(g_Config.m_PlayerName, m_aClients[m_Snap.m_LocalClientID].m_aName) ||
@@ -525,25 +526,7 @@ void CGameClient::OnRelease()
 void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 {
 	// special messages
-	if(MsgId == NETMSGTYPE_SV_EXTRAPROJECTILE)
-	{
-		int Num = pUnpacker->GetInt();
-
-		for(int k = 0; k < Num; k++)
-		{
-			CNetObj_Projectile Proj;
-			for(unsigned i = 0; i < sizeof(CNetObj_Projectile)/sizeof(int); i++)
-				((int *)&Proj)[i] = pUnpacker->GetInt();
-
-			if(pUnpacker->Error())
-				return;
-
-			g_GameClient.m_pItems->AddExtraProjectile(&Proj);
-		}
-
-		return;
-	}
-	else if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
+	if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
 	{
 		// unpack the new tuning
 		CTuningParams NewTuning;
@@ -674,7 +657,7 @@ void CGameClient::OnEnterGame() {}
 
 void CGameClient::OnGameOver()
 {
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	if(Client()->State() != IClient::STATE_DEMOPLAYBACK && g_Config.m_ClEditor == 0)
 		Client()->AutoScreenshot_Start();
 }
 

@@ -98,7 +98,7 @@ bool CGameControllerCTF::CanBeMovedOnBalance(int ClientID)
 		for(int fi = 0; fi < 2; fi++)
 		{
 			CFlag *F = m_apFlags[fi];
-			if(F->m_pCarryingCharacter == Character)
+			if(F && F->m_pCarryingCharacter == Character)
 				return false;
 		}
 	}
@@ -281,39 +281,4 @@ void CGameControllerCTF::Tick()
 		}
 	}
 }
-
-// Flag
-CFlag::CFlag(CGameWorld *pGameWorld, int Team)
-: CEntity(pGameWorld, NETOBJTYPE_FLAG)
-{
-	m_Team = Team;
-	m_ProximityRadius = ms_PhysSize;
-	m_pCarryingCharacter = 0x0;
-	m_GrabTick = 0;
-	
-	Reset();
-}
-
-void CFlag::Reset()
-{
-	m_pCarryingCharacter = 0x0;
-	m_AtStand = 1;
-	m_Pos = m_StandPos;
-	m_Vel = vec2(0,0);
-	m_GrabTick = 0;
-}
-
-void CFlag::Snap(int SnappingClient)
-{
-	CNetObj_Flag *pFlag = (CNetObj_Flag *)Server()->SnapNewItem(NETOBJTYPE_FLAG, m_Team, sizeof(CNetObj_Flag));
-	pFlag->m_X = (int)m_Pos.x;
-	pFlag->m_Y = (int)m_Pos.y;
-	pFlag->m_Team = m_Team;
-	pFlag->m_CarriedBy = -1;
-	
-	if(m_AtStand)
-		pFlag->m_CarriedBy = -2;
-	else if(m_pCarryingCharacter && m_pCarryingCharacter->GetPlayer())
-		pFlag->m_CarriedBy = m_pCarryingCharacter->GetPlayer()->GetCID();
-}*/
-
+*/

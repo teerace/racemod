@@ -1,9 +1,13 @@
 #if defined(CONF_TEERACE)
 
 #include <engine/external/json/writer.h>
+#include <engine/shared/http.h>
 
-#include "../gamecontext.h"
+#include <game/teerace.h>
+
 #include "../webapp.h"
+#include "../gamecontext.h"
+#include "../data.h"
 #include "wa_score.h"
 
 CWebappScore::CWebappScore(CGameContext *pGameServer) : m_pWebapp(pGameServer->Webapp()), m_pGameServer(pGameServer), m_pServer(pGameServer->Server()) {}
@@ -13,16 +17,18 @@ void CWebappScore::LoadScore(int ClientID, bool PrintRank)
 	int UserID = Server()->GetUserID(ClientID);
 	if(Webapp() && UserID > 0)
 	{
-		CWebUserRankData *pUserData = new CWebUserRankData();
+		CWebUserRankData *pUserData = new CWebUserRankData(GameServer());
 		str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
 		pUserData->m_ClientID = ClientID;
 		pUserData->m_UserID = UserID;
 		pUserData->m_PrintRank = PrintRank;
 
 		char aURI[128];
-		str_format(aURI, sizeof(aURI), "users/rank/%d/", UserID);
-		CRequest *pRequest = Webapp()->CreateRequest(aURI, CRequest::HTTP_GET);
-		Webapp()->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, pUserData);
+		str_format(aURI, sizeof(aURI), "/users/rank/%d/", UserID);
+		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+		pInfo->SetCallback(CServerWebapp::OnUserRankGlobal, pUserData);
+		m_pServer->SendHttp(pInfo, pRequest);
 	}
 }
 
@@ -30,7 +36,7 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 {
 	if(Webapp())
 	{
-		CWebRunData *pUserData = new CWebRunData();
+		CWebRunData *pUserData = new CWebRunData(GameServer());
 		pUserData->m_UserID = Server()->GetUserID(ClientID);
 		pUserData->m_ClientID = ClientID;
 		pUserData->m_Tick = -1;
@@ -71,9 +77,11 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 
 			std::string Json = Writer.write(Run);
 
-			CRequest *pRequest = Webapp()->CreateRequest("runs/new/", CRequest::HTTP_POST);
-			pRequest->SetBody(Json.c_str(), Json.length());
-			Webapp()->SendRequest(pRequest, WEB_RUN_POST, pUserData);
+			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/runs/new/");
+			pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+			pInfo->SetCallback(CServerWebapp::OnRunPost, pUserData);
+			m_pServer->SendHttp(pInfo, pRequest);
 		}
 		
 		// higher run count
@@ -91,14 +99,16 @@ void CWebappScore::ShowTop5(int ClientID, int Debut)
 	{
 		if(Webapp()->CurrentMap()->m_ID > -1)
 		{
-			CWebUserTopData *aNameData = new CWebUserTopData();
+			CWebUserTopData *aNameData = new CWebUserTopData(GameServer());
 			aNameData->m_StartRank = Debut;
 			aNameData->m_ClientID = ClientID;
 
 			char aURI[128];
-			str_format(aURI, sizeof(aURI), "maps/rank/%d/%d/", Webapp()->CurrentMap()->m_ID, Debut);
-			CRequest *pRequest = Webapp()->CreateRequest(aURI, CRequest::HTTP_GET);
-			Webapp()->SendRequest(pRequest, WEB_USER_TOP, aNameData);
+			str_format(aURI, sizeof(aURI), "/maps/rank/%d/%d/", Webapp()->CurrentMap()->m_ID, Debut);
+			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+			pInfo->SetCallback(CServerWebapp::OnUserTop, aNameData);
+			m_pServer->SendHttp(pInfo, pRequest);
 		}
 		else
 			GameServer()->SendChatTarget(ClientID, "This map is not a teerace map.");
@@ -137,7 +147,7 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 				}
 			}
 
-			CWebUserRankData *aNameData = new CWebUserRankData();
+			CWebUserRankData *aNameData = new CWebUserRankData(GameServer());
 			aNameData->m_ClientID = ClientID;
 
 			if(SearchID >= 0)
@@ -145,9 +155,11 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 				str_copy(aNameData->m_aName, Server()->GetUserName(SearchID), sizeof(aNameData->m_aName));
 				aNameData->m_UserID = Server()->GetUserID(SearchID);
 				char aURI[128];
-				str_format(aURI, sizeof(aURI), "users/rank/%d/", aNameData->m_UserID);
-				CRequest *pRequest = Webapp()->CreateRequest(aURI, CRequest::HTTP_GET);
-				Webapp()->SendRequest(pRequest, WEB_USER_RANK_GLOBAL, aNameData);
+				str_format(aURI, sizeof(aURI), "/users/rank/%d/", aNameData->m_UserID);
+				CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+				pInfo->SetCallback(CServerWebapp::OnUserRankGlobal, aNameData);
+				m_pServer->SendHttp(pInfo, pRequest);
 			}
 			else if(Search)
 			{
@@ -156,9 +168,12 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 				Json::FastWriter Writer;
 				Data["username"] = pName;
 				std::string Json = Writer.write(Data);
-				CRequest *pRequest = Webapp()->CreateRequest("users/get_by_name/", CRequest::HTTP_POST);
-				pRequest->SetBody(Json.c_str(), Json.length());
-				Webapp()->SendRequest(pRequest, WEB_USER_FIND, aNameData);
+
+				CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/get_by_name/");
+				pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+				pInfo->SetCallback(CServerWebapp::OnUserFind, aNameData);
+				m_pServer->SendHttp(pInfo, pRequest);
 			}
 		}
 		else

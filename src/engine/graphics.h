@@ -80,7 +80,7 @@ public:
 	virtual void WrapClamp() = 0;
 	virtual int MemoryUsage() const = 0;
 
-	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) =0;
+	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
 	virtual int UnloadTexture(int Index) = 0;
 	virtual int LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
 	virtual int LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
@@ -120,7 +120,7 @@ public:
 			: m_X0(x0), m_Y0(y0), m_X1(x1), m_Y1(y1), m_X2(x2), m_Y2(y2), m_X3(x3), m_Y3(y3) {}
 	};
 	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num) = 0;
-	virtual void QuadsText(float x, float y, float Size, float r, float g, float b, float a, const char *pText) = 0;
+	virtual void QuadsText(float x, float y, float Size, const char *pText) = 0;
 
 	struct CColorVertex
 	{
