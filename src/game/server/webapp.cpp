@@ -356,7 +356,6 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserData)
 {
 	CGameContext *pGameServer = (CGameContext*)pUserData;
-	IServer *pServer = pGameServer->Server();
 	CServerWebapp *pWebapp = pGameServer->Webapp();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());

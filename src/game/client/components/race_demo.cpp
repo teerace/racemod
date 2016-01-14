@@ -30,8 +30,6 @@ void CRaceDemo::OnRender()
 	if(!m_pClient->m_IsRace)
 		return;
 	
-	vec2 PlayerPos = m_pClient->m_LocalCharacterPos;
-	
 	// start the demo
 	int EnemyTeam = m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientID].m_Team^1;
 	if(((!m_Active && !m_pClient->m_IsFastCap && m_pClient->m_Snap.m_aCharacters[m_pClient->m_Snap.m_LocalClientID].m_Active) ||
