@@ -96,7 +96,7 @@ private:
 	class CGameContext *GameServer() { return m_pGameServer; }
 	class IServer *Server() { return m_pServer; }
 	
-	CMapInfo *AddMap(const char *pFilename);
+	CMapInfo *AddMap(const char *pFilename, unsigned Crc);
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime = -1);
 	void AddMapVotes();

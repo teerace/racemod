@@ -438,9 +438,11 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 
 	if(!Error)
 	{
-		CMapInfo *pInfo = pGameServer->Webapp()->AddMap(pRes->GetFilename());
+		CMapInfo *pInfo = pGameServer->Webapp()->AddMap(pRes->GetFilename(), pRes->GetCrc());
 		if(pInfo && str_comp(pInfo->m_aName, g_Config.m_SvMap) == 0)
 			pGameServer->Server()->ReloadMap();
+		if(!pInfo)
+			pGameServer->Server()->Storage()->RemoveFile(pRes->GetPath(), IStorage::TYPE_SAVE);
 	}
 	else
 	{
@@ -492,22 +494,23 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 {
 	CServerWebapp *pWebapp = (CServerWebapp*)pUser;
 	int Length = str_length(pName);
-	if(!IsDir && Length >= 4 && str_comp(pName+Length-4, ".map") == 0)
-		pWebapp->AddMap(pName);
+	if(!IsDir && Length >= 4 && str_comp(pName + Length - 4, ".map") == 0)
+	{
+		char aFile[256];
+		str_format(aFile, sizeof(aFile), "maps/teerace/%s", pName);
+		unsigned MapCrc = 0;
+		unsigned MapSize = 0;
+		if(!CDataFileReader::GetCrcSize(pWebapp->Server()->Storage(), aFile, IStorage::TYPE_SAVE, &MapCrc, &MapSize))
+			return 0;
+		pWebapp->AddMap(pName, MapCrc);
+	}
 	return 0;
 }
 
-CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename)
+CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename, unsigned Crc)
 {
-	char aFile[256];
-	str_format(aFile, sizeof(aFile), "maps/teerace/%s", pFilename);
-	CDataFileReader DataFile;
-	if(!DataFile.Open(m_pServer->Storage(), aFile, IStorage::TYPE_SAVE))
-		return 0;
-
 	CMapInfo Info;
-	Info.m_Crc = DataFile.Crc();
-	DataFile.Close();
+	Info.m_Crc = Crc;
 	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName),str_length(pFilename)-3));
 
 	array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
@@ -531,7 +534,6 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename)
 		// something went wrong
 		r.front().m_State = CMapInfo::MAPSTATE_FILE_MISSING;
 	}
-	Server()->Storage()->RemoveFile(aFile, IStorage::TYPE_SAVE);
 	return 0;
 }
 
