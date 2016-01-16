@@ -149,7 +149,7 @@ function build(settings)
 	if config.compiler.driver == "cl" then
 		settings.cc.flags:Add("/wd4244")
 	else
-		settings.cc.flags:Add("-Wall")
+		settings.cc.flags:Add("-Wall", "-fno-exceptions")
 		if family == "windows" then
 			-- disable visibility attribute support for gcc on windows
 			settings.cc.defines:Add("NO_VIZ")
@@ -205,7 +205,6 @@ function build(settings)
 	-- build the small libraries
 	wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
-	json = Compile(settings, Collect("src/engine/external/json/*.cpp"))
 	jsonparser = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	httpparser = Compile(settings, Collect("src/engine/external/http-parser/*.c"))
 
