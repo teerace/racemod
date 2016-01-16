@@ -323,7 +323,7 @@ void CGameContext::SendBroadcast(const char *pText, int ClientID)
 void CGameContext::SendRecord(int ClientID)
 {
 	CNetMsg_Sv_Record Msg;
-	Msg.m_Time = (int)((Score()->GetRecord()->m_Time * 10000.0f + 9.0f) / 10.0f); // TODO: on next major release simply cast
+	Msg.m_Time = Score()->GetRecord()->m_Time;
 
 	if(ClientID == -1)
 	{
@@ -1104,12 +1104,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			{
 				if (m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
 				{
-					char aBuf[16];
-					str_format(aBuf, sizeof(aBuf), "%.0f", Score()->PlayerData(i)->m_CurTime*1000.0f); // damn ugly but the only way i know to do it
-					int TimeToSend;
-					sscanf(aBuf, "%d", &TimeToSend);
 					CNetMsg_Sv_PlayerTime Msg;
-					Msg.m_Time = TimeToSend;
+					Msg.m_Time = Score()->PlayerData(i)->m_CurTime;
 					Msg.m_ClientID = i;
 					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
 				}
@@ -1708,8 +1704,8 @@ void CGameContext::ConGetPos(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConPing(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(pSelf->Webapp())
-		pSelf->Webapp()->m_LastPing = -1;
+	if(pSelf->m_pWebapp)
+		pSelf->m_pWebapp->m_LastPing = -1;
 }
 
 void CGameContext::ConMaplist(IConsole::IResult *pResult, void *pUserData)
@@ -2076,6 +2072,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 
 	RaceController()->InitTeleporter();
 
+	// TODO: score should not be changed during runtime
 #if defined(CONF_TEERACE)
 	// create webapp object
 	if(str_comp(g_Config.m_SvScore, "web") == 0 && !m_pWebapp)

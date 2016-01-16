@@ -1,5 +1,4 @@
 /* copyright (c) 2007 rajh, race mod stuff */
-#include <engine/storage.h>
 #include <engine/shared/config.h>
 #include <game/server/entities/character.h>
 #include <game/server/player.h>
@@ -8,7 +7,6 @@
 #if defined(CONF_TEERACE)
 #include <game/server/webapp.h>
 #endif
-#include <stdio.h>
 #include <string.h>
 #include "race.h"
 
@@ -97,21 +95,23 @@ void CGameControllerRACE::Tick()
 
 		if(p->m_RaceState == RACE_STARTED && Server()->Tick()-p->m_RefreshTime >= Server()->TickSpeed())
 		{
-			int IntTime = (int)GetTime(i);
+			int Time = GetTime(i);
 
 			char aBuftime[128];
 			char aTmp[128];
 
 			CNetMsg_Sv_RaceTime Msg;
-			Msg.m_Time = IntTime;
+			Msg.m_Time = Time / 1000;
 			Msg.m_Check = 0;
-
-			str_format(aBuftime, sizeof(aBuftime), "Current Time: %d min %d sec", IntTime/60, IntTime%60);
+			str_format(aBuftime, sizeof(aBuftime), "Current Time: %d min %d sec",
+				Time / (60 * 1000), (Time / 1000) % 60);
 
 			if(p->m_CpTick != -1 && p->m_CpTick > Server()->Tick())
 			{
-				Msg.m_Check = (int)(p->m_CpDiff*100);
-				str_format(aTmp, sizeof(aTmp), "\nCheckpoint | Diff : %+5.2f", p->m_CpDiff);
+				Msg.m_Check = (p->m_CpDiff % 1000) / 10;
+				int CpDiff = abs(p->m_CpDiff);
+				str_format(aTmp, sizeof(aTmp), "\nCheckpoint | Diff : %s%3d.%02d",
+					p->m_CpDiff > 0 ? "+" : "-", CpDiff / 1000, (CpDiff % 1000) / 10);
 				strcat(aBuftime, aTmp);
 			}
 
@@ -164,7 +164,7 @@ bool CGameControllerRACE::OnCheckpoint(int ID, int z)
 	return true;
 }
 
-bool CGameControllerRACE::OnRaceStart(int ID, float StartAddTime, bool Check)
+bool CGameControllerRACE::OnRaceStart(int ID, int StartAddTime, bool Check)
 {
 	CRaceData *p = &m_aRace[ID];
 	CCharacter *pChr = GameServer()->GetPlayerChar(ID);
@@ -191,7 +191,7 @@ bool CGameControllerRACE::OnRaceStart(int ID, float StartAddTime, bool Check)
 	return true;
 }
 
-bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
+bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 {
 	CRaceData *p = &m_aRace[ID];
 	CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
@@ -203,9 +203,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	// add the time from the start
 	FinishTime += p->m_StartAddTime;
 	
-	GameServer()->m_apPlayers[ID]->m_Score = max(-(int)FinishTime, GameServer()->m_apPlayers[ID]->m_Score);
+	GameServer()->m_apPlayers[ID]->m_Score = max(-(FinishTime / 1000), GameServer()->m_apPlayers[ID]->m_Score);
 
-	float Improved = FinishTime - pBest->m_Time;
+	int Improved = FinishTime - pBest->m_Time;
 	bool NewRecord = pBest->Check(FinishTime, p->m_aCpCurrent);
 
 	// save the score
@@ -214,7 +214,8 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 		GameServer()->SendRecord(-1);
 
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %6.3f second(s)", Server()->ClientName(ID), (int)FinishTime/60, fmod(FinishTime,60));
+	str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %d.%03d second(s)",
+		Server()->ClientName(ID), FinishTime / (60 * 1000), (FinishTime / 1000) % 60, FinishTime % 1000);
 	if(!g_Config.m_SvShowTimes)
 		GameServer()->SendChatTarget(ID, aBuf);
 	else
@@ -222,7 +223,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 
 	if(Improved < 0)
 	{
-		str_format(aBuf, sizeof(aBuf), "New record: %6.3f second(s) better", Improved);
+		str_format(aBuf, sizeof(aBuf), "New record: -%d.%03d second(s) better", abs(Improved) / 1000, abs(Improved) % 1000);
 		if(!g_Config.m_SvShowTimes)
 			GameServer()->SendChatTarget(ID, aBuf);
 		else
@@ -237,7 +238,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, float FinishTime)
 	return true;
 }
 
-float CGameControllerRACE::GetTime(int ID)
+int CGameControllerRACE::GetTime(int ID)
 {
-	return (float)(Server()->Tick()-m_aRace[ID].m_StartTime)/((float)Server()->TickSpeed());
+	return (Server()->Tick() - m_aRace[ID].m_StartTime) * 1000 / Server()->TickSpeed();
 }

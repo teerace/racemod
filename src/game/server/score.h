@@ -20,13 +20,13 @@ public:
 		mem_zero(m_aCpTime, sizeof(m_aCpTime));
 	}
 	
-	void Set(float Time, float *pCpTime)
+	void Set(int Time, int *pCpTime)
 	{
 		m_Time = Time;
 		mem_copy(m_aCpTime, pCpTime, sizeof(m_aCpTime));
 	}
 	
-	bool Check(float Time, float *pCpTime)
+	bool Check(int Time, int *pCpTime)
 	{
 		if(!m_CurTime || Time < m_CurTime)
 			m_CurTime = Time;
@@ -39,14 +39,14 @@ public:
 		return false;
 	}
 
-	void SetCur(float Time)
+	void SetCur(int Time)
 	{
 		m_CurTime = Time;
 	}
 
-	float m_Time;
-	float m_CurTime;
-	float m_aCpTime[NUM_CHECKPOINTS];
+	int m_Time;
+	int m_CurTime;
+	int m_aCpTime[NUM_CHECKPOINTS];
 };
 
 class IScore
@@ -70,7 +70,7 @@ public:
 	}
 	
 	virtual void LoadScore(int ClientID, bool PrintRank=false) = 0;
-	virtual void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord) = 0;
+	virtual void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord) = 0;
 	
 	virtual void ShowTop5(int ClientID, int Debut=1) = 0;
 	virtual void ShowRank(int ClientID, const char *pName, bool Search=false) = 0;

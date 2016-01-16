@@ -35,7 +35,7 @@ void CWebappScore::LoadScore(int ClientID, bool PrintRank)
 	}
 }
 
-void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord)
+void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 {
 	if(Webapp())
 	{
@@ -55,6 +55,7 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 		{
 			json_value *pData = json_object_new(0);
 			char aBuf[1024];
+			char aBuf2[32];
 			json_object_push(pData, "map_id", json_integer_new(Webapp()->CurrentMap()->m_ID));
 			str_format(aBuf, sizeof(aBuf), "%08x", Webapp()->CurrentMap()->m_Crc);
 			json_object_push(pData, "map_crc", json_string_new(aBuf));
@@ -68,12 +69,14 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 				str_sanitize_strong(aBuf);
 				json_object_push(pData, "clan", json_string_new(aBuf));
 			}
-			str_format(aBuf, sizeof(aBuf), "%.3f", Time);
+			str_format(aBuf, sizeof(aBuf), "%d.%03d", Time / 1000, Time % 1000);
 			json_object_push(pData, "time", json_string_new(aBuf));
-			str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
-				pCpTime[0], pCpTime[1], pCpTime[2], pCpTime[3], pCpTime[4], pCpTime[5], pCpTime[6], pCpTime[7], pCpTime[8], pCpTime[9],
-				pCpTime[10], pCpTime[11], pCpTime[12], pCpTime[13], pCpTime[14], pCpTime[15], pCpTime[16], pCpTime[17], pCpTime[18], pCpTime[19],
-				pCpTime[20], pCpTime[21], pCpTime[22], pCpTime[23], pCpTime[24], pCpTime[25]);
+			str_format(aBuf, sizeof(aBuf), "%d.%03d", pCpTime[0] / 1000, pCpTime[0] % 1000);
+			for(int i = 1; i < NUM_CHECKPOINTS; i++)
+			{
+				str_format(aBuf2, sizeof(aBuf2), ";%d.%03d", pCpTime[i] / 1000, pCpTime[i] % 1000);
+				strcat(aBuf, aBuf2);
+			}
 			json_object_push(pData, "checkpoints", json_string_new(aBuf));
 
 			char *pJson = new char[json_measure(pData)];
@@ -94,7 +97,7 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 	
 	// stop ghost record
 	if(Server()->IsGhostRecording(ClientID))
-		Server()->StopGhostRecord(ClientID, Time);
+		Server()->StopGhostRecord(ClientID, Time/1000.f); // TODO: ints in ghost file
 }
 
 void CWebappScore::ShowTop5(int ClientID, int Debut)
@@ -281,12 +284,12 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			const json_value &BestRun = (*pJsonData)["bestrun"];
 			if(BestRun.type == json_object)
 			{
-				float Time = str_tofloat(BestRun["time"]);
-				float aCheckpointTimes[NUM_CHECKPOINTS] = { 0.0f };
+				int Time = (str_tofloat(BestRun["time"]) * 10000.0f + 9.0f) / 10.0f;
+				int aCheckpointTimes[NUM_CHECKPOINTS] = { 0 };
 				const json_value &CheckpointList = BestRun["checkpoints_list"];
 				int CpNum = min(CheckpointList.u.array.length, (unsigned int)NUM_CHECKPOINTS);
 				for(unsigned int i = 0; i < CpNum; i++)
-					aCheckpointTimes[i] = str_tofloat(CheckpointList[i]);
+					aCheckpointTimes[i] = (str_tofloat(CheckpointList[i]) * 10000.0f + 9.0f) / 10.0f;
 				Run.Set(Time, aCheckpointTimes);
 			}
 		}
@@ -321,23 +324,23 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			}
 			else if(!GlobalRank)
 			{
-				if(Run.m_Time < 60.0f)
-					str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %.3f (%s)",
-						pUser->m_aName, MapRank, Run.m_Time, pScore->Server()->ClientName(pUser->m_ClientID));
+				if(Run.m_Time < 60 * 1000)
+					str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %d.%03d (%s)",
+						pUser->m_aName, MapRank, Run.m_Time / 1000, Run.m_Time % 1000, pScore->Server()->ClientName(pUser->m_ClientID));
 				else
-					str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %02d:%06.3f (%s)",
-						pUser->m_aName, MapRank, (int)Run.m_Time / 60,
-						fmod(Run.m_Time, 60), pScore->Server()->ClientName(pUser->m_ClientID));
+					str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %02d:%02d.%03d (%s)",
+						pUser->m_aName, MapRank, Run.m_Time / (60 * 1000), (Run.m_Time / 1000) % 60,
+						Run.m_Time % 1000, pScore->Server()->ClientName(pUser->m_ClientID));
 			}
 			else
 			{
-				if(Run.m_Time < 60.0f)
-					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %.3f (%s)",
-						pUser->m_aName, GlobalRank, MapRank, Run.m_Time, pScore->Server()->ClientName(pUser->m_ClientID));
+				if(Run.m_Time < 60 * 1000)
+					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %d.%03d (%s)",
+						pUser->m_aName, GlobalRank, MapRank, Run.m_Time / 1000, Run.m_Time % 1000, pScore->Server()->ClientName(pUser->m_ClientID));
 				else
-					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%06.3f (%s)",
-						pUser->m_aName, GlobalRank, MapRank, (int)Run.m_Time / 60,
-						fmod(Run.m_Time, 60), pScore->Server()->ClientName(pUser->m_ClientID));
+					str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %02d:%02d.%03d (%s)",
+						pUser->m_aName, GlobalRank, MapRank, Run.m_Time / (60 * 1000), (Run.m_Time / 1000) % 60,
+						Run.m_Time % 1000, pScore->Server()->ClientName(pUser->m_ClientID));
 			}
 
 			if(g_Config.m_SvShowTimes && Public)
@@ -370,21 +373,22 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 			if(pScore->GameServer()->m_apPlayers[ClientID])
 			{
 				char aBuf[256];
-				float LastTime = 0.0f;
+				int LastTime = 0;
 				int SameTimeCount = 0;
 				pScore->GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 				for(unsigned int i = 0; i < pJsonData->u.array.length && i < 5; i++)
 				{
 					const json_value &Run = (*pJsonData)[i];
-					float Time = str_tofloat(Run["run"]["time"]);
+					int Time = (str_tofloat(Run["run"]["time"]) * 10000.0f + 9.0f) / 10.0f;
 
 					if(Time == LastTime)
 						SameTimeCount++;
 					else
 						SameTimeCount = 0;
 
-					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-						i + pUser->m_StartRank - SameTimeCount, (const char*)Run["run"]["user"]["username"], (int)Time / 60, fmod(Time, 60));
+					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
+						i + pUser->m_StartRank - SameTimeCount, (const char*)Run["run"]["user"]["username"],
+						Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
 					pScore->GameServer()->SendChatTarget(ClientID, aBuf);
 
 					LastTime = Time;

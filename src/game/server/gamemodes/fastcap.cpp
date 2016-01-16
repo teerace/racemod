@@ -122,7 +122,7 @@ bool CGameControllerFC::CanBeMovedOnBalance(int Cid)
 	return true;
 }
 
-bool CGameControllerFC::OnRaceStart(int ID, float StartAddTime, bool Check)
+bool CGameControllerFC::OnRaceStart(int ID, int StartAddTime, bool Check)
 {
 	CRaceData *p = &m_aRace[ID];
 	if(p->m_RaceState == RACE_STARTED)
@@ -136,7 +136,7 @@ bool CGameControllerFC::OnRaceStart(int ID, float StartAddTime, bool Check)
 	return true;
 }
 
-bool CGameControllerFC::OnRaceEnd(int ID, float FinishTime)
+bool CGameControllerFC::OnRaceEnd(int ID, int FinishTime)
 {
 	if(!CGameControllerRACE::OnRaceEnd(ID, FinishTime))
 		return false;

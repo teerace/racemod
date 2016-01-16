@@ -50,7 +50,7 @@ public:
 	~CSqlScore();
 	
 	void LoadScore(int ClientID, bool PrintRank);
-	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
+	void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord);
 	void ShowRank(int ClientID, const char *pName, bool Search=false);
 	void ShowTop5(int ClientID, int Debut=1);
 };
@@ -61,8 +61,8 @@ struct CSqlScoreData
 	int m_ClientID;
 	char m_aName[16];
 	char m_aIP[16];
-	float m_Time;
-	float m_aCpCurrent[NUM_CHECKPOINTS];
+	int m_Time;
+	int m_aCpCurrent[NUM_CHECKPOINTS];
 	int m_Num;
 	bool m_Search;
 	char m_aRequestingPlayer[MAX_NAME_LENGTH];

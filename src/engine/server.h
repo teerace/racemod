@@ -29,9 +29,7 @@ public:
 
 	virtual int MaxClients() const = 0;
 
-#if defined(CONF_TEERACE)
 	virtual class IStorage *Storage() = 0;
-#endif
 
 	virtual const char *ClientName(int ClientID) = 0;
 	virtual const char *ClientClan(int ClientID) = 0;

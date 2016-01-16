@@ -15,12 +15,12 @@ class CFileScore : public IScore
 	{
 	public:
 		char m_aName[MAX_NAME_LENGTH];
-		float m_Time;
+		int m_Time;
 		char m_aIP[16];
-		float m_aCpTime[NUM_CHECKPOINTS];
+		int m_aCpTime[NUM_CHECKPOINTS];
 		
 		CPlayerScore() {};
-		CPlayerScore(const char *pName, float Time, const char *pIP, float *apCpTime);
+		CPlayerScore(const char *pName, int Time, const char *pIP, int *apCpTime);
 		
 		bool operator<(const CPlayerScore& other) { return (this->m_Time < other.m_Time); }
 	};
@@ -36,14 +36,16 @@ class CFileScore : public IScore
 	void Init();
 	void Save();
 	static void SaveScoreThread(void *pUser);
+
+	void WriteLine(IOHANDLE File, const char *pLine);
+	IOHANDLE OpenFile(int Flags);
 	
 public:
-	
 	CFileScore(CGameContext *pGameServer);
 	~CFileScore();
 	
 	void LoadScore(int ClientID, bool PrintRank);
-	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
+	void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord);
 	
 	void ShowTop5(int ClientID, int Debut=1);
 	void ShowRank(int ClientID, const char *pName, bool Search=false);

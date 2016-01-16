@@ -57,7 +57,7 @@ public:
 	~CWebappScore() {}
 	
 	void LoadScore(int ClientID, bool PrintRank);
-	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
+	void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord);
 	
 	void ShowTop5(int ClientID, int Debut=1);
 	void ShowRank(int ClientID, const char *pName, bool Search=false);

@@ -597,7 +597,7 @@ void CCharacter::Tick()
 	else if(GameServer()->Collision()->GetCollisionRace(TileIndex) == TILE_END
 		|| (GameServer()->m_pController->IsFastCap() && pFC->IsOwnFlagStand(m_Pos, m_pPlayer->GetTeam())))
 	{
-		float FinishTime = CalculateFinishTime(pRace->GetTime(m_pPlayer->GetCID()), m_PrevPos, m_Pos);
+		int FinishTime = CalculateFinishTime(pRace->GetTime(m_pPlayer->GetCID()), m_PrevPos, m_Pos);
 		pRace->OnRaceEnd(m_pPlayer->GetCID(), FinishTime);
 	}
 
@@ -808,34 +808,32 @@ void CCharacter::TickDefered()
 	}
 }
 
-float CCharacter::CalculateFinishTime(float Time, vec2 PrevPos, vec2 Pos)
+int CCharacter::CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos)
 {
-	int Num = int(1000/Server()->TickSpeed());
+	int Num = 1000/Server()->TickSpeed();
 	for(int i = 0; i <= Num; i++)
 	{
 		float a = i/(float)Num;
 		vec2 TmpPos = mix(PrevPos, Pos, a);
 		if(GameServer()->Collision()->GetCollisionRace(GameServer()->Collision()->GetIndex(TmpPos)) == TILE_END || 
 			(GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(TmpPos, m_pPlayer->GetTeam())))
-			return (Time-1.0f/Server()->TickSpeed()) + (float)i/1000.f;
+			return Time - Num + i;
 	}
-	
 	return Time;
 }
 
-float CCharacter::CalculateStartAddTime(vec2 PrevPos, vec2 Pos)
+int CCharacter::CalculateStartAddTime(vec2 PrevPos, vec2 Pos)
 {
-	int Num = int(1000/Server()->TickSpeed());
+	int Num = 1000/Server()->TickSpeed();
 	for(int i = 0; i <= Num; i++)
 	{
 		float a = i/(float)Num;
 		vec2 TmpPos = mix(Pos, PrevPos, a);
 		if(GameServer()->Collision()->GetCollisionRace(GameServer()->Collision()->GetIndex(TmpPos)) == TILE_BEGIN || 
 			(GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsEnemyFlagStand(TmpPos, m_pPlayer->GetTeam())))
-			return (float)i/1000.f;
+			return i;
 	}
-	
-	return 1.0f/Server()->TickSpeed();
+	return Num;
 }
 
 void CCharacter::TickPaused()

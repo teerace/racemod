@@ -62,6 +62,10 @@ public:
 				fs_makedir(GetPath(TYPE_SAVE, "maps", aPath, sizeof(aPath)));
 				fs_makedir(GetPath(TYPE_SAVE, "downloadedmaps", aPath, sizeof(aPath)));
 			}
+			if(StorageType == STORAGETYPE_SERVER)
+			{
+				fs_makedir(GetPath(TYPE_SAVE, "records", aPath, sizeof(aPath)));
+			}
 #if defined(CONF_TEERACE)
 			fs_makedir(GetPath(TYPE_SAVE, "maps", aPath, sizeof(aPath)));
 			fs_makedir(GetPath(TYPE_SAVE, "maps/teerace", aPath, sizeof(aPath)));

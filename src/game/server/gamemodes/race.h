@@ -4,6 +4,7 @@
 
 #include <game/server/gamecontext.h>
 #include <game/server/gamecontroller.h>
+#include <game/server/score.h>
 
 class CGameControllerRACE : public IGameController
 {
@@ -21,11 +22,11 @@ public:
 		int m_StartTime;
 		int m_RefreshTime;
 
-		float m_aCpCurrent[25];
+		int m_aCpCurrent[NUM_CHECKPOINTS];
 		int m_CpTick;
-		float m_CpDiff;
+		int m_CpDiff;
 		
-		float m_StartAddTime;
+		int m_StartAddTime;
 
 		void Reset()
 		{
@@ -55,10 +56,10 @@ public:
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 
 	virtual bool OnCheckpoint(int ID, int z);
-	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check=true);
-	virtual bool OnRaceEnd(int ID, float FinishTime);
+	virtual bool OnRaceStart(int ID, int StartAddTime, bool Check=true);
+	virtual bool OnRaceEnd(int ID, int FinishTime);
 
-	float GetTime(int ID);
+	int GetTime(int ID);
 };
 
 #endif

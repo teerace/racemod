@@ -3,15 +3,17 @@
 #include <string.h>
 
 #include <engine/shared/config.h>
-#include <sstream>
-#include <fstream>
+#include <engine/shared/linereader.h>
+#include <engine/storage.h>
 
 #include "../gamecontext.h"
 #include "file_score.h"
 
+// TODO: remove score ip or use ip hash
+
 static LOCK gs_ScoreLock = 0;
 
-CFileScore::CPlayerScore::CPlayerScore(const char *pName, float Time, const char *pIP, float *pCpTime)
+CFileScore::CPlayerScore::CPlayerScore(const char *pName, int Time, const char *pIP, int *pCpTime)
 {
 	m_Time = Time;
 	mem_copy(m_aCpTime, pCpTime, sizeof(m_aCpTime));
@@ -37,40 +39,49 @@ CFileScore::~CFileScore()
 	lock_release(gs_ScoreLock);
 }
 
-std::string SaveFile()
+void CFileScore::WriteLine(IOHANDLE File, const char *pLine)
 {
-	std::ostringstream oss;
-	if(g_Config.m_SvScoreFolder[0])
-		oss << g_Config.m_SvScoreFolder << "/" << g_Config.m_SvMap << "_record.dtb";
-	else
-		oss << g_Config.m_SvMap << "_record.dtb";
-	return oss.str();
+	io_write(File, pLine, str_length(pLine));
+	io_write_newline(File);
+}
+
+IOHANDLE CFileScore::OpenFile(int Flags)
+{
+	char aFilename[256];
+	str_format(aFilename, sizeof(aFilename), "records/%s_record.dtb", g_Config.m_SvMap);
+	return m_pServer->Storage()->OpenFile(aFilename, Flags, IStorage::TYPE_SAVE);
 }
 
 void CFileScore::SaveScoreThread(void *pUser)
 {
 	CFileScore *pSelf = (CFileScore *)pUser;
 	lock_wait(gs_ScoreLock);
-	std::fstream f;
-	f.open(SaveFile().c_str(), std::ios::out);
-	if(!f.fail())
+	IOHANDLE File = pSelf->OpenFile(IOFLAG_WRITE);
+	if(File)
 	{
 		int t = 0;
+		char aBuf[128];
 		for(sorted_array<CPlayerScore>::range r = pSelf->m_Top.all(); !r.empty(); r.pop_front())
 		{
-			f << r.front().m_aName << std::endl << r.front().m_Time << std::endl  << r.front().m_aIP << std::endl;
+			pSelf->WriteLine(File, r.front().m_aName);
+			str_format(aBuf, sizeof(aBuf), "%d", r.front().m_Time);
+			pSelf->WriteLine(File, aBuf);
+			pSelf->WriteLine(File, r.front().m_aIP);
 			if(g_Config.m_SvCheckpointSave)
 			{
 				for(int c = 0; c < NUM_CHECKPOINTS; c++)
-					f << r.front().m_aCpTime[c] << " ";
-				f << std::endl;
+				{
+					str_format(aBuf, sizeof(aBuf), "%d ", r.front().m_aCpTime[c]);
+					io_write(File, aBuf, str_length(aBuf));
+				}
+				io_write_newline(File);
 			}
 			t++;
 			if(t%50 == 0)
 				thread_sleep(1);
 		}
+		io_close(File);
 	}
-	f.close();
 	lock_release(gs_ScoreLock);
 }
 
@@ -83,41 +94,53 @@ void CFileScore::Save()
 void CFileScore::Init()
 {
 	lock_wait(gs_ScoreLock);
-	
-	// create folder if not exist
-	if(g_Config.m_SvScoreFolder[0])
-		fs_makedir(g_Config.m_SvScoreFolder);
-	
-	std::fstream f;
-	f.open(SaveFile().c_str(), std::ios::in);
-	
-	while(!f.eof() && !f.fail())
+	IOHANDLE File = OpenFile(IOFLAG_READ);
+	if(File)
 	{
-		std::string TmpName, TmpScore, TmpIP, TmpCpLine;
-		std::getline(f, TmpName);
-		if(!f.eof() && TmpName != "")
+		CLineReader LineReader;
+		LineReader.Init(File);
+		CPlayerScore Tmp;
+		int LineCount = 0;
+		int LinesPerItem = g_Config.m_SvCheckpointSave ? 4 : 3;
+		char *pLine;
+		for(int LineCount = 0; (pLine = LineReader.Get()); LineCount++)
 		{
-			std::getline(f, TmpScore);
-			std::getline(f, TmpIP);
-			float aTmpCpTime[NUM_CHECKPOINTS] = {0};
-			if(g_Config.m_SvCheckpointSave)
+			if(str_length(pLine) == 0)
+				break;
+
+			int Type = LineCount % LinesPerItem;
+			if(Type == 0)
 			{
-				std::getline(f, TmpCpLine);
-				char *pTime = strtok((char*)TmpCpLine.c_str(), " ");
-				int i = 0;
-				while(pTime != NULL && i < NUM_CHECKPOINTS)
-				{
-					aTmpCpTime[i] = atof(pTime);
-					pTime = strtok(NULL, " ");
-					i++;
-				}
+				mem_zero(&Tmp, sizeof(Tmp));
+				str_copy(Tmp.m_aName, pLine, sizeof(Tmp.m_aName));
 			}
-			m_Top.add(CPlayerScore(TmpName.c_str(), atof(TmpScore.c_str()), TmpIP.c_str(), aTmpCpTime));
+			else if(Type == 1)
+			{
+				Tmp.m_Time = str_toint(pLine);
+			}
+			else if(Type == 2)
+			{
+				str_copy(Tmp.m_aIP, pLine, sizeof(Tmp.m_aIP));
+				if(!g_Config.m_SvCheckpointSave)
+					m_Top.add(Tmp);
+			}
+			else if(Type == 3)
+			{
+				char aBuf[256];
+				str_copy(aBuf, pLine, sizeof(aBuf));
+				char *pTime = strtok(aBuf, " ");
+				for(int i = 0; pTime != NULL && i < NUM_CHECKPOINTS; i++)
+				{
+					Tmp.m_aCpTime[i] = str_toint(pTime);
+					pTime = strtok(NULL, " ");
+				}
+				m_Top.add(Tmp);
+			}
 		}
+		io_close(File);
 	}
-	f.close();
 	lock_release(gs_ScoreLock);
-	
+
 	// save the current best score
 	if(m_Top.size())
 		GetRecord()->Set(m_Top[0].m_Time, m_Top[0].m_aCpTime);
@@ -191,7 +214,7 @@ void CFileScore::LoadScore(int ClientID, bool PrintRank)
 		PlayerData(ClientID)->Set(pPlayer->m_Time, pPlayer->m_aCpTime);
 }
 
-void CFileScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord)
+void CFileScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 {
 	if(!NewRecord)
 		return;
@@ -222,13 +245,11 @@ void CFileScore::ShowTop5(int ClientID, int Debut)
 {
 	char aBuf[512];
 	GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
-	for(int i = 0; i < 5; i++)
+	for(int i = 0; i < 5 && i + Debut - 1 < m_Top.size(); i++)
 	{
-		if(i+Debut > m_Top.size())
-			break;
 		CPlayerScore *r = &m_Top[i+Debut-1];
-		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-			i+Debut, r->m_aName, (int)r->m_Time/60, fmod(r->m_Time,60));
+		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
+			i + Debut, r->m_aName, r->m_Time / (60 * 1000), (r->m_Time / 1000) % 60, r->m_Time % 1000);
 		GameServer()->SendChatTarget(ClientID, aBuf);
 	}
 	GameServer()->SendChatTarget(ClientID, "------------------------------");
@@ -247,13 +268,15 @@ void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 	
 	if(pScore && Pos > -1)
 	{
-		float Time = pScore->m_Time;
+		int Time = pScore->m_Time;
 		char aClientName[128];
 		str_format(aClientName, sizeof(aClientName), " (%s)", Server()->ClientName(ClientID));
 		if(!g_Config.m_SvShowTimes)
-			str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %.3f second(s)", (int)Time/60, fmod(Time,60));
+			str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %d.%03d second(s)",
+				Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
 		else
-			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)", Pos, pScore->m_aName, (int)Time/60, fmod(Time,60));
+			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
+				Pos, pScore->m_aName, Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
 		if(Search)
 			strcat(aBuf, aClientName);
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);

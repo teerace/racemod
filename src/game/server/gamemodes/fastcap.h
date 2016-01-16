@@ -22,8 +22,8 @@ public:
 	
 	virtual bool IsFastCap() const { return true; }
 
-	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check);
-	virtual bool OnRaceEnd(int ID, float FinishTime);
+	virtual bool OnRaceStart(int ID, int StartAddTime, bool Check);
+	virtual bool OnRaceEnd(int ID, int FinishTime);
 	
 	virtual void Snap(int SnappingClient);
 };
