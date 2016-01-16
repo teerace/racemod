@@ -16,6 +16,7 @@
 #include "score/wa_score.h"
 #include "gamecontext.h"
 #include "webapp.h"
+#include "score.h"
 #include "data.h"
 
 CBufferRequest *CServerWebapp::CreateAuthedApiRequest(int Method, const char *pURI)
@@ -31,14 +32,16 @@ void CServerWebapp::RegisterFields(IRequest *pRequest)
 	pRequest->AddField("API-GAMESERVER-VERSION", TEERACE_GAMESERVER_VERSION);
 }
 
-void CServerWebapp::CheckStatusCode(IConsole *pConsole, int Status)
+void CServerWebapp::CheckStatusCode(IConsole *pConsole, class IResponse *pResponse)
 {
-	if(Status == 432)
+	if(!pResponse)
+		return;
+	if(pResponse->StatusCode() == 432)
 	{
 		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp",
 			"This server is outdated and cannot fully cooperate with Teerace, hence its support is currently disabled. Please notify the server administrator.");
 	}
-	if(Status == 403)
+	else if(pResponse->StatusCode() == 403)
 	{
 		pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "webapp",
 			"This server was denied access to Teerace network. Please notify the server administator.");
@@ -83,7 +86,7 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 	CGameContext *pGameServer = pUser->m_pGameServer;
 	IServer *pServer = pGameServer->Server();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	int ClientID = pUser->m_ClientID;
 	if(pGameServer->m_apPlayers[ClientID])
@@ -139,7 +142,7 @@ void CServerWebapp::OnUserFind(IResponse *pResponse, bool ConnError, void *pUser
 	CGameContext *pGameServer = pUser->m_pGameServer;
 	IServer *pServer = pGameServer->Server();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	pUser->m_UserID = 0;
 
@@ -189,7 +192,7 @@ void CServerWebapp::OnUserRankGlobal(IResponse *pResponse, bool ConnError, void 
 	IServer *pServer = pGameServer->Server();
 	CServerWebapp *pWebapp = pGameServer->Webapp();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	pUser->m_GlobalRank = 0;
 	if(!Error)
@@ -209,7 +212,7 @@ void CServerWebapp::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pU
 	CGameContext *pGameServer = pUser->m_pGameServer;
 	IServer *pServer = pGameServer->Server();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	int GlobalRank = pUser->m_GlobalRank;
 	int MapRank = 0;
@@ -230,9 +233,10 @@ void CServerWebapp::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pU
 			if(BestRun.type == json_object)
 			{
 				float Time = str_tofloat(BestRun["time"]);
-				float aCheckpointTimes[25] = { 0.0f };
+				float aCheckpointTimes[NUM_CHECKPOINTS] = { 0.0f };
 				const json_value &CheckpointList = BestRun["checkpoints_list"];
-				for(unsigned int i = 0; i < CheckpointList.u.array.length; i++)
+				int CpNum = min(CheckpointList.u.array.length, (unsigned int)NUM_CHECKPOINTS);
+				for(unsigned int i = 0; i < CpNum; i++)
 					aCheckpointTimes[i] = str_tofloat(CheckpointList[i]);
 				Run.Set(Time, aCheckpointTimes);
 			}
@@ -305,7 +309,7 @@ void CServerWebapp::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserD
 	CWebUserTopData *pUser = (CWebUserTopData*)pUserData;
 	CGameContext *pGameServer = pUser->m_pGameServer;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	if(!Error)
 	{
@@ -355,7 +359,7 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 	CGameContext *pGameServer = (CGameContext*)pUserData;
 	IServer *pServer = pGameServer->Server();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	dbg_msg("webapp", "webapp is%s online", Error ? " not" : "");
 	if(Error)
@@ -400,7 +404,7 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 	CGameContext *pGameServer = (CGameContext*)pUserData;
 	CServerWebapp *pWebapp = pGameServer->Webapp();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	if(Error)
 		return;
@@ -485,7 +489,7 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 	CFileResponse *pRes = (CFileResponse*)pResponse;
 	CGameContext *pGameServer = (CGameContext*)pUserData;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	if(!Error)
 	{
@@ -508,7 +512,7 @@ void CServerWebapp::OnRunPost(IResponse *pResponse, bool ConnError, void *pUserD
 	CGameContext *pGameServer = pUser->m_pGameServer;
 	CServerWebapp *pWebapp = pGameServer->Webapp();
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	if(!Error && pUser->m_Tick > -1)
 	{
@@ -531,7 +535,7 @@ void CServerWebapp::OnUploadFile(IResponse *pResponse, bool ConnError, void *pUs
 	CWebUploadData *pUser = (CWebUploadData*)pUserData;
 	CGameContext *pGameServer = pUser->m_pGameServer;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
+	CheckStatusCode(pGameServer->Console(), pResponse);
 
 	if(!Error)
 		dbg_msg("webapp", "uploaded file: '%s'", pUser->m_aFilename);

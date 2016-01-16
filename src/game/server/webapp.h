@@ -38,7 +38,7 @@ public:
 	// helper functions
 	static class CBufferRequest *CreateAuthedApiRequest(int Method, const char *pURI);
 	static void RegisterFields(IRequest *pRequest);
-	static void CheckStatusCode(class IConsole *pConsole, int Status);
+	static void CheckStatusCode(class IConsole *pConsole, class IResponse *pResponse);
 	static void Download(class CGameContext *pGameServer, const char *pFilename, const char *pURI, FHttpCallback pfnCallback);
 	static void Upload(class CGameContext *pGameServer, const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback);
 
