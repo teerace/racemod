@@ -1,11 +1,8 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
-#include <string.h>
 #include <stdio.h>
 #include <base/math.h>
-#include <base/tl/sorted_array.h>
-#include <engine/shared/packer.h>
 #include <engine/shared/config.h>
 #include <engine/shared/http.h>
 #include <engine/map.h>
@@ -22,7 +19,8 @@
 #include "gamemodes/dm.h"
 #include "gamemodes/tdm.h"
 #include "gamemodes/ctf.h"
-#include "gamemodes/mod.h"*/
+#include "gamemodes/mod.h"
+*/
 
 #include "gamemodes/race.h"
 #include "gamemodes/fastcap.h"
@@ -35,7 +33,6 @@
 #include <engine/external/json-parser/json-builder.h>
 #include "score/wa_score.h"
 #include "webapp.h"
-#include "data.h"
 #endif
 
 enum
@@ -65,7 +62,6 @@ void CGameContext::Construct(int Resetting)
 	m_pScore = 0;
 #if defined(CONF_TEERACE)
 	m_pWebapp = 0;
-	m_LastPing = -1;
 #endif
 }
 
@@ -469,54 +465,7 @@ void CGameContext::OnTick()
 	
 #if defined(CONF_TEERACE)
 	if(m_pWebapp)
-	{
 		m_pWebapp->Tick();
-		if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60 < Server()->Tick())
-		{
-			json_value *pData = json_object_new(3);
-			json_value *pUsers = json_object_new(0);
-			json_value *pAnonymous = json_array_new(0);
-			int Num = 0;
-			for(int i = 0; i < MAX_CLIENTS; i++)
-			{
-				if(m_apPlayers[i])
-				{
-					if(Server()->GetUserID(i) > 0)
-					{
-						char aBuf[16];
-						str_format(aBuf, sizeof(aBuf), "%d", Server()->GetUserID(i));
-						char aName[MAX_NAME_LENGTH];
-						str_copy(aName, Server()->ClientName(i), sizeof(aName));
-						str_sanitize_strong(aName);
-						json_object_push(pUsers, aBuf, json_string_new(aName));
-					}
-					else
-					{
-						char aName[MAX_NAME_LENGTH];
-						str_copy(aName, Server()->ClientName(i), sizeof(aName));
-						str_sanitize_strong(aName);
-						json_array_push(pAnonymous, json_string_new(aName));
-						Num++;
-					}
-				}
-			}
-			json_object_push(pData, "users", pUsers);
-			json_object_push(pData, "anonymous", pAnonymous);
-			json_object_push(pData, "map", json_string_new(g_Config.m_SvMap));
-			char *pJson = new char[json_measure(pData)];
-			json_serialize(pJson, pData);
-			json_builder_free(pData);
-			
-			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/ping/");
-			pRequest->SetBody(pJson, str_length(pJson), "application/json");
-			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-			pInfo->SetCallback(CServerWebapp::OnPingPing, this);
-			m_pServer->SendHttp(pInfo, pRequest);
-			delete pJson;
-			
-			m_LastPing = Server()->Tick();
-		}
-	}
 #endif
 
 	// copy tuning
@@ -634,26 +583,9 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmd
 {
 	if(str_comp_num(pStr, "teerace:", 8) == 0)
 	{
-		char m_aToken[32];
-		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", m_aToken) == 1)
-		{
-			json_value *pData = json_object_new(1);
-			json_object_push(pData, "api_token", json_string_new(m_aToken));
-			char *pJson = new char[json_measure(pData)];
-			json_serialize(pJson, pData);
-			json_builder_free(pData);
-
-			CWebUserAuthData *pUserData = new CWebUserAuthData(this);
-			pUserData->m_ClientID = ClientID;
-			pUserData->m_SendRconCmds = SendRconCmds;
-
-			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/auth_token/");
-			pRequest->SetBody(pJson, str_length(pJson), "application/json");
-			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-			pInfo->SetCallback(CServerWebapp::OnUserAuth, pUserData);
-			m_pServer->SendHttp(pInfo, pRequest);
-			delete pJson;
-		}
+		char aToken[32];
+		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", aToken) == 1)
+			m_pWebapp->OnAuth(ClientID, aToken, SendRconCmds);
 	}
 }
 #endif
@@ -1776,7 +1708,8 @@ void CGameContext::ConGetPos(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConPing(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	pSelf->m_LastPing = -1;
+	if(pSelf->Webapp())
+		pSelf->Webapp()->m_LastPing = -1;
 }
 
 void CGameContext::ConMaplist(IConsole::IResult *pResult, void *pUserData)

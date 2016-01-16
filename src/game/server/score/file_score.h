@@ -42,7 +42,7 @@ public:
 	CFileScore(CGameContext *pGameServer);
 	~CFileScore();
 	
-	void LoadScore(int ClientID);
+	void LoadScore(int ClientID, bool PrintRank);
 	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
 	
 	void ShowTop5(int ClientID, int Debut=1);

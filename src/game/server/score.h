@@ -69,7 +69,7 @@ public:
 		return NewRecord;
 	}
 	
-	virtual void LoadScore(int ClientID) = 0;
+	virtual void LoadScore(int ClientID, bool PrintRank=false) = 0;
 	virtual void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord) = 0;
 	
 	virtual void ShowTop5(int ClientID, int Debut=1) = 0;

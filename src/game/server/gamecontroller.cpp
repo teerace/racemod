@@ -1,14 +1,11 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
-#include <base/tl/array.h>
-
 #include <engine/shared/config.h>
 #include <game/mapitems.h>
 
 #include <game/generated/protocol.h>
 
 #include "entities/pickup.h"
-#include "webapp.h"
 #include "gamecontroller.h"
 #include "gamecontext.h"
 

@@ -70,7 +70,6 @@ class CGameContext : public IGameServer
 	class IScore *m_pScore;
 #if defined(CONF_TEERACE)
 	class CServerWebapp *m_pWebapp;
-	int m_LastPing;
 #endif
 	
 	static void ConKillPl(IConsole::IResult *pResult, void *pUserData);

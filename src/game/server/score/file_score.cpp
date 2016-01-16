@@ -173,7 +173,7 @@ CFileScore::CPlayerScore *CFileScore::SearchName(const char *pName, int *pPositi
 	return pPlayer;
 }
 
-void CFileScore::LoadScore(int ClientID)
+void CFileScore::LoadScore(int ClientID, bool PrintRank)
 {
 	char aIP[16];
 	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));

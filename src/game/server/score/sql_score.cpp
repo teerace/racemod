@@ -221,7 +221,7 @@ void CSqlScore::LoadScoreThread(void *pUser)
 	lock_release(gs_SqlLock);
 }
 
-void CSqlScore::LoadScore(int ClientID)
+void CSqlScore::LoadScore(int ClientID, bool PrintRank)
 {
 	CSqlScoreData *Tmp = new CSqlScoreData();
 	Tmp->m_ClientID = ClientID;

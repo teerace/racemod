@@ -49,7 +49,7 @@ public:
 	CSqlScore(CGameContext *pGameServer);
 	~CSqlScore();
 	
-	void LoadScore(int ClientID);
+	void LoadScore(int ClientID, bool PrintRank);
 	void SaveScore(int ClientID, float Time, float *pCpTime, bool NewRecord);
 	void ShowRank(int ClientID, const char *pName, bool Search=false);
 	void ShowTop5(int ClientID, int Debut=1);

@@ -2,9 +2,7 @@
 #ifndef GAME_SERVER_WEBAPP_H
 #define GAME_SERVER_WEBAPP_H
 
-#include <base/tl/array.h>
 #include <base/tl/sorted_array.h>
-
 #include <engine/shared/http.h>
 
 class CServerWebapp
@@ -35,24 +33,12 @@ public:
 		bool operator<(const CMapInfo& Other) { return this->m_ID < Other.m_ID; }
 	};
 
+	int m_LastPing;
+
 	// helper functions
 	static class CBufferRequest *CreateAuthedApiRequest(int Method, const char *pURI);
 	static void RegisterFields(IRequest *pRequest);
 	static void CheckStatusCode(class IConsole *pConsole, class IResponse *pResponse);
-	static void Download(class CGameContext *pGameServer, const char *pFilename, const char *pURI, FHttpCallback pfnCallback);
-	static void Upload(class CGameContext *pGameServer, const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback);
-
-	// http callbacks
-	static void OnUserAuth(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnUserFind(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnUserRankGlobal(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnUserRankMap(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnUserTop(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnPingPing(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnMapList(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnDownloadMap(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnRunPost(class IResponse *pResponse, bool ConnError, void *pUserData);
-	static void OnUploadFile(class IResponse *pResponse, bool ConnError, void *pUserData);
 
 	CServerWebapp(class CGameContext *pGameServer);
 	virtual ~CServerWebapp() { }
@@ -62,11 +48,39 @@ public:
 	int GetMapCount() { return m_lMapList.size(); }
 	void LoadMapList();
 	void OnInit();
+	void OnAuth(int ClientID, const char *pToken, int SendRconCmds);
 	void Tick();
 
+	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime = -1);
+	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, int64 StartTime = -1)
+	{
+		AddUpload(pFilename, pURI, pUploadName, OnUploadFile, StartTime);
+	}
+
 private:
-	class CGameContext *m_pGameServer;
-	class IServer *m_pServer;
+	class CWebData
+	{
+	public:
+		CWebData(CServerWebapp *pWebapp) : m_pWebapp(pWebapp) { }
+		CServerWebapp *m_pWebapp;
+		int m_ClientID;
+
+		virtual ~CWebData() {}
+	};
+
+	class CUserAuthData : public CWebData
+	{
+	public:
+		CUserAuthData(CServerWebapp *pWebapp) : CWebData(pWebapp) { }
+		int m_SendRconCmds;
+	};
+
+	class CUploadData : public CWebData
+	{
+	public:
+		CUploadData(CServerWebapp *pWebapp) : CWebData(pWebapp) { }
+		char m_aFilename[512];
+	};
 
 	class CUpload
 	{
@@ -78,28 +92,35 @@ private:
 		int64 m_StartTime;
 
 		CUpload() {}
-		CUpload(const char* pFilename, const char* pURL, const char* pUploadname, FHttpCallback pfnCallback, int64 StartTime)
-		{
-			str_copy(m_aFilename, pFilename, sizeof(m_aFilename));
-			str_copy(m_aURL, pURL, sizeof(m_aURL));
-			str_copy(m_aUploadname, pUploadname, sizeof(m_aUploadname));
-			m_pfnCallback = pfnCallback;
-			m_StartTime = StartTime;
-		}
+		CUpload(const char* pFilename, const char* pURL, const char* pUploadname, FHttpCallback pfnCallback, int64 StartTime);
 	};
+
+	class CGameContext *m_pGameServer;
+
 	array<CUpload> m_lUploads;
 
 	int m_LastMapListLoad;
 	sorted_array<CMapInfo> m_lMapList;
 	CMapInfo m_CurrentMap;
-	
+
+	// http callbacks
+	static void OnUserAuth(class IResponse *pResponse, bool ConnError, void *pUserData);
+	static void OnPingPing(class IResponse *pResponse, bool ConnError, void *pUserData);
+	static void OnMapList(class IResponse *pResponse, bool ConnError, void *pUserData);
+	static void OnDownloadMap(class IResponse *pResponse, bool ConnError, void *pUserData);
+	static void OnUploadFile(class IResponse *pResponse, bool ConnError, void *pUserData);
+
 	class CGameContext *GameServer() { return m_pGameServer; }
-	class IServer *Server() { return m_pServer; }
-	
+	class IServer *Server();
+	class IScore *Score();
+	class IStorage *Storage();
+
 	CMapInfo *AddMap(const char *pFilename, unsigned Crc);
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
-	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime = -1);
 	void AddMapVotes();
+
+	void Download(const char *pFilename, const char *pURI, FHttpCallback pfnCallback);
+	void Upload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback);
 };
 
 #endif

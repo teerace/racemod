@@ -20,7 +20,7 @@ public:
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 	virtual bool CanSpawn(class CPlayer *pPlayer, vec2 *pOutPos);
 	
-	virtual bool IsFastCap() { return true; }
+	virtual bool IsFastCap() const { return true; }
 
 	virtual bool OnRaceStart(int ID, float StartAddTime, bool Check);
 	virtual bool OnRaceEnd(int ID, float FinishTime);

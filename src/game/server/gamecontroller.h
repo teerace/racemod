@@ -146,7 +146,7 @@ public:
 	virtual void PostReset();
 	
 	// fast cap
-	virtual bool IsFastCap() { return false; }
+	virtual bool IsFastCap() const { return false; }
 };
 
 #endif
