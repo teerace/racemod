@@ -1,6 +1,6 @@
 #if defined(CONF_TEERACE)
 
-#include <engine/external/json/writer.h>
+#include <engine/external/json-parser/json-builder.h>
 #include <engine/shared/http.h>
 
 #include <game/teerace.h>
@@ -15,7 +15,7 @@ CWebappScore::CWebappScore(CGameContext *pGameServer) : m_pWebapp(pGameServer->W
 void CWebappScore::LoadScore(int ClientID, bool PrintRank)
 {
 	int UserID = Server()->GetUserID(ClientID);
-	if(Webapp() && UserID > 0)
+	if(Webapp() && Webapp()->CurrentMap()->m_ID > -1 && UserID > 0)
 	{
 		CWebUserRankData *pUserData = new CWebUserRankData(GameServer());
 		str_copy(pUserData->m_aName, Server()->GetUserName(ClientID), sizeof(pUserData->m_aName));
@@ -50,38 +50,39 @@ void CWebappScore::SaveScore(int ClientID, float Time, float *pCpTime, bool NewR
 
 		if(Webapp()->CurrentMap()->m_ID > -1)
 		{
-			Json::Value Run;
-			Json::FastWriter Writer;
-
+			json_value *pData = json_object_new(0);
 			char aBuf[1024];
-			Run["map_id"] = Webapp()->CurrentMap()->m_ID;
+			json_object_push(pData, "map_id", json_integer_new(Webapp()->CurrentMap()->m_ID));
 			str_format(aBuf, sizeof(aBuf), "%08x", Webapp()->CurrentMap()->m_Crc);
-			Run["map_crc"] = aBuf;
-			Run["user_id"] = Server()->GetUserID(ClientID);
+			json_object_push(pData, "map_crc", json_string_new(aBuf));
+			json_object_push(pData, "user_id", json_integer_new(Server()->GetUserID(ClientID)));
 			str_copy(aBuf, Server()->ClientName(ClientID), MAX_NAME_LENGTH);
 			str_sanitize_strong(aBuf);
-			Run["nickname"] = aBuf;
+			json_object_push(pData, "nickname", json_string_new(aBuf));
 			if(Server()->ClientClan(ClientID)[0])
 			{
 				str_copy(aBuf, Server()->ClientClan(ClientID), MAX_CLAN_LENGTH);
 				str_sanitize_strong(aBuf);
-				Run["clan"] = aBuf;
+				json_object_push(pData, "clan", json_string_new(aBuf));
 			}
 			str_format(aBuf, sizeof(aBuf), "%.3f", Time);
-			Run["time"] = aBuf;
+			json_object_push(pData, "time", json_string_new(aBuf));
 			str_format(aBuf, sizeof(aBuf), "%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
 				pCpTime[0], pCpTime[1], pCpTime[2], pCpTime[3], pCpTime[4], pCpTime[5], pCpTime[6], pCpTime[7], pCpTime[8], pCpTime[9],
 				pCpTime[10], pCpTime[11], pCpTime[12], pCpTime[13], pCpTime[14], pCpTime[15], pCpTime[16], pCpTime[17], pCpTime[18], pCpTime[19],
 				pCpTime[20], pCpTime[21], pCpTime[22], pCpTime[23], pCpTime[24], pCpTime[25]);
-			Run["checkpoints"] = aBuf;
+			json_object_push(pData, "checkpoints", json_string_new(aBuf));
 
-			std::string Json = Writer.write(Run);
+			char *pJson = new char[json_measure(pData)];
+			json_serialize(pJson, pData);
+			json_builder_free(pData);
 
 			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/runs/new/");
-			pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+			pRequest->SetBody(pJson, str_length(pJson), "application/json");
 			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 			pInfo->SetCallback(CServerWebapp::OnRunPost, pUserData);
 			m_pServer->SendHttp(pInfo, pRequest);
+			delete pJson;
 		}
 		
 		// higher run count
@@ -163,17 +164,19 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 			}
 			else if(Search)
 			{
-				str_copy(aNameData->m_aName, pName, sizeof(aNameData->m_aName));
-				Json::Value Data;
-				Json::FastWriter Writer;
-				Data["username"] = pName;
-				std::string Json = Writer.write(Data);
+				json_value *pData = json_object_new(1);
+				json_object_push(pData, "username", json_string_new(pName));
+				char *pJson = new char[json_measure(pData)];
+				json_serialize(pJson, pData);
+				json_builder_free(pData);
 
+				str_copy(aNameData->m_aName, pName, sizeof(aNameData->m_aName));
 				CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/get_by_name/");
-				pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+				pRequest->SetBody(pJson, str_length(pJson), "application/json");
 				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 				pInfo->SetCallback(CServerWebapp::OnUserFind, aNameData);
 				m_pServer->SendHttp(pInfo, pRequest);
+				delete pJson;
 			}
 		}
 		else

@@ -32,7 +32,7 @@
 #include "score/sql_score.h"
 #endif
 #if defined(CONF_TEERACE)
-#include <engine/external/json/writer.h>
+#include <engine/external/json-parser/json-builder.h>
 #include "score/wa_score.h"
 #include "webapp.h"
 #include "data.h"
@@ -473,9 +473,9 @@ void CGameContext::OnTick()
 		m_pWebapp->Tick();
 		if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60 < Server()->Tick())
 		{
-			Json::Value Data;
-			Json::FastWriter Writer;
-			
+			json_value *pData = json_object_new(3);
+			json_value *pUsers = json_object_new(0);
+			json_value *pAnonymous = json_array_new(0);
 			int Num = 0;
 			for(int i = 0; i < MAX_CLIENTS; i++)
 			{
@@ -488,28 +488,31 @@ void CGameContext::OnTick()
 						char aName[MAX_NAME_LENGTH];
 						str_copy(aName, Server()->ClientName(i), sizeof(aName));
 						str_sanitize_strong(aName);
-						Data["users"][aBuf] = aName;
+						json_object_push(pUsers, aBuf, json_string_new(aName));
 					}
 					else
 					{
 						char aName[MAX_NAME_LENGTH];
 						str_copy(aName, Server()->ClientName(i), sizeof(aName));
 						str_sanitize_strong(aName);
-						Data["anonymous"][Num] = aName;
+						json_array_push(pAnonymous, json_string_new(aName));
 						Num++;
 					}
 				}
 			}
-			
-			Data["map"] = g_Config.m_SvMap;
-
-			std::string Json = Writer.write(Data);
+			json_object_push(pData, "users", pUsers);
+			json_object_push(pData, "anonymous", pAnonymous);
+			json_object_push(pData, "map", json_string_new(g_Config.m_SvMap));
+			char *pJson = new char[json_measure(pData)];
+			json_serialize(pJson, pData);
+			json_builder_free(pData);
 			
 			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/ping/");
-			pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+			pRequest->SetBody(pJson, str_length(pJson), "application/json");
 			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 			pInfo->SetCallback(CServerWebapp::OnPingPing, this);
 			m_pServer->SendHttp(pInfo, pRequest);
+			delete pJson;
 			
 			m_LastPing = Server()->Tick();
 		}
@@ -634,20 +637,22 @@ void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmd
 		char m_aToken[32];
 		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", m_aToken) == 1)
 		{
-			Json::Value Data;
-			Json::FastWriter Writer;
-			Data["api_token"] = m_aToken;
-			std::string Json = Writer.write(Data);
+			json_value *pData = json_object_new(1);
+			json_object_push(pData, "api_token", json_string_new(m_aToken));
+			char *pJson = new char[json_measure(pData)];
+			json_serialize(pJson, pData);
+			json_builder_free(pData);
 
 			CWebUserAuthData *pUserData = new CWebUserAuthData(this);
 			pUserData->m_ClientID = ClientID;
 			pUserData->m_SendRconCmds = SendRconCmds;
 
 			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/auth_token/");
-			pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+			pRequest->SetBody(pJson, str_length(pJson), "application/json");
 			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 			pInfo->SetCallback(CServerWebapp::OnUserAuth, pUserData);
 			m_pServer->SendHttp(pInfo, pRequest);
+			delete pJson;
 		}
 	}
 }
@@ -724,18 +729,21 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 	if(m_pWebapp && UserID > 0)
 	{
 		// calculate time in seconds
-		Json::Value Post;
-		Json::FastWriter Writer;
-		Post["seconds"] = Server()->GetPlayTicks(ClientID)/Server()->TickSpeed();
-		std::string Json = Writer.write(Post);
+		int Seconds = Server()->GetPlayTicks(ClientID) / Server()->TickSpeed();
+		json_value *pData = json_object_new(1);
+		json_object_push(pData, "seconds", json_integer_new(Seconds));
+		char *pJson = new char[json_measure(pData)];
+		json_serialize(pJson, pData);
+		json_builder_free(pData);
 
 		char aURI[128];
 		str_format(aURI, sizeof(aURI), "/users/playtime/%d/", UserID);
 		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_PUT, aURI);
-		pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+		pRequest->SetBody(pJson, str_length(pJson), "application/json");
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 		//pInfo->SetCallback(CServerWebapp::OnUserPlaytime, this);
 		m_pServer->SendHttp(pInfo, pRequest);
+		delete pJson;
 	}
 #endif
 	AbortVoteKickOnDisconnect(ClientID);
@@ -1109,23 +1117,25 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 #if defined(CONF_TEERACE)
 			if (m_pWebapp && Server()->GetUserID(ClientID) > 0)
 			{
-				Json::Value Userdata;
-				Json::FastWriter Writer;
-				Userdata["skin_name"] = pMsg->m_pSkin;
+				json_value *pData = json_object_new(1);
+				json_object_push(pData, "skin_name", json_string_new(pMsg->m_pSkin));
 				if (pMsg->m_UseCustomColor)
 				{
-					Userdata["body_color"] = HslToRgb(pMsg->m_ColorBody);
-					Userdata["feet_color"] = HslToRgb(pMsg->m_ColorFeet);
+					json_object_push(pData, "body_color", json_integer_new(HslToRgb(pMsg->m_ColorBody)));
+					json_object_push(pData, "feet_color", json_integer_new(pMsg->m_ColorFeet));
 				}
-				std::string Json = Writer.write(Userdata);
+				char *pJson = new char[json_measure(pData)];
+				json_serialize(pJson, pData);
+				json_builder_free(pData);
 
 				char aURI[128];
 				str_format(aURI, sizeof(aURI), "/users/skin/%d/", Server()->GetUserID(ClientID));
 				CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_PUT, aURI);
-				pRequest->SetBody(Json.c_str(), Json.length(), "application/json");
+				pRequest->SetBody(pJson, str_length(pJson), "application/json");
 				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 				//pInfo->SetCallback(CServerWebapp::OnUserUpdateSkin, this);
 				m_pServer->SendHttp(pInfo, pRequest);
+				delete pJson;
 			}
 #endif
 		}

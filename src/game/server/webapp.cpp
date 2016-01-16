@@ -7,7 +7,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/datafile.h>
 #include <engine/shared/http.h>
-#include <engine/external/json/reader.h>
+#include <engine/external/json-parser/json.h>
 #include <engine/storage.h>
 
 #include <game/teerace.h>
@@ -98,22 +98,28 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 		int SendRconCmds = pUser->m_SendRconCmds;
 		int UserID = 0;
 
-		Json::Value JsonData;
-		Json::Reader Reader;
+		json_settings JsonSettings;
+		mem_zero(&JsonSettings, sizeof(JsonSettings));
+		char aError[256];
+
 		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-		if(str_comp(pBody, "false") != 0 && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
-			UserID = JsonData["id"].asInt();
+		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+		if(!pJsonData)
+			dbg_msg("json", aError);
+
+		if(str_comp(pBody, "false") != 0 && pJsonData)
+			UserID = (*pJsonData)["id"].u.integer;
 
 		if(UserID > 0)
 		{
 			char aBuf[512];
-			str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pServer->ClientName(ClientID), JsonData["username"].asCString());
+			str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pServer->ClientName(ClientID), (const char*)(*pJsonData)["username"]);
 			pGameServer->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 			pServer->SetUserID(ClientID, UserID);
-			pServer->SetUserName(ClientID, JsonData["username"].asCString());
+			pServer->SetUserName(ClientID, (*pJsonData)["username"]);
 
 			// auth staff members
-			if(JsonData["is_staff"].asBool())
+			if((bool)(*pJsonData)["is_staff"])
 				pServer->StaffAuth(ClientID, SendRconCmds);
 
 			((CWebappScore*)pGameServer->Score())->LoadScore(ClientID, true);
@@ -122,6 +128,7 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 		{
 			pGameServer->SendChatTarget(ClientID, "wrong username and/or password");
 		}
+		json_value_free(pJsonData);
 	}
 	delete pUser;
 }
@@ -136,16 +143,26 @@ void CServerWebapp::OnUserFind(IResponse *pResponse, bool ConnError, void *pUser
 
 	pUser->m_UserID = 0;
 
-	Json::Value JsonData;
-	Json::Reader Reader;
-	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
-		pUser->m_UserID = JsonData["id"].asInt();
+	if(!Error)
+	{
+		json_settings JsonSettings;
+		mem_zero(&JsonSettings, sizeof(JsonSettings));
+		char aError[256];
+
+		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+		if(pJsonData)
+		{
+			pUser->m_UserID = (*pJsonData)["id"].u.integer;
+			str_copy(pUser->m_aName, (*pJsonData)["username"], sizeof(pUser->m_aName));
+		}
+		else
+			dbg_msg("json", aError);
+		json_value_free(pJsonData);
+	}
 
 	if(pUser->m_UserID > 0)
 	{
-		str_copy(pUser->m_aName, JsonData["username"].asCString(), sizeof(pUser->m_aName));
-
 		char aURI[128];
 		str_format(aURI, sizeof(aURI), "/users/rank/%d/", pUser->m_UserID);
 		CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
@@ -198,21 +215,31 @@ void CServerWebapp::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pU
 	int MapRank = 0;
 	CPlayerData Run;
 
-	Json::Value JsonData;
-	Json::Reader Reader;
-	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+	if(!Error)
 	{
-		MapRank = JsonData["position"].asInt();
-		if(MapRank)
+		json_settings JsonSettings;
+		mem_zero(&JsonSettings, sizeof(JsonSettings));
+		char aError[256];
+
+		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+		if(pJsonData)
 		{
-			float Time = str_tofloat(JsonData["bestrun"]["time"].asCString());
-			float aCheckpointTimes[25] = { 0.0f };
-			Json::Value Checkpoint = JsonData["bestrun"]["checkpoints_list"];
-			for(unsigned int i = 0; i < Checkpoint.size(); i++)
-				aCheckpointTimes[i] = str_tofloat(Checkpoint[i].asCString());
-			Run.Set(Time, aCheckpointTimes);
+			MapRank = (*pJsonData)["position"].u.integer;
+			const json_value &BestRun = (*pJsonData)["bestrun"];
+			if(BestRun.type == json_object)
+			{
+				float Time = str_tofloat(BestRun["time"]);
+				float aCheckpointTimes[25] = { 0.0f };
+				const json_value &CheckpointList = BestRun["checkpoints_list"];
+				for(unsigned int i = 0; i < CheckpointList.u.array.length; i++)
+					aCheckpointTimes[i] = str_tofloat(CheckpointList[i]);
+				Run.Set(Time, aCheckpointTimes);
+			}
 		}
+		else
+			dbg_msg("json", aError);
+		json_value_free(pJsonData);
 	}
 
 	if(pGameServer->m_apPlayers[pUser->m_ClientID])
@@ -280,36 +307,45 @@ void CServerWebapp::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserD
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
 
-	Json::Value JsonData;
-	Json::Reader Reader;
-	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+	if(!Error)
 	{
-		int ClientID = pUser->m_ClientID;
-		if(pGameServer->m_apPlayers[ClientID])
+		json_settings JsonSettings;
+		mem_zero(&JsonSettings, sizeof(JsonSettings));
+		char aError[256];
+
+		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+		if(pJsonData)
 		{
-			char aBuf[256];
-			float LastTime = 0.0f;
-			int SameTimeCount = 0;
-			pGameServer->SendChatTarget(ClientID, "----------- Top 5 -----------");
-			for(unsigned int i = 0; i < JsonData.size() && i < 5; i++)
+			int ClientID = pUser->m_ClientID;
+			if(pGameServer->m_apPlayers[ClientID])
 			{
-				Json::Value Run = JsonData[i];
-				float Time = str_tofloat(Run["run"]["time"].asCString());
+				char aBuf[256];
+				float LastTime = 0.0f;
+				int SameTimeCount = 0;
+				pGameServer->SendChatTarget(ClientID, "----------- Top 5 -----------");
+				for(unsigned int i = 0; i < pJsonData->u.array.length && i < 5; i++)
+				{
+					const json_value &Run = (*pJsonData)[i];
+					float Time = str_tofloat(Run["run"]["time"]);
 
-				if(Time == LastTime)
-					SameTimeCount++;
-				else
-					SameTimeCount = 0;
+					if(Time == LastTime)
+						SameTimeCount++;
+					else
+						SameTimeCount = 0;
 
-				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
-					i + pUser->m_StartRank - SameTimeCount, Run["run"]["user"]["username"].asCString(), (int)Time / 60, fmod(Time, 60));
-				pGameServer->SendChatTarget(ClientID, aBuf);
+					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %.3f second(s)",
+						i + pUser->m_StartRank - SameTimeCount, (const char*)Run["run"]["user"]["username"], (int)Time / 60, fmod(Time, 60));
+					pGameServer->SendChatTarget(ClientID, aBuf);
 
-				LastTime = Time;
+					LastTime = Time;
+				}
+				pGameServer->SendChatTarget(ClientID, "------------------------------");
 			}
-			pGameServer->SendChatTarget(ClientID, "------------------------------");
 		}
+		else
+			dbg_msg("json", aError);
+		json_value_free(pJsonData);
 	}
 	delete pUser;
 }
@@ -325,19 +361,22 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 	if(Error)
 		return;
 
-	Json::Value JsonData;
-	Json::Reader Reader;
+	json_settings JsonSettings;
+	mem_zero(&JsonSettings, sizeof(JsonSettings));
+	char aError[256];
+
 	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	if(Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+	json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+	if(pJsonData)
 	{
-		Json::Value Awards = JsonData["awards"];
-		for(unsigned int i = 0; i < Awards.size(); i++)
+		const json_value &Awards = (*pJsonData)["awards"];
+		for(unsigned int i = 0; i < Awards.u.array.length; i++)
 		{
-			Json::Value Award = Awards[i];
-			int UserID = Award["user_id"].isInt() ? Award["user_id"].asInt() : 0;
+			const json_value &Award = Awards[i];
+			int UserID = Award["user_id"].u.integer;
 
 			if(!UserID)
-				return;
+				continue;
 
 			// show awards to everyone only if the player is there
 			for(int j = 0; j < MAX_CLIENTS; j++)
@@ -346,11 +385,14 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 					continue;
 
 				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "%s achieved award \"%s\".", pServer->ClientName(j), Award["name"].asCString());
+				str_format(aBuf, sizeof(aBuf), "%s achieved award \"%s\".", pServer->ClientName(j), (const char*)Award["name"]);
 				pGameServer->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 			}
 		}
 	}
+	else
+		dbg_msg("json", aError);
+	json_value_free(pJsonData);
 }
 
 void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -360,29 +402,35 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pGameServer->Console(), pResponse->StatusCode());
 
-	Json::Value JsonData;
-	Json::Reader Reader;
+	if(Error)
+		return;
+
+	json_settings JsonSettings;
+	mem_zero(&JsonSettings, sizeof(JsonSettings));
+	char aError[256];
+
 	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	if(!Error && Reader.parse(pBody, pBody + pResponse->Size(), JsonData))
+	json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+	if(pJsonData)
 	{
 		char aFilename[256];
 		const char *pPath = "/maps/teerace/%s.map";
 		bool Change = false;
 
-		for(unsigned int i = 0; i < JsonData.size(); i++)
+		for(unsigned int i = 0; i < pJsonData->u.array.length; i++)
 		{
-			Json::Value Map = JsonData[i];
-			if(!Map["crc"].isString())
+			const json_value &Map = (*pJsonData)[i];
+			if(Map["crc"].type != json_string)
 				continue; // skip maps without crc
 
 			CMapInfo Info;
-			str_copy(Info.m_aName, Map["name"].asCString(), sizeof(Info.m_aName));
-			sscanf(Map["crc"].asCString(), "%08x", &Info.m_Crc);
-			Info.m_ID = Map["id"].asInt();
-			Info.m_RunCount = Map["run_count"].asInt();
-			Info.m_MapType = Map["get_map_type"].asInt();
-			str_copy(Info.m_aURL, Map["get_download_url"].asCString(), sizeof(Info.m_aURL));
-			str_copy(Info.m_aAuthor, Map["author"].asCString(), sizeof(Info.m_aAuthor));
+			str_copy(Info.m_aName, Map["name"], sizeof(Info.m_aName));
+			sscanf(Map["crc"], "%08x", &Info.m_Crc);
+			Info.m_ID = Map["id"].u.integer;
+			Info.m_RunCount = Map["run_count"].u.integer;
+			Info.m_MapType = Map["get_map_type"].u.integer;
+			str_copy(Info.m_aURL, Map["get_download_url"], sizeof(Info.m_aURL));
+			str_copy(Info.m_aAuthor, Map["author"], sizeof(Info.m_aAuthor));
 
 			array<CMapInfo>::range r = find_linear(pWebapp->m_lMapList.all(), Info);
 			if(r.empty()) // new entry
@@ -392,7 +440,7 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 				dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
 
 				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-				Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
+				Download(pGameServer, aFilename, Map["get_download_url"], OnDownloadMap);
 			}
 			else if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
 			{
@@ -401,7 +449,7 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 				dbg_msg("webapp", "updated map info: '%s' (%d)", Info.m_aName, Info.m_ID);
 
 				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-				Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
+				Download(pGameServer, aFilename, Map["get_download_url"], OnDownloadMap);
 			}
 			else if(r.front().m_Crc == Info.m_Crc) // we already have this 
 			{
@@ -416,7 +464,7 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 				{
 					r.front().m_State = CMapInfo::MAPSTATE_DOWNLOADING;
 					str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-					Download(pGameServer, aFilename, Map["get_download_url"].asCString(), OnDownloadMap);
+					Download(pGameServer, aFilename, Map["get_download_url"], OnDownloadMap);
 				}
 			}
 		}
@@ -427,6 +475,9 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 			pWebapp->OnInit();
 		}
 	}
+	else
+		dbg_msg("json", aError);
+	json_value_free(pJsonData);
 }
 
 void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pUserData)
