@@ -75,7 +75,7 @@ void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecor
 			for(int i = 1; i < NUM_CHECKPOINTS; i++)
 			{
 				strcat(aBuf, ";");
-				FormatTimeSeconds(aBuf, sizeof(aBuf), pCpTime[i]);
+				FormatTimeSeconds(aBuf2, sizeof(aBuf2), pCpTime[i]);
 				strcat(aBuf, aBuf2);
 			}
 			json_object_push(pData, "checkpoints", json_string_new(aBuf));

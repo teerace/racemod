@@ -63,9 +63,9 @@ public:
 		return 0;
 	}
 
-	static void FormatTimeLong(char *pBuf, int Size, int Time)
+	static void FormatTimeLong(char *pBuf, int Size, int Time, bool ForceMinutes = false)
 	{
-		if(Time < 60 * 1000)
+		if(Time < 60 * 1000 && !ForceMinutes)
 			str_format(pBuf, Size, "%d.%03d second(s)", Time / 1000, Time % 1000);
 		else
 			str_format(pBuf, Size, "%d minute(s) %d.%03d second(s)", Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
