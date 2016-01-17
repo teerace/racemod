@@ -251,10 +251,10 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			if(pInfo->m_Score == -9999)
 				m_pClient->m_aClients[pInfo->m_ClientID].m_Score = 0;
 			
-			float Time = m_pClient->m_aClients[pInfo->m_ClientID].m_Score;
+			int Time = m_pClient->m_aClients[pInfo->m_ClientID].m_Score;
 			if(Time > 0)
 			{
-				str_format(aBuf, sizeof(aBuf), "%02d:%06.3f", (int)Time/60, fmod(Time,60));
+				str_format(aBuf, sizeof(aBuf), "%02d:%02d.%03d", Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
 				tw = TextRender()->TextWidth(0, FontSize, aBuf, -1);
 				TextRender()->SetCursor(&Cursor, ScoreOffset+ScoreLength/2-tw/2, y+Spacing, FontSize, TEXTFLAG_RENDER|TEXTFLAG_STOP_AT_END);
 				Cursor.m_LineWidth = ScoreLength;

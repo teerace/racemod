@@ -200,7 +200,7 @@ public:
 		bool m_Friend;
 
 		// race
-		float m_Score;
+		int m_Score;
 		
 		void UpdateRenderInfo();
 		void Reset();
