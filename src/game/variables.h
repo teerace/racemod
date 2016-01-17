@@ -121,6 +121,7 @@ MACRO_CONFIG_INT(SvRocketJumpDamage, sv_rocket_jump_damage, 1, 0, 1, CFGFLAG_SER
 MACRO_CONFIG_INT(SvPickupRespawn, sv_pickup_respawn, -1, -1, 120, CFGFLAG_SERVER, "Time before a pickup respawn")
 MACRO_CONFIG_INT(SvScoreIP, sv_score_ip, 1, 0, 1, CFGFLAG_SERVER, "Check score for ip, too")
 MACRO_CONFIG_INT(SvCheckpointSave, sv_checkpoint_save, 1, 0, 1, CFGFLAG_SERVER, "Save checkpoint times to score file")
+MACRO_CONFIG_INT(SvShowBest, sv_load_best, 1, 0, 1, CFGFLAG_SERVER, "Loads the best time from scoring")
 
 MACRO_CONFIG_INT(SvShowTimes, sv_show_times, 1, 0, 1, CFGFLAG_SERVER, "Shows the times of other players")
 MACRO_CONFIG_INT(SvShowOthers, sv_show_others, 1, 0, 1, CFGFLAG_SERVER, "Shows the other players")

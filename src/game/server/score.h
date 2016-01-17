@@ -39,11 +39,6 @@ public:
 		return false;
 	}
 
-	void SetCur(int Time)
-	{
-		m_CurTime = Time;
-	}
-
 	int m_Time;
 	int m_CurTime;
 	int m_aCpTime[NUM_CHECKPOINTS];

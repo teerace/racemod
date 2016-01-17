@@ -298,11 +298,28 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 		json_value_free(pJsonData);
 	}
 
-	if(pScore->GameServer()->m_apPlayers[pUser->m_ClientID])
+	CPlayer *pPl = pScore->GameServer()->m_apPlayers[pUser->m_ClientID];
+	if(pPl)
 	{
 		bool Own = pUser->m_UserID == pScore->Server()->GetUserID(pUser->m_ClientID);
 		if(Own && MapRank)
+		{
 			pScore->PlayerData(pUser->m_ClientID)->Set(Run.m_Time, Run.m_aCpTime);
+			// TODO: generalize this (should be usable in all scoring classes)
+			if(g_Config.m_SvShowTimes && g_Config.m_SvShowBest && Run.m_Time > 0)
+			{
+				pScore->PlayerData(pUser->m_ClientID)->m_CurTime = Run.m_Time;
+				pPl->m_Score = max(-(Run.m_Time / 1000), pPl->m_Score);
+				CNetMsg_Sv_PlayerTime Msg;
+				Msg.m_Time = Run.m_Time;
+				Msg.m_ClientID = pUser->m_ClientID;
+				for(int i = 0; i < MAX_CLIENTS; i++) // send time to all players
+				{
+					if(pScore->GameServer()->m_apPlayers[i] && pScore->GameServer()->m_apPlayers[i]->m_IsUsingRaceClient)
+						pScore->Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+				}
+			}
+		}
 
 		if(pUser->m_PrintRank)
 		{
