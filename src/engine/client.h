@@ -138,14 +138,16 @@ public:
 
 	virtual bool SoundInitFailed() = 0;
 
+	virtual bool DemoIsRecording() = 0;
+	virtual bool DemoIsPlaying() = 0;
+	virtual void DemoRecord_Stop() = 0;
+
 	virtual int GetDebugFont() = 0;
 	
 	// Race
 	virtual const char* GetCurrentMap() = 0;
 	virtual int GetCurrentMapCrc() = 0;
 	virtual const char* RaceRecordStart(const char *pFilename) = 0;
-	virtual void RaceRecordStop() = 0;
-	virtual bool DemoIsRecording() = 0;
 	
 	virtual void GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet) = 0;
 	virtual void GhostRecorder_Stop(float Time=0.0f) = 0;

@@ -485,6 +485,16 @@ void CClient::SetState(int s)
 		GameClient()->OnStateChange(m_State, Old);
 }
 
+bool CClient::DemoIsRecording()
+{
+	return m_DemoRecorder.IsRecording();
+}
+
+bool CClient::DemoIsPlaying()
+{
+	return m_DemoPlayer.IsPlaying();
+}
+
 // called when the map is loaded and we should init for a new round
 void CClient::OnEnterGame()
 {
@@ -2102,6 +2112,26 @@ void CClient::Con_RemoveFavorite(IConsole::IResult *pResult, void *pUserData)
 	if(net_addr_from_str(&Addr, pResult->GetString(0)) == 0)
 		pSelf->m_ServerBrowser.RemoveFavorite(Addr);
 }
+
+const char *CClient::DemoRecord(const char *pName)
+{
+	char aFilename[512];
+	str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", m_aCurrentMap, pName);
+	
+	if(m_State != STATE_ONLINE)
+		dbg_msg("demorec/record", "client is not online");
+	else
+		m_DemoRecorder.Start(Storage(), m_pConsole, aFilename, GameClient()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
+	
+	return m_aCurrentMap;
+}
+
+void CClient::DemoRecord_Stop()
+{
+	if(m_DemoRecorder.IsRecording())
+		m_DemoRecorder.Stop();
+}
+
 // Race
 const char* CClient::GetCurrentMap()
 {
@@ -2126,15 +2156,38 @@ const char* CClient::RaceRecordStart(const char *pFilename)
 	return m_aCurrentMap;
 }
 
-void CClient::RaceRecordStop()
+void CClient::GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
 {
-	if(m_DemoRecorder.IsRecording())
-		m_DemoRecorder.Stop();
-}	
+	// check the player name
+	char aName[MAX_NAME_LENGTH];
+	str_copy(aName, g_Config.m_PlayerName, sizeof(aName));
+	for (int i = 0; i < MAX_NAME_LENGTH; i++)
+	{
+		if (!aName[i])
+			break;
 
-bool CClient::DemoIsRecording()
+		if (aName[i] == '\\' || aName[i] == '/' || aName[i] == '|' || aName[i] == ':' || aName[i] == '*' || aName[i] == '?' || aName[i] == '<' || aName[i] == '>' || aName[i] == '"')
+			aName[i] = '%';
+	}
+
+	char aFilename[128];
+	str_format(aFilename, sizeof(aFilename), "ghosts/%s_%s_%08x_tmp.gho", GetCurrentMap(), aName, GetCurrentMapCrc());
+	m_GhostRecorder.Start(Storage(), m_pConsole, aFilename, GetCurrentMap(), GetCurrentMapCrc(), g_Config.m_PlayerName, pSkinName, UseCustomColor, ColorBody, ColorFeet);
+}
+
+void CClient::GhostRecorder_Stop(float Time)
 {
-	return m_DemoRecorder.IsRecording();
+	m_GhostRecorder.Stop(Time);
+}
+
+bool CClient::GhostIsRecording()
+{
+	return m_GhostRecorder.IsRecording();
+}
+
+void CClient::GhostRecorder_AddInfo(IGhostRecorder::CGhostCharacter *pPlayer)
+{
+	m_GhostRecorder.AddInfos(pPlayer);
 }
 
 const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
@@ -2187,40 +2240,6 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 	GameClient()->OnEnterGame();
 
 	return 0;
-}
-
-void CClient::GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
-{
-	// check the player name
-	char aName[MAX_NAME_LENGTH];
-	str_copy(aName, g_Config.m_PlayerName, sizeof(aName));
-	for(int i = 0; i < MAX_NAME_LENGTH; i++)
-	{
-		if(!aName[i])
-			break;
-		
-		if(aName[i] == '\\' || aName[i] == '/' || aName[i] == '|' || aName[i] == ':' || aName[i] == '*' || aName[i] == '?' || aName[i] == '<' || aName[i] == '>' || aName[i] == '"')
-			aName[i] = '%';
-	}
-
-	char aFilename[128];
-	str_format(aFilename, sizeof(aFilename), "ghosts/%s_%s_%08x_tmp.gho", GetCurrentMap(), aName, GetCurrentMapCrc());
-	m_GhostRecorder.Start(Storage(), m_pConsole, aFilename, GetCurrentMap(), GetCurrentMapCrc(), g_Config.m_PlayerName, pSkinName, UseCustomColor, ColorBody, ColorFeet);
-}
-
-void CClient::GhostRecorder_Stop(float Time)
-{
-	m_GhostRecorder.Stop(Time);
-}
-
-bool CClient::GhostIsRecording()
-{
-	return m_GhostRecorder.IsRecording();
-}
-
-void CClient::GhostRecorder_AddInfo(IGhostRecorder::CGhostCharacter *pPlayer)
-{
-	m_GhostRecorder.AddInfos(pPlayer);
 }
 
 void CClient::Con_Play(IConsole::IResult *pResult, void *pUserData)

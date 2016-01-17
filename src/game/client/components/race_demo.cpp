@@ -56,7 +56,7 @@ void CRaceDemo::OnRender()
 void CRaceDemo::OnReset()
 {
 	if(Client()->DemoIsRecording())
-		Client()->RaceRecordStop();
+		Client()->DemoRecord_Stop();
 	
 	char aFilename[512];
 	str_format(aFilename, sizeof(aFilename), "demos/%s_tmp.demo", m_pMap);
@@ -129,7 +129,7 @@ void CRaceDemo::OnMessage(int MsgType, void *pRawMsg)
 void CRaceDemo::CheckDemo()
 {
 	// stop the demo recording
-	Client()->RaceRecordStop();
+	Client()->DemoRecord_Stop();
 	
 	char aTmpDemoName[128];
 	str_format(aTmpDemoName, sizeof(aTmpDemoName), "%s_tmp", m_pMap);

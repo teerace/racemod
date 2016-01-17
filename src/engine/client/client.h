@@ -299,23 +299,24 @@ public:
 	virtual const char* GetCurrentMap();
 	virtual int GetCurrentMapCrc();
 	virtual const char* RaceRecordStart(const char *pFilename);
-	virtual void RaceRecordStop();
-	virtual bool DemoIsRecording();
-	
+
+	void GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet);
+	void GhostRecorder_Stop(float Time=0.0f);
+	bool GhostIsRecording();
+	void GhostRecorder_AddInfo(IGhostRecorder::CGhostCharacter *pPlayer);
+
 	void RegisterCommands();
 
+	virtual bool DemoIsRecording();
+	virtual bool DemoIsPlaying();
+	const char *DemoRecord(const char *pName);
+	virtual void DemoRecord_Stop();
 	const char *DemoPlayer_Play(const char *pFilename, int StorageType);
 	void DemoRecorder_Start(const char *pFilename, bool WithTimestamp);
 	void DemoRecorder_HandleAutoStart();
 	void DemoRecorder_Stop();
 	void DemoRecorder_AddDemoMarker();
 
-	void GhostRecorder_Start(const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet);
-	void GhostRecorder_Stop(float Time=0.0f);
-	bool GhostIsRecording();
-	void GhostRecorder_AddInfo(IGhostRecorder::CGhostCharacter *pPlayer);
-	
-	
 	void AutoScreenshot_Start();
 	void AutoScreenshot_Cleanup();
 
