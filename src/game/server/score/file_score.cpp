@@ -244,12 +244,14 @@ void CFileScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 void CFileScore::ShowTop5(int ClientID, int Debut)
 {
 	char aBuf[512];
+	char aTime[64];
 	GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 	for(int i = 0; i < 5 && i + Debut - 1 < m_Top.size(); i++)
 	{
 		CPlayerScore *r = &m_Top[i+Debut-1];
-		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
-			i + Debut, r->m_aName, r->m_Time / (60 * 1000), (r->m_Time / 1000) % 60, r->m_Time % 1000);
+		IScore::FormatTimeLong(aTime, sizeof(aTime), r->m_Time);
+		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
+			i + Debut, r->m_aName, aTime);
 		GameServer()->SendChatTarget(ClientID, aBuf);
 	}
 	GameServer()->SendChatTarget(ClientID, "------------------------------");
@@ -268,15 +270,14 @@ void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 	
 	if(pScore && Pos > -1)
 	{
-		int Time = pScore->m_Time;
 		char aClientName[128];
+		char aTime[64];
+		IScore::FormatTimeLong(aTime, sizeof(aTime), pScore->m_Time);
 		str_format(aClientName, sizeof(aClientName), " (%s)", Server()->ClientName(ClientID));
 		if(!g_Config.m_SvShowTimes)
-			str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %d.%03d second(s)",
-				Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
+			str_format(aBuf, sizeof(aBuf), "Your time: %s", aTime);
 		else
-			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
-				Pos, pScore->m_aName, Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
+			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", Pos, pScore->m_aName, aTime);
 		if(Search)
 			strcat(aBuf, aClientName);
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);

@@ -224,8 +224,9 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 		GameServer()->SendRecord(-1);
 
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "%s finished in: %d minute(s) %d.%03d second(s)",
-		Server()->ClientName(ID), FinishTime / (60 * 1000), (FinishTime / 1000) % 60, FinishTime % 1000);
+	char aTime[64];
+	IScore::FormatTimeShort(aTime, sizeof(aTime), FinishTime);
+	str_format(aBuf, sizeof(aBuf), "%s finished in: %s", Server()->ClientName(ID), aTime);
 	if(!g_Config.m_SvShowTimes)
 		GameServer()->SendChatTarget(ID, aBuf);
 	else

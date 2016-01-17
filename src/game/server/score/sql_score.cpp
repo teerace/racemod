@@ -366,13 +366,13 @@ void CSqlScore::ShowRankThread(void *pUser)
 			}
 			else
 			{
-				int Time = pData->m_pSqlData->m_pResults->getInt("Time");
+				char aTime[64];
+				IScore::FormatTimeLong(aTime, sizeof(aTime), pData->m_pSqlData->m_pResults->getInt("Time"));
 				if(!g_Config.m_SvShowTimes)
-					str_format(aBuf, sizeof(aBuf), "Your time: %d minute(s) %d.%03d second(s)",
-						Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
+					str_format(aBuf, sizeof(aBuf), "Your time: %s", aTime);
 				else
-					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
-						RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
+					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
+						RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), aTime);
 				
 				if(pData->m_Search)
 					strcat(aBuf, pData->m_aRequestingPlayer);
@@ -437,9 +437,10 @@ void CSqlScore::ShowTop5Thread(void *pUser)
 			int Time = 0;
 			while(pData->m_pSqlData->m_pResults->next())
 			{
-				Time = pData->m_pSqlData->m_pResults->getInt("Time");
-				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %d minute(s) %d.%03d second(s)",
-					Rank, pData->m_pSqlData->m_pResults->getString("Name").c_str(), Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
+				char aTime[64];
+				IScore::FormatTimeLong(aTime, sizeof(aTime), pData->m_pSqlData->m_pResults->getInt("Time"));
+				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
+					Rank, pData->m_pSqlData->m_pResults->getString("Name").c_str(), aTime);
 				pData->m_pSqlData->GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
 				Rank++;
 			}
