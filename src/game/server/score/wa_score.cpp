@@ -47,7 +47,7 @@ void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecor
 		if(NewRecord && Server()->GetUserID(ClientID) > 0)
 		{
 			// set demo and ghost so that it is saved
-			Server()->SaveGhostDemo(ClientID);
+			Server()->SaveGhostAndDemo(ClientID);
 			pUserData->m_Tick = Server()->Tick();
 		}
 
@@ -96,8 +96,8 @@ void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecor
 	}
 	
 	// stop ghost record
-	if(Server()->IsGhostRecording(ClientID))
-		Server()->StopGhostRecord(ClientID, Time/1000.f); // TODO: ints in ghost file
+	if(Server()->GhostRecorder_IsRecording(ClientID))
+		Server()->GhostRecorder_Stop(ClientID, Time);
 }
 
 void CWebappScore::ShowTop5(int ClientID, int Debut)
@@ -432,12 +432,12 @@ void CWebappScore::OnRunPost(IResponse *pResponse, bool ConnError, void *pUserDa
 		char aFilename[256];
 		char aURL[128];
 
-		str_format(aFilename, sizeof(aFilename), "/demos/teerace/%d_%d_%d.demo", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
-		str_format(aURL, sizeof(aURL), "files/demo/%d/%d/", pUser->m_UserID, pScore->Webapp()->CurrentMap()->m_ID);
+		pScore->Server()->Race_GetPath(aFilename, sizeof(aFilename), pUser->m_ClientID, false, pUser->m_Tick);
+		str_format(aURL, sizeof(aURL), "/files/demo/%d/%d/", pUser->m_UserID, pScore->Webapp()->CurrentMap()->m_ID);
 		pScore->Webapp()->AddUpload(aFilename, aURL, "demo_file", time_get() + time_freq() * 2);
 
-		str_format(aFilename, sizeof(aFilename), "/ghosts/teerace/%d_%d_%d.gho", pUser->m_Tick, g_Config.m_SvPort, pUser->m_ClientID);
-		str_format(aURL, sizeof(aURL), "files/ghost/%d/%d/", pUser->m_UserID, pScore->Webapp()->CurrentMap()->m_ID);
+		pScore->Server()->Ghost_GetPath(aFilename, sizeof(aFilename), pUser->m_ClientID, false, pUser->m_Tick);
+		str_format(aURL, sizeof(aURL), "/files/ghost/%d/%d/", pUser->m_UserID, pScore->Webapp()->CurrentMap()->m_ID);
 		pScore->Webapp()->AddUpload(aFilename, aURL, "ghost_file");
 	}
 	delete pUser;

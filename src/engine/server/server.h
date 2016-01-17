@@ -146,7 +146,6 @@ public:
 	CServerBan m_ServerBan;
 	CHttpClient m_HttpClient;
 
-
 	IEngineMap *m_pMap;
 
 	int64 m_GameStartTime;
@@ -168,12 +167,11 @@ public:
 #if defined(CONF_TEERACE)
 	char m_aConfigFilename[128];
 
-	CDemoRecorder m_aDemoRecorder[MAX_CLIENTS+1];
+	CDemoRecorder m_aDemoRecorder[MAX_CLIENTS];
 	CGhostRecorder m_aGhostRecorder[MAX_CLIENTS];
-#else
-	CDemoRecorder m_DemoRecorder;
+	int m_aNumGhostTicks[MAX_CLIENTS];
 #endif
-
+	CDemoRecorder m_DemoRecorder;
 	CRegister m_Register;
 	CMapChecker m_MapChecker;
 
@@ -247,18 +245,21 @@ public:
 	void SetUserName(int ClientID, const char* pUsername) { str_copy(m_aClients[ClientID].m_aUsername, pUsername, sizeof(m_aClients[ClientID].m_aUsername)); }
 	const char* GetUserName(int ClientID) { return m_aClients[ClientID].m_aUsername; }
 
-	void SaveGhostDemo(int ClientID);
-
-	void StartRecord(int ClientID);
-	void StopRecord(int ClientID);
-	bool IsRecording(int ClientID);
-
 	void StaffAuth(int ClientID, int SendRconCmds);
 
-	void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet);
-	void StopGhostRecord(int ClientID, float Time=0.0f);
-	bool IsGhostRecording(int ClientID);
-	void GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlayer);
+	void SaveGhostAndDemo(int ClientID);
+
+	void Race_GetPath(char *pBuf, int Size, int ClientID, bool Tmp, int Tick = 0);
+	void RaceRecorder_Start(int ClientID);
+	void RaceRecorder_Stop(int ClientID);
+	bool RaceRecorder_IsRecording(int ClientID);
+
+	void Ghost_GetPath(char *pBuf, int Size, int ClientID, bool Tmp, int Tick = 0);
+	void GhostRecorder_Start(int ClientID);
+	void GhostRecorder_AddTick(int ClientID);
+	void GhostRecorder_Stop(int ClientID, int Time);
+	bool GhostRecorder_IsRecording(int ClientID);
+	void GhostRecorder_WriteData(int ClientID, int Type, const char *pData, int Size);
 #endif
 
 	char *GetMapName();

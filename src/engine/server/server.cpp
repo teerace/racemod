@@ -19,6 +19,7 @@
 #include <engine/shared/demo.h>
 #include <engine/shared/econ.h>
 #include <engine/shared/filecollection.h>
+#include <engine/shared/ghost.h>
 #include <engine/shared/http.h>
 #include <engine/shared/mapchecker.h>
 #include <engine/shared/netban.h>
@@ -274,14 +275,10 @@ void CServer::CClient::Reset()
 #endif
 }
 
-#if defined(CONF_TEERACE)
-CServer::CServer()
-#else
 CServer::CServer() : m_DemoRecorder(&m_SnapshotDelta)
-#endif
 {
 #if defined(CONF_TEERACE)
-	for(int i = 0; i < MAX_CLIENTS+1; i++)
+	for(int i = 0; i < MAX_CLIENTS; i++)
 		m_aDemoRecorder[i] = CDemoRecorder(&m_SnapshotDelta);
 #endif
 	m_TickSpeed = SERVER_TICK_SPEED;
@@ -554,10 +551,8 @@ int CServer::SendMsgEx(CMsgPacker *pMsg, int Flags, int ClientID, bool System)
 #if defined(CONF_TEERACE)
 		if(ClientID > -1)
 			m_aDemoRecorder[ClientID].RecordMessage(pMsg->Data(), pMsg->Size());
-		m_aDemoRecorder[MAX_CLIENTS].RecordMessage(pMsg->Data(), pMsg->Size());
-#else
-		m_DemoRecorder.RecordMessage(pMsg->Data(), pMsg->Size());
 #endif
+		m_DemoRecorder.RecordMessage(pMsg->Data(), pMsg->Size());
 	}
 
 	if(!(Flags&MSGFLAG_NOSEND))
@@ -584,11 +579,7 @@ void CServer::DoSnapshot()
 	GameServer()->OnPreSnap();
 
 	// create snapshot for demo recording
-#if defined(CONF_TEERACE)
-	if(m_aDemoRecorder[MAX_CLIENTS].IsRecording())
-#else
 	if(m_DemoRecorder.IsRecording())
-#endif
 	{
 		char aData[CSnapshot::MAX_SIZE];
 		int SnapshotSize;
@@ -599,11 +590,7 @@ void CServer::DoSnapshot()
 		SnapshotSize = m_SnapshotBuilder.Finish(aData);
 
 		// write snapshot
-#if defined(CONF_TEERACE)
-		m_aDemoRecorder[MAX_CLIENTS].RecordSnapshot(Tick(), aData, SnapshotSize);
-#else
 		m_DemoRecorder.RecordSnapshot(Tick(), aData, SnapshotSize);
-#endif
 	}
 
 	// create snapshots for all clients
@@ -1284,20 +1271,28 @@ void CServer::ReloadMap()
 	m_MapReload = 1;
 }
 
-void CServer::SaveGhostDemo(int ClientID)
+void CServer::SaveGhostAndDemo(int ClientID)
 {
 	m_aClients[ClientID].m_SaveDemoTick = Tick();
 	m_aClients[ClientID].m_SaveGhostTick = Tick();
 }
 
-void CServer::StartRecord(int ClientID)
+void CServer::Race_GetPath(char *pBuf, int Size, int ClientID, bool Tmp, int Tick)
+{
+	if(Tmp)
+		str_format(pBuf, Size, "demos/teerace/%s_%d_%d_tmp.demo", m_aCurrentMap, g_Config.m_SvPort, ClientID);
+	else
+		str_format(pBuf, Size, "demos/teerace/%d_%d_%d.demo", Tick, g_Config.m_SvPort, ClientID);
+}
+
+void CServer::RaceRecorder_Start(int ClientID)
 {
 	char aFilename[128];
-	str_format(aFilename, sizeof(aFilename), "demos/teerace/%s_%d_%d_tmp.demo", m_aCurrentMap, g_Config.m_SvPort, ClientID);
+	Race_GetPath(aFilename, sizeof(aFilename), ClientID, true);
 	m_aDemoRecorder[ClientID].Start(Storage(), Console(), aFilename, GameServer()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "client");
 }
 
-void CServer::StopRecord(int ClientID)
+void CServer::RaceRecorder_Stop(int ClientID)
 {
 	m_aDemoRecorder[ClientID].Stop();
 
@@ -1306,51 +1301,63 @@ void CServer::StopRecord(int ClientID)
 		// rename the demo
 		char aOldFilename[256];
 		char aNewFilename[256];
-		str_format(aOldFilename, sizeof(aOldFilename), "demos/teerace/%s_%d_%d_tmp.demo", m_aCurrentMap, g_Config.m_SvPort, ClientID);
-		str_format(aNewFilename, sizeof(aNewFilename), "demos/teerace/%d_%d_%d.demo", m_aClients[ClientID].m_SaveDemoTick, g_Config.m_SvPort, ClientID);
+		Race_GetPath(aOldFilename, sizeof(aOldFilename), ClientID, true);
+		Race_GetPath(aNewFilename, sizeof(aNewFilename), ClientID, false, m_aClients[ClientID].m_SaveDemoTick);
 		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
-		
 		m_aClients[ClientID].m_SaveDemoTick = -1;
 	}
 }
 
-bool CServer::IsRecording(int ClientID)
+bool CServer::RaceRecorder_IsRecording(int ClientID)
 {
 	return m_aDemoRecorder[ClientID].IsRecording();
 }
 
-void CServer::StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet)
+void CServer::Ghost_GetPath(char *pBuf, int Size, int ClientID, bool Tmp, int Tick)
 {
-	char aFilename[128];
-	str_format(aFilename, sizeof(aFilename), "ghosts/teerace/%s_%d_%d_tmp.gho", m_aCurrentMap, g_Config.m_SvPort, ClientID);
-	m_aGhostRecorder[ClientID].Start(Storage(), Console(), aFilename, m_aCurrentMap, m_CurrentMapCrc, ClientName(ClientID), pSkinName, UseCustomColor, ColorBody, ColorFeet);
+	if(Tmp)
+		str_format(pBuf, Size, "ghosts/teerace/%s_%d_%d_tmp.gho", m_aCurrentMap, g_Config.m_SvPort, ClientID);
+	else
+		str_format(pBuf, Size, "ghosts/teerace/%d_%d_%d.gho", Tick, g_Config.m_SvPort, ClientID);
 }
 
-void CServer::StopGhostRecord(int ClientID, float Time)
+void CServer::GhostRecorder_Start(int ClientID)
 {
-	m_aGhostRecorder[ClientID].Stop(Time);
+	char aFilename[128];
+	Ghost_GetPath(aFilename, sizeof(aFilename), ClientID, true);
+	m_aGhostRecorder[ClientID].Start(Storage(), Console(), aFilename, m_aCurrentMap, m_CurrentMapCrc, ClientName(ClientID));
+	m_aNumGhostTicks[ClientID] = 0;
+}
+
+void CServer::GhostRecorder_AddTick(int ClientID)
+{
+	m_aNumGhostTicks[ClientID]++;
+}
+
+void CServer::GhostRecorder_Stop(int ClientID, int Time)
+{
+	m_aGhostRecorder[ClientID].Stop(m_aNumGhostTicks[ClientID], Time);
 
 	if(m_aClients[ClientID].m_SaveGhostTick > -1)
 	{
 		// rename the ghost
 		char aOldFilename[256];
 		char aNewFilename[256];
-		str_format(aOldFilename, sizeof(aOldFilename), "ghosts/teerace/%s_%d_%d_tmp.gho", m_aCurrentMap, g_Config.m_SvPort, ClientID);
-		str_format(aNewFilename, sizeof(aNewFilename), "ghosts/teerace/%d_%d_%d.gho", m_aClients[ClientID].m_SaveGhostTick, g_Config.m_SvPort, ClientID);
+		Ghost_GetPath(aOldFilename, sizeof(aOldFilename), ClientID, true);
+		Ghost_GetPath(aNewFilename, sizeof(aNewFilename), ClientID, false, m_aClients[ClientID].m_SaveGhostTick);
 		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
-		
 		m_aClients[ClientID].m_SaveGhostTick = -1;
 	}
 }
 
-bool CServer::IsGhostRecording(int ClientID)
+bool CServer::GhostRecorder_IsRecording(int ClientID)
 {
 	return m_aGhostRecorder[ClientID].IsRecording();
 }
 
-void CServer::GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlayer)
+void CServer::GhostRecorder_WriteData(int ClientID, int Type, const char *pData, int Size)
 {
-	m_aGhostRecorder[ClientID].AddInfos(pPlayer);
+	m_aGhostRecorder[ClientID].WriteData(Type, pData, Size);
 }
 
 void CServer::StaffAuth(int ClientID, int SendRconCmds)
@@ -1411,7 +1418,7 @@ int CServer::LoadMap(const char *pMapName)
 
 	// stop recording when we change map
 #if defined(CONF_TEERACE)
-	for(int i = 0; i < MAX_CLIENTS+1; i++)
+	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		m_aDemoRecorder[i].Stop();
 		
@@ -1423,9 +1430,8 @@ int CServer::LoadMap(const char *pMapName)
 			Storage()->RemoveFile(aPath, IStorage::TYPE_SAVE);
 		}
 	}
-#else
-	m_DemoRecorder.Stop();
 #endif
+	m_DemoRecorder.Stop();
 
 	// reinit snapshot ids
 	m_IDPool.TimeoutIDs();
@@ -1691,20 +1697,12 @@ void CServer::DemoRecorder_HandleAutoStart()
 {
 	if(g_Config.m_SvAutoDemoRecord)
 	{
-#if defined(CONF_TEERACE)
-		m_aDemoRecorder[MAX_CLIENTS].Stop();
-#else
 		m_DemoRecorder.Stop();
-#endif
 		char aFilename[128];
 		char aDate[20];
 		str_timestamp(aDate, sizeof(aDate));
 		str_format(aFilename, sizeof(aFilename), "demos/%s_%s.demo", "auto/autorecord", aDate);
-#if defined(CONF_TEERACE)
-		m_aDemoRecorder[MAX_CLIENTS].Start(Storage(), m_pConsole, aFilename, GameServer()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "server");
-#else
 		m_DemoRecorder.Start(Storage(), m_pConsole, aFilename, GameServer()->NetVersion(), m_aCurrentMap, m_CurrentMapCrc, "server");
-#endif
 		if(g_Config.m_SvAutoDemoMax)
 		{
 			// clean up auto recorded demos
@@ -1716,11 +1714,7 @@ void CServer::DemoRecorder_HandleAutoStart()
 
 bool CServer::DemoRecorder_IsRecording()
 {
-#if defined(CONF_TEERACE)
-	return m_aDemoRecorder[MAX_CLIENTS].IsRecording();
-#else
 	return m_DemoRecorder.IsRecording();
-#endif
 }
 
 void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
@@ -1736,20 +1730,12 @@ void CServer::ConRecord(IConsole::IResult *pResult, void *pUser)
 		str_timestamp(aDate, sizeof(aDate));
 		str_format(aFilename, sizeof(aFilename), "demos/demo_%s.demo", aDate);
 	}
-#if defined(CONF_TEERACE)
-	pServer->m_aDemoRecorder[MAX_CLIENTS].Start(pServer->Storage(), pServer->Console(), aFilename, pServer->GameServer()->NetVersion(), pServer->m_aCurrentMap, pServer->m_CurrentMapCrc, "server");
-#else
 	pServer->m_DemoRecorder.Start(pServer->Storage(), pServer->Console(), aFilename, pServer->GameServer()->NetVersion(), pServer->m_aCurrentMap, pServer->m_CurrentMapCrc, "server");
-#endif
 }
 
 void CServer::ConStopRecord(IConsole::IResult *pResult, void *pUser)
 {
-#if defined(CONF_TEERACE)
-	((CServer *)pUser)->m_aDemoRecorder[MAX_CLIENTS].Stop();
-#else
 	((CServer *)pUser)->m_DemoRecorder.Stop();
-#endif
 }
 
 void CServer::ConMapReload(IConsole::IResult *pResult, void *pUser)

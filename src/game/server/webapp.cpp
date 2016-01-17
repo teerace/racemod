@@ -20,7 +20,7 @@
 
 IServer *CServerWebapp::Server() { return m_pGameServer->Server(); }
 IScore *CServerWebapp::Score() { return m_pGameServer->Score(); }
-IStorage *CServerWebapp::Storage() { return m_pGameServer->Server()->Storage(); }
+IStorage *CServerWebapp::Storage() { return m_pGameServer->Storage(); }
 
 CBufferRequest *CServerWebapp::CreateAuthedApiRequest(int Method, const char *pURI)
 {
@@ -282,7 +282,7 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 	}
 	else
 	{
-		pWebapp->GameServer()->Server()->Storage()->RemoveFile(pRes->GetPath(), IStorage::TYPE_SAVE);
+		pWebapp->GameServer()->Storage()->RemoveFile(pRes->GetPath(), IStorage::TYPE_SAVE);
 		dbg_msg("webapp", "could not download map: '%s'", pRes->GetPath());
 	}
 }
@@ -312,7 +312,7 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 		str_format(aFile, sizeof(aFile), "maps/teerace/%s", pName);
 		unsigned MapCrc = 0;
 		unsigned MapSize = 0;
-		if(!CDataFileReader::GetCrcSize(pWebapp->Server()->Storage(), aFile, IStorage::TYPE_SAVE, &MapCrc, &MapSize))
+		if(!CDataFileReader::GetCrcSize(pWebapp->Storage(), aFile, IStorage::TYPE_SAVE, &MapCrc, &MapSize))
 			return 0;
 		pWebapp->AddMap(pName, MapCrc);
 	}

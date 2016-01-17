@@ -2,10 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef ENGINE_SERVER_H
 #define ENGINE_SERVER_H
-
 #include "kernel.h"
 #include "message.h"
-#include <engine/shared/ghost.h>
 
 class IServer : public IInterface
 {
@@ -28,9 +26,6 @@ public:
 	int TickSpeed() const { return m_TickSpeed; }
 
 	virtual int MaxClients() const = 0;
-
-	virtual class IStorage *Storage() = 0;
-
 	virtual const char *ClientName(int ClientID) = 0;
 	virtual const char *ClientClan(int ClientID) = 0;
 	virtual int ClientCountry(int ClientID) = 0;
@@ -88,18 +83,21 @@ public:
 
 	virtual char *GetMapName() = 0;
 
-	virtual void SaveGhostDemo(int ClientID) = 0;
-
-	virtual void StartRecord(int ClientID) = 0;
-	virtual void StopRecord(int ClientID) = 0;
-	virtual bool IsRecording(int ClientID) = 0;
-
 	virtual void StaffAuth(int ClientID, int SendRconCmds) = 0;
 
-	virtual void StartGhostRecord(int ClientID, const char* pSkinName, int UseCustomColor, int ColorBody, int ColorFeet) = 0;
-	virtual void StopGhostRecord(int ClientID, float Time=0.0f) = 0;
-	virtual bool IsGhostRecording(int ClientID) = 0;
-	virtual void GhostAddInfo(int ClientID, IGhostRecorder::CGhostCharacter *pPlayer) = 0;
+	virtual void SaveGhostAndDemo(int ClientID) = 0;
+
+	virtual void Race_GetPath(char *pBuf, int Size, int ClientID, bool Tmp, int Tick) = 0;
+	virtual void RaceRecorder_Start(int ClientID) = 0;
+	virtual void RaceRecorder_Stop(int ClientID) = 0;
+	virtual bool RaceRecorder_IsRecording(int ClientID) = 0;
+
+	virtual void Ghost_GetPath(char *pBuf, int Size, int ClientID, bool Tmp, int Tick) = 0;
+	virtual void GhostRecorder_Start(int ClientID) = 0;
+	virtual void GhostRecorder_AddTick(int ClientID) = 0;
+	virtual void GhostRecorder_Stop(int ClientID, int Time) = 0;
+	virtual bool GhostRecorder_IsRecording(int ClientID) = 0;
+	virtual void GhostRecorder_WriteData(int ClientID, int Type, const char *pData, int Size) = 0;
 #endif
 };
 

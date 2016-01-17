@@ -6,6 +6,7 @@
 #include <game/server/score.h>
 #if defined(CONF_TEERACE)
 #include <game/server/webapp.h>
+#include <game/ghost.h>
 #endif
 #include <string.h>
 #include "race.h"
@@ -65,11 +66,11 @@ int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlay
 	m_aRace[ClientID].Reset();
 	
 #if defined(CONF_TEERACE)
-	if(Server()->IsRecording(ClientID))
-		Server()->StopRecord(ClientID);
+	if(Server()->RaceRecorder_IsRecording(ClientID))
+		Server()->RaceRecorder_Stop(ClientID);
 	
-	if(Server()->IsGhostRecording(ClientID))
-		Server()->StopGhostRecord(ClientID);
+	if(Server()->GhostRecorder_IsRecording(ClientID))
+		Server()->GhostRecorder_Stop(ClientID, 0);
 #endif
 
 	return 0;
@@ -126,22 +127,22 @@ void CGameControllerRACE::Tick()
 #if defined(CONF_TEERACE)
 		// stop recording at the finish
 		CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
-		if(Server()->IsRecording(i))
+		if(Server()->RaceRecorder_IsRecording(i))
 		{
 			if(Server()->Tick() == m_aStopRecordTick[i])
 			{
 				m_aStopRecordTick[i] = -1;
-				Server()->StopRecord(i);
+				Server()->RaceRecorder_Stop(i);
 				continue;
 			}
 			
 			if(m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
-				Server()->StopRecord(i);
+				Server()->RaceRecorder_Stop(i);
 		}
 		
 		// stop ghost if time is bigger then best time
-		if(Server()->IsGhostRecording(i) && m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
-			Server()->StopGhostRecord(i);
+		if(Server()->GhostRecorder_IsRecording(i) && m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
+			Server()->GhostRecorder_Stop(i, 0);
 #endif
 	}
 }
@@ -184,8 +185,17 @@ bool CGameControllerRACE::OnRaceStart(int ID, int StartAddTime, bool Check)
 	}
 
 #if defined(CONF_TEERACE)
-	if(g_Config.m_WaAutoRecord && GameServer()->Webapp() && Server()->GetUserID(ID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && !Server()->IsGhostRecording(ID))
-		Server()->StartGhostRecord(ID, pChr->GetPlayer()->m_TeeInfos.m_SkinName, pChr->GetPlayer()->m_TeeInfos.m_UseCustomColor, pChr->GetPlayer()->m_TeeInfos.m_ColorBody, pChr->GetPlayer()->m_TeeInfos.m_ColorFeet);
+	if(g_Config.m_WaAutoRecord && GameServer()->Webapp() && Server()->GetUserID(ID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && !Server()->GhostRecorder_IsRecording(ID))
+	{
+		Server()->GhostRecorder_Start(ID);
+		
+		CGhostSkin Skin;
+		StrToInts(&Skin.m_Skin0, 6, pChr->GetPlayer()->m_TeeInfos.m_SkinName);
+		Skin.m_UseCustomColor = pChr->GetPlayer()->m_TeeInfos.m_UseCustomColor;
+		Skin.m_ColorBody = pChr->GetPlayer()->m_TeeInfos.m_ColorBody;
+		Skin.m_ColorFeet = pChr->GetPlayer()->m_TeeInfos.m_ColorFeet;
+		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_SKIN, (const char*)&Skin, sizeof(Skin));
+	}
 #endif
 
 	return true;
@@ -231,7 +241,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 	}
 
 #if defined(CONF_TEERACE)
-	if(Server()->IsRecording(ID))
+	if(Server()->RaceRecorder_IsRecording(ID))
 		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
 #endif
 
