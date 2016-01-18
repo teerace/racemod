@@ -1,0 +1,104 @@
+
+##### translated strings #####
+
+
+##### needs translation #####
+
+Always show ghost nameplates
+== 
+
+Api token
+== 
+
+Author
+== 
+
+Auto record
+== 
+
+Checking...
+== 
+
+Credits
+== 
+
+Delete this envelope
+== 
+
+Enable Ghost
+== 
+
+Error requesting api token
+== 
+
+Finish time
+== 
+
+Ghost
+== 
+
+Global settings
+== 
+
+License
+== 
+
+Map info
+== 
+
+None
+== 
+
+Port
+== 
+
+Race
+== 
+
+Race specific settings
+== 
+
+Request api token
+== 
+
+Save Ghost
+== 
+
+Save player name
+== 
+
+Server best
+== 
+
+Show acceleration
+== 
+
+Show best time on server
+== 
+
+Show checkpoint difference
+== 
+
+Show ghost nameplates
+== 
+
+Show other players
+== 
+
+Show records
+== 
+
+Show speedmeter
+== 
+
+Teerace servers only
+== 
+
+Time
+== 
+
+Username
+== 
+
+##### old translations #####
+

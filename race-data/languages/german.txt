@@ -1,0 +1,103 @@
+
+##### translated strings #####
+
+Always show ghost nameplates
+== Geist-Namen immer anzeigen
+
+Api token
+== API-Token
+
+Author
+== Autor
+
+Auto record
+== Automatisch aufnehmen
+
+Checking...
+== Prüfe...
+
+Credits
+== Credits
+
+Enable Ghost
+== Geist aktivieren
+
+Error requesting api token
+== Fehler beim Anfragen des API-Tokens
+
+Finish time
+== Zeit
+
+Ghost
+== Geist
+
+Global settings
+== Globale Einstellungen
+
+License
+== Lizenz
+
+Map info
+== Map-Info
+
+Port
+== Port
+
+Race
+== Race
+
+Race specific settings
+== Race Einstellungen
+
+Request api token
+== API-Token anfragen
+
+Save Ghost
+== Geist speichern
+
+Save player name
+== Name speichern
+
+Server best
+== Server Bestzeit
+
+Show acceleration
+== Zeige Beschleunigung
+
+Show best time on server
+== Zeige Server Bestzeit
+
+Show checkpoint difference
+== Zeige Checkpoint-Differenz
+
+Show ghost nameplates
+== Zeige Geist-Namen
+
+Show other players
+== Andere Spieler anzeigen
+
+Show records
+== Rekorde anzeigen
+
+Show speedmeter
+== Speedmeter anzeigen
+
+Teerace servers only
+== Nur Teerace Server
+
+Time
+== Zeit
+
+Username
+== Name
+
+##### needs translation #####
+
+Delete this envelope
+== 
+
+None
+== 
+
+##### old translations #####
+
