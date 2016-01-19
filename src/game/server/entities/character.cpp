@@ -501,7 +501,7 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 
 #if defined(CONF_TEERACE)
 	// start demo recording
-	if(g_Config.m_WaAutoRecord && m_LastAction == Server()->Tick())
+	if(g_Config.m_WaAutoRecord && m_LastAction == Server()->Tick() && GameServer()->Webapp())
 	{
 		int ClientID = m_pPlayer->GetCID();
 		if(!Server()->RaceRecorder_IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
