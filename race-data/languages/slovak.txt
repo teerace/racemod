@@ -1,8 +1,10 @@
 
 ##### translated strings #####
 
-
 ##### needs translation #####
+
+Activate
+== 
 
 Always show ghost nameplates
 == 
@@ -20,6 +22,9 @@ Checking...
 == 
 
 Credits
+== 
+
+Deactivate
 == 
 
 Delete this envelope

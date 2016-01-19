@@ -1,6 +1,9 @@
 
 ##### translated strings #####
 
+Activate
+== Aktivieren
+
 Always show ghost nameplates
 == Geist-Namen immer anzeigen
 
@@ -18,6 +21,9 @@ Checking...
 
 Credits
 == Credits
+
+Deactivate
+== Deaktivieren
 
 Enable Ghost
 == Geist aktivieren
