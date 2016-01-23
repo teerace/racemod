@@ -109,7 +109,7 @@ void CGameControllerRACE::Tick()
 
 			if(p->m_CpTick != -1 && p->m_CpTick > Server()->Tick())
 			{
-				Msg.m_Check = (p->m_CpDiff % 1000) / 10;
+				Msg.m_Check = p->m_CpDiff / 10;
 				int CpDiff = abs(p->m_CpDiff);
 				str_format(aTmp, sizeof(aTmp), "\nCheckpoint | Diff : %s%3d.%02d",
 					p->m_CpDiff > 0 ? "+" : "-", CpDiff / 1000, (CpDiff % 1000) / 10);
