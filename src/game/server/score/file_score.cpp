@@ -100,7 +100,6 @@ void CFileScore::Init()
 		CLineReader LineReader;
 		LineReader.Init(File);
 		CPlayerScore Tmp;
-		int LineCount = 0;
 		int LinesPerItem = g_Config.m_SvCheckpointSave ? 4 : 3;
 		char *pLine;
 		for(int LineCount = 0; (pLine = LineReader.Get()); LineCount++)

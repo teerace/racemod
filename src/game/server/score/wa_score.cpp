@@ -288,7 +288,7 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 				int Time = IScore::TimeFromStr(BestRun["time"]);
 				int aCheckpointTimes[NUM_CHECKPOINTS] = { 0 };
 				const json_value &CheckpointList = BestRun["checkpoints_list"];
-				int CpNum = min(CheckpointList.u.array.length, (unsigned int)NUM_CHECKPOINTS);
+				unsigned int CpNum = min(CheckpointList.u.array.length, (unsigned int)NUM_CHECKPOINTS);
 				for(unsigned int i = 0; i < CpNum; i++)
 					aCheckpointTimes[i] = IScore::TimeFromStr(CheckpointList[i]);
 				Run.Set(Time, aCheckpointTimes);

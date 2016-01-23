@@ -75,7 +75,7 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 	Server()->SendHttp(pInfo, pRequest);
 }
 
-CServerWebapp::CServerWebapp(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1)
+CServerWebapp::CServerWebapp(CGameContext *pGameServer) : m_LastPing(-1), m_pGameServer(pGameServer), m_LastMapListLoad(-1)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
