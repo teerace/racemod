@@ -3,6 +3,7 @@ CheckVersion("0.4")
 Import("configure.lua")
 Import("other/sdl/sdl.lua")
 Import("other/freetype/freetype.lua")
+Import("other/mysql/mysql.lua")
 
 --- Setup Config -------
 config = NewConfig()
@@ -13,6 +14,7 @@ config:Add(OptTestCompileC("macosxppc", "int main(){return 0;}", "-arch ppc"))
 config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
+config:Add(MySQL.OptFind("mysql", false))
 config:Finalize("config.lua")
 
 -- data compiler
@@ -119,13 +121,13 @@ if family == "windows" then
 	if platform == "win32" then
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib32\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\lib32\\SDL.dll"))
+		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib32\\mysqlcppconn.dll"))
 	else
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib64\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\lib64\\SDL.dll"))
+		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib64\\mysqlcppconn.dll"))
 	end
-	table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\vc2005libs\\mysqlcppconn.dll"))
-	table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\vc2005libs\\libmysql.dll"))
-	
+
 	if config.compiler.driver == "cl" then
 		client_link_other = {ResCompile("other/icons/teeworlds_cl.rc")}
 		server_link_other = {ResCompile("other/icons/teeworlds_srv_cl.rc")}
@@ -168,7 +170,6 @@ function build(settings)
 
 	-- set some platform specific settings
 	settings.cc.includes:Add("src")
-	settings.cc.includes:Add("other/mysql/include")
 
 	if family == "unix" then
 		if platform == "macosx" then
@@ -215,41 +216,22 @@ function build(settings)
 	launcher_settings = engine_settings:Copy()
 
 	if family == "unix" then
-		if string.find(settings.config_name, "sql") then
-			server_settings.link.libs:Add("mysqlcppconn-static")
-			server_settings.link.libs:Add("mysqlclient")
-		end
-
 		if platform == "macosx" then
 			client_settings.link.frameworks:Add("OpenGL")
 			client_settings.link.frameworks:Add("AGL")
 			client_settings.link.frameworks:Add("Carbon")
 			client_settings.link.frameworks:Add("Cocoa")
 			launcher_settings.link.frameworks:Add("Cocoa")
-			if string.find(settings.config_name, "sql") then
-				server_settings.link.libpath:Add("other/mysql/mac/lib32")
-			end
 		else
 			client_settings.link.libs:Add("X11")
 			client_settings.link.libs:Add("GL")
 			client_settings.link.libs:Add("GLU")
-			if string.find(settings.config_name, "sql") then
-				if arch == "amd64" then
-					server_settings.link.libpath:Add("other/mysql/linux/lib64")
-				else
-					server_settings.link.libpath:Add("other/mysql/linux/lib32")
-				end
-			end
 		end
 
 	elseif family == "windows" then
 		client_settings.link.libs:Add("opengl32")
 		client_settings.link.libs:Add("glu32")
 		client_settings.link.libs:Add("winmm")
-		if string.find(settings.config_name, "sql") then
-			server_settings.link.libpath:Add("other/mysql/vc2005libs")
-			server_settings.link.libs:Add("mysqlcppconn")
-		end
 	end
 
 	-- apply sdl settings
@@ -263,7 +245,6 @@ function build(settings)
 
 	versionserver = Compile(settings, Collect("src/versionsrv/*.cpp"))
 	masterserver = Compile(settings, Collect("src/mastersrv/*.cpp"))
-	game_http = Compile(settings, Collect("src/game/http/*.cpp"))
 	game_shared = Compile(settings, Collect("src/game/*.cpp"), nethash, network_source)
 	game_client = Compile(settings, CollectRecursive("src/game/client/*.cpp"), client_content_source)
 	game_server = Compile(settings, CollectRecursive("src/game/server/*.cpp"), server_content_source)
@@ -383,6 +364,11 @@ release_teerace_sql_settings.debug = 0
 release_teerace_sql_settings.optimize = 1
 release_teerace_sql_settings.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE", "CONF_SQL")
 
+config.mysql:Apply(debug_sql_settings)
+config.mysql:Apply(debug_teerace_sql_settings)
+config.mysql:Apply(release_sql_settings)
+config.mysql:Apply(release_teerace_sql_settings)
+
 if platform == "macosx" then
 	debug_settings_ppc = debug_settings:Copy()
 	debug_settings_ppc.config_name = "debug_ppc"
@@ -398,14 +384,14 @@ if platform == "macosx" then
 	debug_sql_settings_ppc.link.flags:Add("-arch ppc")
 	debug_sql_settings_ppc.cc.defines:Add("CONF_DEBUG", "CONF_SQL")
 	
-	debug_teerace_settings_ppc = debug_sql_settings:Copy()
+	debug_teerace_settings_ppc = debug_teerace_settings:Copy()
 	debug_teerace_settings_ppc.config_name = "teerace_debug_ppc"
 	debug_teerace_settings_ppc.config_ext = "_teerace_ppc_d"
 	debug_teerace_settings_ppc.cc.flags:Add("-arch ppc")
 	debug_teerace_settings_ppc.link.flags:Add("-arch ppc")
 	debug_teerace_settings_ppc.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE")
 	
-	debug_teerace_sql_settings_ppc = debug_sql_settings:Copy()
+	debug_teerace_sql_settings_ppc = debug_teerace_sql_settings:Copy()
 	debug_teerace_sql_settings_ppc.config_name = "teerace_sql_debug_ppc"
 	debug_teerace_sql_settings_ppc.config_ext = "_teerace_sql_ppc_d"
 	debug_teerace_sql_settings_ppc.cc.flags:Add("-arch ppc")
@@ -426,14 +412,14 @@ if platform == "macosx" then
 	release_sql_settings_ppc.link.flags:Add("-arch ppc")
 	release_sql_settings_ppc.cc.defines:Add("CONF_RELEASE", "CONF_SQL")
 	
-	release_teerace_settings_ppc = release_sql_settings:Copy()
+	release_teerace_settings_ppc = release_teerace_settings:Copy()
 	release_teerace_settings_ppc.config_name = "teerace_release_ppc"
 	release_teerace_settings_ppc.config_ext = "_teerace_ppc"
 	release_teerace_settings_ppc.cc.flags:Add("-arch ppc")
 	release_teerace_settings_ppc.link.flags:Add("-arch ppc")
 	release_teerace_settings_ppc.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE")
 	
-	release_teerace_sql_settings_ppc = release_sql_settings:Copy()
+	release_teerace_sql_settings_ppc = release_teerace_sql_settings:Copy()
 	release_teerace_sql_settings_ppc.config_name = "teerace_sql_release_ppc"
 	release_teerace_sql_settings_ppc.config_ext = "_teerace_sql_ppc"
 	release_teerace_sql_settings_ppc.cc.flags:Add("-arch ppc")
@@ -464,14 +450,14 @@ if platform == "macosx" then
 		debug_sql_settings_x86.link.flags:Add("-arch i386")
 		debug_sql_settings_x86.cc.defines:Add("CONF_DEBUG", "CONF_SQL")
 		
-		debug_teerace_settings_x86 = debug_sql_settings:Copy()
+		debug_teerace_settings_x86 = debug_teerace_settings:Copy()
 		debug_teerace_settings_x86.config_name = "teerace_debug_x86"
 		debug_teerace_settings_x86.config_ext = "_teerace_x86_d"
 		debug_teerace_settings_x86.cc.flags:Add("-arch i386")
 		debug_teerace_settings_x86.link.flags:Add("-arch i386")
 		debug_teerace_settings_x86.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE")
 		
-		debug_teerace_sql_settings_x86 = debug_sql_settings:Copy()
+		debug_teerace_sql_settings_x86 = debug_teerace_sql_settings:Copy()
 		debug_teerace_sql_settings_x86.config_name = "teerace_sql_debug_x86"
 		debug_teerace_sql_settings_x86.config_ext = "_teerace_sql_x86_d"
 		debug_teerace_sql_settings_x86.cc.flags:Add("-arch i386")
@@ -492,14 +478,14 @@ if platform == "macosx" then
 		release_sql_settings_x86.link.flags:Add("-arch i386")
 		release_sql_settings_x86.cc.defines:Add("CONF_RELEASE", "CONF_SQL")
 		
-		release_teerace_settings_x86 = release_sql_settings:Copy()
+		release_teerace_settings_x86 = release_teerace_settings:Copy()
 		release_teerace_settings_x86.config_name = "teerace_release_x86"
 		release_teerace_settings_x86.config_ext = "_teerace_x86"
 		release_teerace_settings_x86.cc.flags:Add("-arch i386")
 		release_teerace_settings_x86.link.flags:Add("-arch i386")
 		release_teerace_settings_x86.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE")
 		
-		release_teerace_sql_settings_x86 = release_sql_settings:Copy()
+		release_teerace_sql_settings_x86 = release_teerace_sql_settings:Copy()
 		release_teerace_sql_settings_x86.config_name = "teerace_sql_release_x86"
 		release_teerace_sql_settings_x86.config_ext = "_teerace_sql_x86"
 		release_teerace_sql_settings_x86.cc.flags:Add("-arch i386")
@@ -531,14 +517,14 @@ if platform == "macosx" then
 		debug_sql_settings_x86_64.link.flags:Add("-arch x86_64")
 		debug_sql_settings_x86_64.cc.defines:Add("CONF_DEBUG", "CONF_SQL")
 		
-		debug_teerace_settings_x86_64 = debug_sql_settings:Copy()
+		debug_teerace_settings_x86_64 = debug_teerace_settings:Copy()
 		debug_teerace_settings_x86_64.config_name = "teerace_debug_x86_64"
 		debug_teerace_settings_x86_64.config_ext = "_teerace_x86_64_d"
 		debug_teerace_settings_x86_64.cc.flags:Add("-arch x86_64")
 		debug_teerace_settings_x86_64.link.flags:Add("-arch x86_64")
 		debug_teerace_settings_x86_64.cc.defines:Add("CONF_DEBUG", "CONF_TEERACE")
 		
-		debug_teerace_sql_settings_x86_64 = debug_sql_settings:Copy()
+		debug_teerace_sql_settings_x86_64 = debug_teerace_sql_settings:Copy()
 		debug_teerace_sql_settings_x86_64.config_name = "teerace_sql_debug_x86_64"
 		debug_teerace_sql_settings_x86_64.config_ext = "_teerace_sql_x86_64_d"
 		debug_teerace_sql_settings_x86_64.cc.flags:Add("-arch x86_64")
@@ -559,14 +545,14 @@ if platform == "macosx" then
 		release_sql_settings_x86_64.link.flags:Add("-arch x86_64")
 		release_sql_settings_x86_64.cc.defines:Add("CONF_RELEASE", "CONF_SQL")
 		
-		release_teerace_settings_x86_64 = release_sql_settings:Copy()
+		release_teerace_settings_x86_64 = release_teerace_settings:Copy()
 		release_teerace_settings_x86_64.config_name = "teerace_release_x86_64"
 		release_teerace_settings_x86_64.config_ext = "_teerace_x86_64"
 		release_teerace_settings_x86_64.cc.flags:Add("-arch x86_64")
 		release_teerace_settings_x86_64.link.flags:Add("-arch x86_64")
 		release_teerace_settings_x86_64.cc.defines:Add("CONF_RELEASE", "CONF_TEERACE")
 		
-		release_teerace_sql_settings_x86_64 = release_sql_settings:Copy()
+		release_teerace_sql_settings_x86_64 = release_teerace_sql_settings:Copy()
 		release_teerace_sql_settings_x86_64.config_name = "teerace_sql_release_x86_64"
 		release_teerace_sql_settings_x86_64.config_ext = "_teerace_sql_x86_64"
 		release_teerace_sql_settings_x86_64.cc.flags:Add("-arch x86_64")
