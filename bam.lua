@@ -151,7 +151,10 @@ function build(settings)
 	if config.compiler.driver == "cl" then
 		settings.cc.flags:Add("/wd4244", "/wd4577")
 	else
-		settings.cc.flags:Add("-Wall", "-fno-exceptions")
+		settings.cc.flags:Add("-Wall")
+		if string.find(settings.config_name, "sql") == nil then
+			settings.cc.flags:Add("-fno-exceptions")
+		end
 		if family == "windows" then
 			-- disable visibility attribute support for gcc on windows
 			settings.cc.defines:Add("NO_VIZ")

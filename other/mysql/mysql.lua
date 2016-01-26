@@ -1,16 +1,24 @@
 MySQL = {
 	basepath = PathDir(ModuleFilename()),
 	
-	OptFind = function (name, required)	
+	OptFind = function (name, required)
+		local function check_compile_include(settings, filename)
+			if CTestCompile(settings, "#include <" .. filename .. ">\nint main(){return 0;}", "") then
+				return true
+			end
+
+			return false
+		end
+
 		local check = function(option, settings)
 			option.value = false
-			option.use_mysqlconfig = false
+			option.use_syslib = false
 			option.use_winlib = 0
 			option.lib_path = nil
 			
-			if ExecuteSilent("mysql_config") > 0 and ExecuteSilent("mysql_config --cflags") == 0 then
+			if check_compile_include(settings, "cppconn/config.h") then
 				option.value = true
-				option.use_mysqlconfig = true
+				option.use_syslib = true
 			end
 				
 			if platform == "win32" then
@@ -23,9 +31,8 @@ MySQL = {
 		end
 		
 		local apply = function(option, settings)
-			if option.use_mysqlconfig == true then
-				settings.cc.flags:Add("`mysql_config --cflags`")
-				settings.link.flags:Add("`mysql_config --libs`")
+			if option.use_syslib == true then
+				settings.link.libs:Add("mysqlcppconn")
 			elseif option.use_winlib > 0 then
 				settings.cc.includes:Add(MySQL.basepath .. "/include")
 				if option.use_winlib == 32 then
@@ -39,13 +46,13 @@ MySQL = {
 		
 		local save = function(option, output)
 			output:option(option, "value")
-			output:option(option, "use_mysqlconfig")
+			output:option(option, "use_syslib")
 			output:option(option, "use_winlib")
 		end
 		
 		local display = function(option)
 			if option.value == true then
-				if option.use_mysqlconfig == true then return "using mysql_config" end
+				if option.use_syslib == true then return "using system libaries" end
 				if option.use_winlib == 32 then return "using supplied win32 libraries" end
 				if option.use_winlib == 64 then return "using supplied win64 libraries" end
 				return "using unknown method"

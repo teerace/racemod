@@ -434,7 +434,6 @@ void CSqlScore::ShowTop5Thread(void *pUser)
 			pData->m_pSqlData->GameServer()->SendChatTarget(pData->m_ClientID, "----------- Top 5 -----------");
 			
 			int Rank = pData->m_Num;
-			int Time = 0;
 			while(pData->m_pSqlData->m_pResults->next())
 			{
 				char aTime[64];
