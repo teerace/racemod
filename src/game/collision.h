@@ -53,8 +53,6 @@ public:
 
 	int CheckTeleport(vec2 Pos);
 	vec2 GetTeleportDestination(int Number);
-	
-	class CLayers *Layers() { return m_pLayers; }
 };
 
 #endif
