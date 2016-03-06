@@ -121,77 +121,63 @@ bool CCollision::IsTileSolid(int x, int y)
 }
 
 // race
-int CCollision::GetIndex(vec2 Pos)
+int CCollision::GetTilePos(vec2 Pos)
 {
-	int nx = clamp((int)Pos.x/32, 0, m_Width-1);
-	int ny = clamp((int)Pos.y/32, 0, m_Height-1);
+	int Nx = clamp((int)Pos.x/32, 0, m_Width-1);
+	int Ny = clamp((int)Pos.y/32, 0, m_Height-1);
 	
-	return ny*m_Width+nx;
+	return Ny*m_Width+Nx;
 }
 
-int CCollision::GetIndex(vec2 PrevPos, vec2 Pos)
+vec2 CCollision::GetPos(int TilePos)
 {
-	float Distance = distance(PrevPos, Pos);
-	
-	if(!Distance)
-	{
-		int Nx = clamp((int)Pos.x/32, 0, m_Width-1);
-		int Ny = clamp((int)Pos.y/32, 0, m_Height-1);
-		
-		if((m_pTiles[Ny*m_Width+Nx].m_Index >= TILE_STOPL && m_pTiles[Ny*m_Width+Nx].m_Index <= 59) ||
-			(m_pTele && m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN) ||
-			(m_pSpeedup && m_pSpeedup[Ny*m_Width+Nx].m_Force > 0))
-		{
-			return Ny*m_Width+Nx;
-		}
-	}
-	
-	float a = 0.0f;
-	vec2 Tmp = vec2(0, 0);
-	int Nx = 0;
-	int Ny = 0;
-	
-	for(float f = 0; f < Distance; f++)
-	{
-		a = f/Distance;
-		Tmp = mix(PrevPos, Pos, a);
-		Nx = clamp((int)Tmp.x/32, 0, m_Width-1);
-		Ny = clamp((int)Tmp.y/32, 0, m_Height-1);
-		if((m_pTiles[Ny*m_Width+Nx].m_Index >= TILE_STOPL && m_pTiles[Ny*m_Width+Nx].m_Index <= 59) ||
-			(m_pTele && m_pTele[Ny*m_Width+Nx].m_Type == TILE_TELEIN) ||
-			(m_pSpeedup && m_pSpeedup[Ny*m_Width+Nx].m_Force > 0))
-		{
-			return Ny*m_Width+Nx;
-		}
-	}
-	
-	return -1;
-}
-
-vec2 CCollision::GetPos(int Index)
-{
-	int x = Index%m_Width;
-	int y = Index/m_Width;
+	int x = TilePos%m_Width;
+	int y = TilePos/m_Width;
 	
 	return vec2(x*32+16, y*32+16);
 }
 
-int CCollision::GetCollisionRace(int Index)
+int CCollision::GetIndex(vec2 Pos)
 {
-	if(Index < 0)
-		return 0;
-		
-	return m_pTiles[Index].m_Index;
+	return m_pTiles[GetTilePos(Pos)].m_Index;
 }
 
-int CCollision::CheckTeleport(vec2 Pos)
+int CCollision::GetIndex(int TilePos)
 {
-	int Nx = clamp(round_to_int(Pos.x) / 32, 0, m_Width - 1);
-	int Ny = clamp(round_to_int(Pos.y) / 32, 0, m_Height - 1);
+	if(TilePos < 0)
+		return -1;
+	return m_pTiles[TilePos].m_Index;
+}
 
-	if(!m_pTele || m_pTele[Ny*m_Width + Nx].m_Type != TILE_TELEIN)
+int CCollision::CheckRaceTile(vec2 PrevPos, vec2 Pos)
+{
+	float Distance = distance(PrevPos, Pos);
+	int End = Distance+1;
+
+	for(int i = 0; i < End; i++)
+	{
+		float a = i/Distance;
+		vec2 Tmp = mix(PrevPos, Pos, a);
+		int TilePos = GetTilePos(Tmp);
+		if((m_pTiles[TilePos].m_Index >= TILE_STOPL && m_pTiles[TilePos].m_Index <= 59) ||
+			(m_pTele && m_pTele[TilePos].m_Type == TILE_TELEIN) ||
+			(m_pSpeedup && m_pSpeedup[TilePos].m_Force > 0))
+		{
+			return TilePos;
+		}
+	}
+
+	return -1;
+}
+
+int CCollision::CheckTeleport(vec2 PrevPos, vec2 Pos)
+{
+	if(!m_pTele)
 		return 0;
-	return m_pTele[Ny*m_Width + Nx].m_Number;
+	int TilePos = CheckRaceTile(PrevPos, Pos);
+	if(TilePos < 0 || m_pTele[TilePos].m_Type != TILE_TELEIN)
+		return 0;
+	return m_pTele[TilePos].m_Number;
 }
 
 vec2 CCollision::GetTeleportDestination(int Number)
@@ -201,32 +187,29 @@ vec2 CCollision::GetTeleportDestination(int Number)
 	return vec2(0,0);
 }
 
-int CCollision::IsCheckpoint(int Index)
+int CCollision::CheckCheckpoint(int TilePos)
 {
-	if(Index < 0)
+	if(TilePos < 0)
 		return -1;
-		
-	int z = m_pTiles[Index].m_Index;
-	if(z >= 35 && z <= 59)
-		return z-35;
+	int Cp = m_pTiles[TilePos].m_Index;
+	if(Cp >= 35 && Cp <= 59)
+		return Cp-35;
 	return -1;
 }
 
-int CCollision::IsSpeedup(int Index)
+int CCollision::CheckSpeedup(int TilePos)
 {
-	if(!m_pSpeedup || Index < 0)
+	if(!m_pSpeedup || TilePos < 0)
 		return -1;
-	
-	if(m_pSpeedup[Index].m_Force > 0)
-		return Index;
-		
+	if(m_pSpeedup[TilePos].m_Force > 0)
+		return TilePos;
 	return -1;
 }
 
-void CCollision::GetSpeedup(int Index, vec2 *Dir, int *Force)
+void CCollision::GetSpeedup(int SpeedupPos, vec2 *Dir, int *Force)
 {
-	float Angle = m_pSpeedup[Index].m_Angle * (3.14159265f/180.0f);
-	*Force = m_pSpeedup[Index].m_Force;
+	float Angle = m_pSpeedup[SpeedupPos].m_Angle * (3.14159265f/180.0f);
+	*Force = m_pSpeedup[SpeedupPos].m_Force;
 	*Dir = vec2(cos(Angle), sin(Angle));
 }
 	

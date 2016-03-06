@@ -91,7 +91,7 @@ void CProjectile::Tick()
 	}
 	
 	
-	int Tele = GameServer()->Collision()->CheckTeleport(CurPos);
+	int Tele = GameServer()->Collision()->CheckTeleport(PrevPos, CurPos);
   	if(Tele && m_Weapon == WEAPON_GRENADE && g_Config.m_SvTeleportGrenade)
   	{
 		m_Pos = GameServer()->Collision()->GetTeleportDestination(Tele);
