@@ -20,6 +20,13 @@ CCollision::CCollision()
 	m_pLayers = 0;
 	m_pTele = 0;
 	m_pSpeedup = 0;
+	m_pTeleporter = 0;
+}
+
+CCollision::~CCollision()
+{
+	if(m_pTeleporter)
+		delete[] m_pTeleporter;
 }
 
 void CCollision::Init(class CLayers *pLayers)
@@ -36,6 +43,8 @@ void CCollision::Init(class CLayers *pLayers)
 		m_pTele = static_cast<CTeleTile *>(m_pLayers->Map()->GetData(m_pLayers->TeleLayer()->m_Tele));
 	if(m_pLayers->SpeedupLayer())
 		m_pSpeedup = static_cast<CSpeedupTile *>(m_pLayers->Map()->GetData(m_pLayers->SpeedupLayer()->m_Speedup));
+
+	InitTeleporter();
 
 	for(int i = 0; i < m_Width*m_Height; i++)
 	{
@@ -62,6 +71,36 @@ void CCollision::Init(class CLayers *pLayers)
 		// race tiles
 		if(Index >= 29 && Index <= 59)
 			m_pTiles[i].m_Index = Index;
+	}
+}
+
+void CCollision::InitTeleporter()
+{
+	int ArraySize = 0;
+	if(m_pLayers->TeleLayer())
+	{
+		for(int i = 0; i < m_pLayers->TeleLayer()->m_Width * m_pLayers->TeleLayer()->m_Height; i++)
+		{
+			// get the array size
+			if(m_pTele[i].m_Number > ArraySize)
+				ArraySize = m_pTele[i].m_Number;
+		}
+	}
+
+	if(!ArraySize)
+	{
+		m_pTeleporter = 0x0;
+		return;
+	}
+
+	m_pTeleporter = new vec2[ArraySize];
+	mem_zero(m_pTeleporter, ArraySize*sizeof(vec2));
+
+	// assign the values
+	for(int i = 0; i < m_pLayers->TeleLayer()->m_Width * m_pLayers->TeleLayer()->m_Height; i++)
+	{
+		if(m_pTele[i].m_Type == TILE_TELEOUT && m_pTele[i].m_Number > 0)
+			m_pTeleporter[m_pTele[i].m_Number - 1] = vec2(i % m_pLayers->TeleLayer()->m_Width * 32 + 16, i / m_pLayers->TeleLayer()->m_Width * 32 + 16);
 	}
 }
 
@@ -145,16 +184,21 @@ int CCollision::GetCollisionRace(int Index)
 	return m_pTiles[Index].m_Index;
 }
 
-int CCollision::IsTeleport(int Index)
+int CCollision::CheckTeleport(vec2 Pos)
 {
-	if(!m_pTele || Index < 0)
+	int Nx = clamp(round_to_int(Pos.x) / 32, 0, m_Width - 1);
+	int Ny = clamp(round_to_int(Pos.y) / 32, 0, m_Height - 1);
+
+	if(!m_pTele || m_pTele[Ny*m_Width + Nx].m_Type != TILE_TELEIN)
 		return 0;
-	
-	int Tele = 0;
-	if(m_pTele[Index].m_Type == TILE_TELEIN)
-		Tele = m_pTele[Index].m_Number;
-		
-	return Tele;
+	return m_pTele[Ny*m_Width + Nx].m_Number;
+}
+
+vec2 CCollision::GetTeleportDestination(int Number)
+{
+	if(m_pTeleporter && Number > 0)
+		return m_pTeleporter[Number - 1];
+	return vec2(0,0);
 }
 
 int CCollision::IsCheckpoint(int Index)

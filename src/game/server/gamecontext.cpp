@@ -2072,8 +2072,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	else
 		m_pController = new CGameControllerRACE(this);
 
-	RaceController()->InitTeleporter();
-
 	// TODO: score should not be changed during runtime
 #if defined(CONF_TEERACE)
 	// create webapp object

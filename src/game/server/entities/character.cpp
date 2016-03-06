@@ -658,20 +658,10 @@ void CCharacter::Tick()
 	}
 	
 	m_LastSpeedup = CurrentSpeedup;
-	
-	// handle teleporter
-	z = GameServer()->Collision()->IsTeleport(TileIndex);
-	if(g_Config.m_SvTeleport && z)
+
+	if(m_Core.m_Teleported)
 	{
-		// check double jump
-		if(Jumped&3 && m_Core.m_Jumped != Jumped)
-			m_Core.m_Jumped = Jumped;
-				
-		m_Core.m_HookedPlayer = -1;
-		m_Core.m_HookState = HOOK_RETRACTED;
-		m_Core.m_Pos = pRace->m_pTeleporter[z-1];
-		m_Core.m_HookPos = m_Core.m_Pos;
-		//Resetting velocity to prevent exploit
+		// TODO: predict this (needs some kind of tuning param)
 		if(g_Config.m_SvTeleportVelReset)
 			m_Core.m_Vel = vec2(0,0);
 		if(g_Config.m_SvStrip)
@@ -679,7 +669,7 @@ void CCharacter::Tick()
 			m_ActiveWeapon = WEAPON_HAMMER;
 			m_LastWeapon = WEAPON_HAMMER;
 			m_aWeapons[0].m_Got = true;
-			for(int i = 1; i < NUM_WEAPONS; i++)
+			for (int i = 1; i < NUM_WEAPONS; i++)
 				m_aWeapons[i].m_Got = false;
 		}
 	}
