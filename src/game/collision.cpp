@@ -76,6 +76,9 @@ void CCollision::Init(class CLayers *pLayers)
 
 void CCollision::InitTeleporter()
 {
+	if(m_pTeleporter)
+		delete[] m_pTeleporter;
+	
 	int ArraySize = 0;
 	if(m_pLayers->TeleLayer())
 	{
