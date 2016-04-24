@@ -288,6 +288,11 @@ class CNetServer
 	NETFUNC_DELCLIENT m_pfnDelClient;
 	void *m_UserPtr;
 
+	// vanilla connect flood detection
+	bool m_VConnHighLoad;
+	int64 m_VConnFirst;
+	int m_VConnNum;
+
 	CNetRecvUnpacker m_RecvUnpacker;
 
 	int m_NumConAttempts; // log flooding attacks
