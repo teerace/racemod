@@ -31,7 +31,7 @@ CSqlScore::CSqlScore(CGameContext *pGameServer)
 CSqlScore::~CSqlScore()
 {
 	lock_wait(gs_SqlLock);
-	lock_release(gs_SqlLock);
+	lock_unlock(gs_SqlLock);
 }
 
 bool CSqlScore::Connect()
@@ -168,7 +168,7 @@ void CSqlScore::LoadScoreThread(void *pUser)
 					
 					delete pData;
 
-					lock_release(gs_SqlLock);
+					lock_unlock(gs_SqlLock);
 					
 					return;
 				}
@@ -218,7 +218,7 @@ void CSqlScore::LoadScoreThread(void *pUser)
 	
 	delete pData;
 
-	lock_release(gs_SqlLock);
+	lock_unlock(gs_SqlLock);
 }
 
 void CSqlScore::LoadScore(int ClientID, bool PrintRank)
@@ -229,7 +229,7 @@ void CSqlScore::LoadScore(int ClientID, bool PrintRank)
 	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	Tmp->m_pSqlData = this;
 	
-	void *LoadThread = thread_create(LoadScoreThread, Tmp);
+	void *LoadThread = thread_init(LoadScoreThread, Tmp);
 	thread_detach(LoadThread);
 }
 
@@ -274,7 +274,7 @@ void CSqlScore::SaveScoreThread(void *pUser)
 				
 				delete pData;
 				
-				lock_release(gs_SqlLock);
+				lock_unlock(gs_SqlLock);
 				
 				return;
 			}
@@ -300,7 +300,7 @@ void CSqlScore::SaveScoreThread(void *pUser)
 	
 	delete pData;
 
-	lock_release(gs_SqlLock);
+	lock_unlock(gs_SqlLock);
 }
 
 void CSqlScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
@@ -316,7 +316,7 @@ void CSqlScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	Tmp->m_pSqlData = this;
 	
-	void *SaveThread = thread_create(SaveScoreThread, Tmp);
+	void *SaveThread = thread_init(SaveScoreThread, Tmp);
 	thread_detach(SaveThread);
 }
 
@@ -397,7 +397,7 @@ void CSqlScore::ShowRankThread(void *pUser)
 	
 	delete pData;
 
-	lock_release(gs_SqlLock);
+	lock_unlock(gs_SqlLock);
 }
 
 void CSqlScore::ShowRank(int ClientID, const char *pName, bool Search)
@@ -410,7 +410,7 @@ void CSqlScore::ShowRank(int ClientID, const char *pName, bool Search)
 	str_format(Tmp->m_aRequestingPlayer, sizeof(Tmp->m_aRequestingPlayer), " (%s)", Server()->ClientName(ClientID));
 	Tmp->m_pSqlData = this;
 	
-	void *RankThread = thread_create(ShowRankThread, Tmp);
+	void *RankThread = thread_init(ShowRankThread, Tmp);
 	thread_detach(RankThread);
 }
 
@@ -462,7 +462,7 @@ void CSqlScore::ShowTop5Thread(void *pUser)
 	
 	delete pData;
 
-	lock_release(gs_SqlLock);
+	lock_unlock(gs_SqlLock);
 }
 
 void CSqlScore::ShowTop5(int ClientID, int Debut)
@@ -472,7 +472,7 @@ void CSqlScore::ShowTop5(int ClientID, int Debut)
 	Tmp->m_ClientID = ClientID;
 	Tmp->m_pSqlData = this;
 	
-	void *Top5Thread = thread_create(ShowTop5Thread, Tmp);
+	void *Top5Thread = thread_init(ShowTop5Thread, Tmp);
 	thread_detach(Top5Thread);
 }
 
