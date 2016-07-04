@@ -36,7 +36,7 @@ CFileScore::~CFileScore()
 	// clear list
 	m_Top.clear();
 	
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 }
 
 void CFileScore::WriteLine(IOHANDLE File, const char *pLine)
@@ -82,12 +82,12 @@ void CFileScore::SaveScoreThread(void *pUser)
 		}
 		io_close(File);
 	}
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 }
 
 void CFileScore::Save()
 {
-	void *pSaveThread = thread_create(SaveScoreThread, this);
+	void *pSaveThread = thread_init(SaveScoreThread, this);
 	thread_detach(pSaveThread);
 }
 
@@ -138,7 +138,7 @@ void CFileScore::Init()
 		}
 		io_close(File);
 	}
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 
 	// save the current best score
 	if(m_Top.size())
@@ -204,7 +204,7 @@ void CFileScore::LoadScore(int ClientID, bool PrintRank)
 	{
 		lock_wait(gs_ScoreLock);
 		str_copy(pPlayer->m_aIP, aIP, sizeof(pPlayer->m_aIP));
-		lock_release(gs_ScoreLock);
+		lock_unlock(gs_ScoreLock);
 		Save();
 	}
 	
@@ -236,7 +236,7 @@ void CFileScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 	else
 		m_Top.add(CPlayerScore(pName, PlayerData(ClientID)->m_Time, aIP, PlayerData(ClientID)->m_aCpTime));
 
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 	Save();
 }
 

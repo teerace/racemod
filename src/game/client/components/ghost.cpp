@@ -53,7 +53,7 @@ void CGhost::OnRender()
 
 	// Check if the race line is crossed then start the render of the ghost if one
 	int EnemyTeam = m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientID].m_Team^1;
-	if(m_RaceState != RACE_STARTED && ((m_pClient->Collision()->GetCollisionRace(m_pClient->Collision()->GetIndex(m_pClient->m_PredictedPrevChar.m_Pos, m_pClient->m_LocalCharacterPos)) == TILE_BEGIN) ||
+	if(m_RaceState != RACE_STARTED && ((m_pClient->Collision()->GetIndex(m_pClient->Collision()->CheckRaceTile(m_pClient->m_PredictedPrevChar.m_Pos, m_pClient->m_LocalCharacterPos)) == TILE_BEGIN) ||
 		(m_pClient->m_IsFastCap && m_pClient->m_aFlagPos[EnemyTeam] != vec2(-1, -1) && distance(m_pClient->m_LocalCharacterPos, m_pClient->m_aFlagPos[EnemyTeam]) < 32)))
 	{
 		m_RaceState = RACE_STARTED;
@@ -177,8 +177,6 @@ void CGhost::RenderGhostHook(CGhostCharacter Player, CGhostCharacter Prev)
 		return;
 
 	float IntraTick = Client()->PredIntraGameTick();
-
-	float Angle = mix((float)Prev.m_Angle, (float)Player.m_Angle, IntraTick)/256.0f;
 	vec2 Pos = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
 
 	vec2 HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Player.m_HookX, Player.m_HookY), IntraTick);

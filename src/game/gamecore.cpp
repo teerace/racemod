@@ -72,6 +72,7 @@ void CCharacterCore::Reset()
 	m_HookedPlayer = -1;
 	m_Jumped = 0;
 	m_TriggeredEvents = 0;
+	m_Teleported = false;
 }
 
 void CCharacterCore::Tick(bool UseInput)
@@ -363,6 +364,7 @@ void CCharacterCore::Move()
 	m_Vel.x = m_Vel.x*RampValue;
 
 	vec2 NewPos = m_Pos;
+	vec2 PrevPos = m_Pos;
 	m_pCollision->MoveBox(&NewPos, &m_Vel, vec2(28.0f, 28.0f), 0);
 
 	m_Vel.x = m_Vel.x*(1.0f/RampValue);
@@ -397,6 +399,22 @@ void CCharacterCore::Move()
 	}
 
 	m_Pos = NewPos;
+	
+	m_Teleported = false;
+	int Tele = m_pCollision->CheckTeleport(PrevPos, m_Pos);
+	if(Tele)
+	{
+		// TODO
+		// check double jump
+		//if(Jumped & 3 && m_Jumped != Jumped)
+		//	m_Jumped = Jumped;
+
+		m_HookedPlayer = -1;
+		m_HookState = HOOK_RETRACTED;
+		m_Pos = m_pCollision->GetTeleportDestination(Tele);
+		m_HookPos = m_Pos;
+		m_Teleported = true;
+	}
 }
 
 void CCharacterCore::Write(CNetObj_CharacterCore *pObjCore)

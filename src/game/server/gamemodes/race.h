@@ -43,13 +43,9 @@ public:
 	CGameControllerRACE(class CGameContext *pGameServer);
 	~CGameControllerRACE();
 	
-	vec2 *m_pTeleporter;
-	
 #if defined(CONF_TEERACE)
 	int m_aStopRecordTick[MAX_CLIENTS];
 #endif
-	
-	void InitTeleporter();
 
 	virtual void DoWincheck();
 	virtual void Tick();
