@@ -1680,16 +1680,6 @@ int main(int argc, const char **argv) // ignore_convention
 	}
 #endif
 
-	bool UseDefaultConfig = false;
-	for(int i = 1; i < argc; i++) // ignore_convention
-	{
-		if(str_comp("-d", argv[i]) == 0 || str_comp("--default", argv[i]) == 0) // ignore_convention
-		{
-			UseDefaultConfig = true;
-			break;
-		}
-	}
-
 	if(secure_random_init() != 0)
 	{
 		dbg_msg("secure", "could not initialize secure RNG");

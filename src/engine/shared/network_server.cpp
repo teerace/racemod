@@ -524,7 +524,7 @@ int CNetServer::Recv(CNetChunk *pChunk)
 			{
 				// banned, reply with a message
 				//TODO: antispoof
-				CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, aBuf, str_length(aBuf)+1, 0);
+				CNetBase::SendControlMsg(m_Socket, &Addr, 0, NET_CTRLMSG_CLOSE, aBuf, str_length(aBuf)+1);
 				continue;
 			}
 

@@ -184,6 +184,7 @@ function build(settings)
 		settings.link.libs:Add("ws2_32")
 		settings.link.libs:Add("ole32")
 		settings.link.libs:Add("shell32")
+		settings.link.libs:Add("advapi32")
 	end
 
 	-- compile zlib if needed
@@ -262,7 +263,6 @@ function build(settings)
 
 	-- build client, server, version server and master server
 	client_exe = Link(client_settings, "teeworlds", game_shared, game_client,
-		engine, client, game_editor, zlib, pnglite, wavpack,
 		engine, client, game_editor, zlib, pnglite, wavpack, md5,
 		client_link_other, client_osxlaunch)
 
