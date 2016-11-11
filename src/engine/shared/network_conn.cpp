@@ -178,7 +178,7 @@ int CNetConnection::Connect(NETADDR *pAddr)
 	m_PeerAddr = *pAddr;
 	mem_zero(m_ErrorString, sizeof(m_ErrorString));
 	m_State = NET_CONNSTATE_CONNECT;
-	SendControl(NET_CTRLMSG_CONNECT, 0, 0);
+	SendControl(NET_CTRLMSG_CONNECT, SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC));
 	return 0;
 }
 
@@ -316,6 +316,20 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr)
 				// connection made
 				if(CtrlMsg == NET_CTRLMSG_CONNECTACCEPT)
 				{
+					if (m_SecurityToken == NET_SECURITY_TOKEN_UNKNOWN
+						&& pPacket->m_DataSize >= (int)(1 + sizeof(SECURITY_TOKEN_MAGIC) + sizeof(m_SecurityToken))
+						&& !mem_comp(&pPacket->m_aChunkData[1], SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC)))
+					{
+						m_SecurityToken = ToSecurityToken(&pPacket->m_aChunkData[1 + sizeof(SECURITY_TOKEN_MAGIC)]);
+						if(g_Config.m_Debug)
+							dbg_msg("security", "got token %d", m_SecurityToken);
+					}
+					else
+					{
+						m_SecurityToken = NET_SECURITY_TOKEN_UNSUPPORTED;
+						if(g_Config.m_Debug)
+							dbg_msg("security", "token not supported by server");
+					}
 					m_LastRecvTime = Now;
 					SendControl(NET_CTRLMSG_ACCEPT, 0, 0);
 					m_State = NET_CONNSTATE_ONLINE;
@@ -396,12 +410,12 @@ int CNetConnection::Update()
 	else if(State() == NET_CONNSTATE_CONNECT)
 	{
 		if(time_get()-m_LastSendTime > time_freq()/2) // send a new connect every 500ms
-			SendControl(NET_CTRLMSG_CONNECT, 0, 0);
+			SendControl(NET_CTRLMSG_CONNECT, SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC));
 	}
 	else if(State() == NET_CONNSTATE_PENDING)
 	{
 		if(time_get()-m_LastSendTime > time_freq()/2) // send a new connect/accept every 500ms
-			SendControl(NET_CTRLMSG_CONNECTACCEPT, 0, 0);
+			SendControl(NET_CTRLMSG_CONNECTACCEPT, SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC));
 	}
 
 	return 0;
