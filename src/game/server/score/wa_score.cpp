@@ -1,5 +1,7 @@
 #if defined(CONF_TEERACE)
 
+#include <stdio.h>
+
 #include <engine/external/json-parser/json-builder.h>
 #include <engine/shared/config.h>
 #include <engine/shared/http.h>
@@ -9,6 +11,19 @@
 #include "../webapp.h"
 #include "../gamecontext.h"
 #include "wa_score.h"
+
+static int SecondsFromStr(const char *pStr)
+{
+	int Seconds, MSec;
+	if (sscanf(pStr, "%d.%03d", &Seconds, &MSec) == 2)
+		return Seconds * 1000 + MSec;
+	return 0;
+}
+
+void FormatSeconds(char *pBuf, int Size, int Time)
+{
+	str_format(pBuf, Size, "%d.%03d", Time / 1000, Time % 1000);
+}
 
 CWebappScore::CWebappScore(CGameContext *pGameServer) : m_pGameServer(pGameServer) { }
 
@@ -69,13 +84,13 @@ void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecor
 				str_sanitize_strong(aBuf);
 				json_object_push(pData, "clan", json_string_new(aBuf));
 			}
-			FormatTimeSeconds(aBuf, sizeof(aBuf), Time);
+			FormatSeconds(aBuf, sizeof(aBuf), Time);
 			json_object_push(pData, "time", json_string_new(aBuf));
-			FormatTimeSeconds(aBuf, sizeof(aBuf), pCpTime[0]);
+			FormatSeconds(aBuf, sizeof(aBuf), pCpTime[0]);
 			for(int i = 1; i < NUM_CHECKPOINTS; i++)
 			{
 				strcat(aBuf, ";");
-				FormatTimeSeconds(aBuf2, sizeof(aBuf2), pCpTime[i]);
+				FormatSeconds(aBuf2, sizeof(aBuf2), pCpTime[i]);
 				strcat(aBuf, aBuf2);
 			}
 			json_object_push(pData, "checkpoints", json_string_new(aBuf));
@@ -285,12 +300,12 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			const json_value &BestRun = (*pJsonData)["bestrun"];
 			if(BestRun.type == json_object)
 			{
-				int Time = IScore::TimeFromStr(BestRun["time"]);
+				int Time = SecondsFromStr(BestRun["time"]);
 				int aCheckpointTimes[NUM_CHECKPOINTS] = { 0 };
 				const json_value &CheckpointList = BestRun["checkpoints_list"];
 				unsigned int CpNum = min(CheckpointList.u.array.length, (unsigned int)NUM_CHECKPOINTS);
 				for(unsigned int i = 0; i < CpNum; i++)
-					aCheckpointTimes[i] = IScore::TimeFromStr(CheckpointList[i]);
+					aCheckpointTimes[i] = SecondsFromStr(CheckpointList[i]);
 				Run.Set(Time, aCheckpointTimes);
 			}
 		}
@@ -343,14 +358,14 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			else if(!GlobalRank)
 			{
 				char aTime[64];
-				IScore::FormatTimeShort(aTime, sizeof(aTime), Run.m_Time);
+				IRace::FormatTimeShort(aTime, sizeof(aTime), Run.m_Time);
 				str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %s (%s)",
 					pUser->m_aName, MapRank, aTime, pScore->Server()->ClientName(pUser->m_ClientID));
 			}
 			else
 			{
 				char aTime[64];
-				IScore::FormatTimeShort(aTime, sizeof(aTime), Run.m_Time);
+				IRace::FormatTimeShort(aTime, sizeof(aTime), Run.m_Time);
 				str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %s (%s)",
 					pUser->m_aName, GlobalRank, MapRank, aTime, pScore->Server()->ClientName(pUser->m_ClientID));
 			}
@@ -391,7 +406,7 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 				for(unsigned int i = 0; i < pJsonData->u.array.length && i < 5; i++)
 				{
 					const json_value &Run = (*pJsonData)[i];
-					int Time = IScore::TimeFromStr(Run["run"]["time"]);
+					int Time = SecondsFromStr(Run["run"]["time"]);
 
 					if(Time == LastTime)
 						SameTimeCount++;
@@ -399,7 +414,7 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 						SameTimeCount = 0;
 
 					char aTime[64];
-					IScore::FormatTimeLong(aTime, sizeof(aTime), Time);
+					IRace::FormatTimeLong(aTime, sizeof(aTime), Time);
 					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
 						i + pUser->m_StartRank - SameTimeCount, (const char*)Run["run"]["user"]["username"], aTime);
 					pScore->GameServer()->SendChatTarget(ClientID, aBuf);

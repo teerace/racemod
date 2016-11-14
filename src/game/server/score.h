@@ -1,7 +1,6 @@
 #ifndef GAME_SERVER_INTERFACE_SCORE_H
 #define GAME_SERVER_INTERFACE_SCORE_H
 
-#include <stdio.h>
 #include <base/system.h>
 #include <engine/shared/protocol.h>
 
@@ -54,35 +53,6 @@ class IScore
 public:
 	IScore() { m_CurrentRecord.Reset(); }
 	virtual ~IScore() {}
-
-	static int TimeFromStr(const char *pStr)
-	{
-		int Seconds, MSec;
-		if(sscanf(pStr, "%d.%03d", &Seconds, &MSec) == 2)
-			return Seconds * 1000 + MSec;
-		return 0;
-	}
-
-	static void FormatTimeLong(char *pBuf, int Size, int Time, bool ForceMinutes = false)
-	{
-		if(Time < 60 * 1000 && !ForceMinutes)
-			str_format(pBuf, Size, "%d.%03d second(s)", Time / 1000, Time % 1000);
-		else
-			str_format(pBuf, Size, "%d minute(s) %d.%03d second(s)", Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
-	}
-
-	static void FormatTimeShort(char *pBuf, int Size, int Time, bool Seconds = false)
-	{
-		if(Time < 60 * 1000)
-			str_format(pBuf, Size, "%d.%03d", Time / 1000, Time % 1000);
-		else
-			str_format(pBuf, Size, "%02d:%02d.%03d", Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
-	}
-
-	static void FormatTimeSeconds(char *pBuf, int Size, int Time)
-	{
-		str_format(pBuf, Size, "%d.%03d", Time / 1000, Time % 1000);
-	}
 	
 	CPlayerData *PlayerData(int ID) { return &m_aPlayerData[ID]; }
 	CPlayerData *GetRecord() { return &m_CurrentRecord; }

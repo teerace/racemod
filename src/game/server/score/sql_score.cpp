@@ -4,6 +4,8 @@
 #include <string.h>
 #include <engine/shared/config.h>
 
+#include <game/teerace.h>
+
 #include "../gamecontext.h"
 #include "sql_score.h"
 
@@ -367,7 +369,7 @@ void CSqlScore::ShowRankThread(void *pUser)
 			else
 			{
 				char aTime[64];
-				IScore::FormatTimeLong(aTime, sizeof(aTime), pData->m_pSqlData->m_pResults->getInt("Time"));
+				IRace::FormatTimeLong(aTime, sizeof(aTime), pData->m_pSqlData->m_pResults->getInt("Time"));
 				if(!g_Config.m_SvShowTimes)
 					str_format(aBuf, sizeof(aBuf), "Your time: %s", aTime);
 				else
@@ -437,7 +439,7 @@ void CSqlScore::ShowTop5Thread(void *pUser)
 			while(pData->m_pSqlData->m_pResults->next())
 			{
 				char aTime[64];
-				IScore::FormatTimeLong(aTime, sizeof(aTime), pData->m_pSqlData->m_pResults->getInt("Time"));
+				IRace::FormatTimeLong(aTime, sizeof(aTime), pData->m_pSqlData->m_pResults->getInt("Time"));
 				str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
 					Rank, pData->m_pSqlData->m_pResults->getString("Name").c_str(), aTime);
 				pData->m_pSqlData->GameServer()->SendChatTarget(pData->m_ClientID, aBuf);

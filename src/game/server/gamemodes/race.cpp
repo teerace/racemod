@@ -8,6 +8,7 @@
 #include <game/server/webapp.h>
 #include <game/ghost.h>
 #endif
+#include <game/teerace.h>
 #include <string.h>
 #include "race.h"
 
@@ -193,7 +194,7 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 
 	char aBuf[128];
 	char aTime[64];
-	IScore::FormatTimeLong(aTime, sizeof(aTime), FinishTime, true);
+	IRace::FormatTimeLong(aTime, sizeof(aTime), FinishTime, true);
 	str_format(aBuf, sizeof(aBuf), "%s finished in: %s", Server()->ClientName(ID), aTime);
 	if(!g_Config.m_SvShowTimes)
 		GameServer()->SendChatTarget(ID, aBuf);

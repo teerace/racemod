@@ -6,6 +6,8 @@
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
+#include <game/teerace.h>
+
 #include "../gamecontext.h"
 #include "file_score.h"
 
@@ -248,7 +250,7 @@ void CFileScore::ShowTop5(int ClientID, int Debut)
 	for(int i = 0; i < 5 && i + Debut - 1 < m_Top.size(); i++)
 	{
 		CPlayerScore *r = &m_Top[i+Debut-1];
-		IScore::FormatTimeLong(aTime, sizeof(aTime), r->m_Time);
+		IRace::FormatTimeLong(aTime, sizeof(aTime), r->m_Time);
 		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
 			i + Debut, r->m_aName, aTime);
 		GameServer()->SendChatTarget(ClientID, aBuf);
@@ -271,7 +273,7 @@ void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 	{
 		char aClientName[128];
 		char aTime[64];
-		IScore::FormatTimeLong(aTime, sizeof(aTime), pScore->m_Time);
+		IRace::FormatTimeLong(aTime, sizeof(aTime), pScore->m_Time);
 		str_format(aClientName, sizeof(aClientName), " (%s)", Server()->ClientName(ClientID));
 		if(!g_Config.m_SvShowTimes)
 			str_format(aBuf, sizeof(aBuf), "Your time: %s", aTime);
