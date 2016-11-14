@@ -380,7 +380,7 @@ void CServerWebapp::OnAuth(int ClientID, const char *pToken, int SendRconCmds)
 	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 	pInfo->SetCallback(CServerWebapp::OnUserAuth, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
-	delete pJson;
+	delete[] pJson;
 }
 
 void CServerWebapp::Tick()
@@ -444,7 +444,7 @@ void CServerWebapp::Tick()
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 		pInfo->SetCallback(CServerWebapp::OnPingPing, this);
 		Server()->SendHttp(pInfo, pRequest);
-		delete pJson;
+		delete[] pJson;
 			
 		m_LastPing = Server()->Tick();
 	}

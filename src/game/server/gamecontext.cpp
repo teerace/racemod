@@ -675,7 +675,7 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 		//pInfo->SetCallback(CServerWebapp::OnUserPlaytime, this);
 		m_pServer->SendHttp(pInfo, pRequest);
-		delete pJson;
+		delete[] pJson;
 	}
 #endif
 	AbortVoteKickOnDisconnect(ClientID);
@@ -1067,7 +1067,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 				//pInfo->SetCallback(CServerWebapp::OnUserUpdateSkin, this);
 				m_pServer->SendHttp(pInfo, pRequest);
-				delete pJson;
+				delete[] pJson;
 			}
 #endif
 		}

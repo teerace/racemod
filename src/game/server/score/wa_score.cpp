@@ -104,7 +104,7 @@ void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecor
 			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 			pInfo->SetCallback(OnRunPost, pUserData);
 			Server()->SendHttp(pInfo, pRequest);
-			delete pJson;
+			delete[] pJson;
 		}
 		
 		// higher run count
@@ -198,7 +198,7 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 				pInfo->SetCallback(OnUserFind, aNameData);
 				Server()->SendHttp(pInfo, pRequest);
-				delete pJson;
+				delete[] pJson;
 			}
 		}
 		else
