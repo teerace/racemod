@@ -3,6 +3,7 @@
 #include <new>
 #include <stdio.h>
 #include <base/math.h>
+#include <engine/config.h>
 #include <engine/shared/config.h>
 #include <engine/shared/http.h>
 #include <engine/map.h>
@@ -63,6 +64,9 @@ void CGameContext::Construct(int Resetting)
 #if defined(CONF_TEERACE)
 	m_pWebapp = 0;
 #endif
+#if defined(CONF_SQL)
+	m_pSqlConfig = 0;
+#endif
 }
 
 CGameContext::CGameContext(int Resetting)
@@ -95,6 +99,9 @@ void CGameContext::Clear()
 #if defined(CONF_TEERACE)
 	CServerWebapp *pWebapp = m_pWebapp;
 #endif
+#if defined(CONF_SQL)
+	CSqlConfig *pSqlConfig = m_pSqlConfig;
+#endif
 
 	m_Resetting = true;
 	this->~CGameContext();
@@ -108,6 +115,9 @@ void CGameContext::Clear()
 	m_Tuning = Tuning;
 #if defined(CONF_TEERACE)
 	m_pWebapp = pWebapp;
+#endif
+#if defined(CONF_SQL)
+	m_pSqlConfig = pSqlConfig;
 #endif
 }
 
@@ -2092,7 +2102,14 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	m_Collision.Init(&m_Layers);
 
 	if(g_Config.m_SvLoadMapDefaults)
+	{
+		IConfig *pConfig = Kernel()->RequestInterface<IConfig>();
+		if(pConfig)
+			pConfig->Reset(CFGFLAG_MAPSETTINGS);
 		LoadMapSettings();
+		if(str_find_nocase(g_Config.m_SvMap, "no-weapons"))
+			g_Config.m_SvNoItems = true;
+	}
 
 	InitChatConsole();
 
@@ -2114,7 +2131,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	else
 		m_pController = new CGameControllerRACE(this);
 
-	// TODO: score should not be changed during runtime
+	// TODO: score should not be changed during runtime!!!
 #if defined(CONF_TEERACE)
 	// create webapp object
 	if(str_comp(g_Config.m_SvScore, "web") == 0 && !m_pWebapp)
@@ -2129,6 +2146,20 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		m_pWebapp->OnInit();
 #endif
 
+	// TODO: remove when the upper TODO is fixed
+#if defined(CONF_SQL)
+	if(!m_pSqlConfig)
+	{
+		m_pSqlConfig = new CSqlConfig();
+		str_copy(m_pSqlConfig->m_aDatabase, g_Config.m_SvSqlDatabase, sizeof(m_pSqlConfig->m_aDatabase));
+		str_copy(m_pSqlConfig->m_aPrefix, g_Config.m_SvSqlPrefix, sizeof(m_pSqlConfig->m_aPrefix));
+		str_copy(m_pSqlConfig->m_aUser, g_Config.m_SvSqlUser, sizeof(m_pSqlConfig->m_aUser));
+		str_copy(m_pSqlConfig->m_aPass, g_Config.m_SvSqlPw, sizeof(m_pSqlConfig->m_aPass));
+		str_copy(m_pSqlConfig->m_aIp, g_Config.m_SvSqlIp, sizeof(m_pSqlConfig->m_aIp));
+		m_pSqlConfig->m_Port = g_Config.m_SvSqlPort;
+	}
+#endif
+
 	// delete old score object
 	if(m_pScore)
 		delete m_pScore;
@@ -2138,7 +2169,7 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		m_pScore = new CFileScore(this);
 #if defined(CONF_SQL)
 	else if(str_comp(g_Config.m_SvScore, "mysql") == 0)
-		m_pScore = new CSqlScore(this);
+		m_pScore = new CSqlScore(this, m_pSqlConfig);
 #endif
 #if defined(CONF_TEERACE)
 	else if(str_comp(g_Config.m_SvScore, "web") == 0)
@@ -2208,19 +2239,13 @@ void CGameContext::LoadMapSettings()
 		if(pItem->m_Settings > -1)
 		{
 			int Size = pMap->GetUncompressedDataSize(pItem->m_Settings);
-			char *pBuf = new char[Size];
-			mem_zero(pBuf, Size);
-			mem_copy(pBuf, pMap->GetData(pItem->m_Settings), Size);
-			char *pTmp = pBuf;
-			int Index = 0;
-			while(Index < Size)
+			const char *pTmp = (char*)pMap->GetData(pItem->m_Settings);
+			const char *pEnd = pTmp + Size;
+			while(pTmp < pEnd)
 			{
-				int StrSize = str_length(pTmp);
-				Console()->ExecuteLine(pTmp);
-				pTmp += StrSize+1;
-				Index += StrSize+1;
+				Console()->ExecuteLineFlag(pTmp, CFGFLAG_MAPSETTINGS);
+				pTmp += str_length(pTmp) + 1;
 			}
-			delete[] pBuf;
 		}
 	}
 }

@@ -264,7 +264,7 @@ bool CConsole::LineIsValid(const char *pStr)
 	return true;
 }
 
-void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd)
+void CConsole::ExecuteLineStroked(int Stroke, const char *pStr)
 {
 	while(pStr && *pStr)
 	{
@@ -306,20 +306,6 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, bool ForceSqlCmd
 
 		if(pCommand)
 		{
-			// dont allow SQL Commands
-#if defined(CONF_SQL)
-			if(!ForceSqlCmd && !str_comp_num(Result.m_pCommand, "sv_sql", 6))
-			{
-				if(Stroke) // dont show it twice
-					return;
-				
-				char aBuf[128];
-				str_copy(aBuf, "SQL commands are supposed to be changed in the config file.", sizeof(aBuf));
-				Print(OUTPUT_LEVEL_STANDARD, "Console", aBuf);
-				return;
-			}
-#endif
-
 			if(pCommand->GetAccessLevel() >= m_AccessLevel)
 			{
 				int IsStrokeCommand = 0;
@@ -393,10 +379,10 @@ CConsole::CCommand *CConsole::FindCommand(const char *pName, int FlagMask)
 	return 0x0;
 }
 
-void CConsole::ExecuteLine(const char *pStr, bool ForceSqlCmd)
+void CConsole::ExecuteLine(const char *pStr)
 {
-	CConsole::ExecuteLineStroked(1, pStr, ForceSqlCmd); // press it
-	CConsole::ExecuteLineStroked(0, pStr, ForceSqlCmd); // then release it
+	CConsole::ExecuteLineStroked(1, pStr); // press it
+	CConsole::ExecuteLineStroked(0, pStr); // then release it
 }
 
 void CConsole::ExecuteLineFlag(const char *pStr, int FlagMask)
@@ -441,7 +427,7 @@ void CConsole::ExecuteFile(const char *pFilename)
 		lr.Init(File);
 
 		while((pLine = lr.Get()))
-			ExecuteLine(pLine, true);
+			ExecuteLine(pLine);
 
 		io_close(File);
 	}

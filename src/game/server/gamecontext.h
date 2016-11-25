@@ -72,6 +72,9 @@ class CGameContext : public IGameServer
 #if defined(CONF_TEERACE)
 	class CServerWebapp *m_pWebapp;
 #endif
+#if defined(CONF_SQL)
+	class CSqlConfig *m_pSqlConfig;
+#endif
 	
 	static void ConKillPl(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeleport(IConsole::IResult *pResult, void *pUserData);

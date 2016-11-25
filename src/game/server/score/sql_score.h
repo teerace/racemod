@@ -9,6 +9,16 @@
 
 #include "../score.h"
 
+struct CSqlConfig
+{
+	char m_aDatabase[16];
+	char m_aPrefix[16];
+	char m_aUser[32];
+	char m_aPass[32];
+	char m_aIp[32];
+	int m_Port;
+};
+
 class CSqlScore : public IScore
 {
 	class CGameContext *m_pGameServer;
@@ -20,13 +30,8 @@ class CSqlScore : public IScore
 	sql::ResultSet *m_pResults;
 	
 	// copy of config vars
-	const char* m_pDatabase;
-	const char* m_pPrefix;
-	const char* m_pUser;
-	const char* m_pPass;
-	const char* m_pIp;
+	const CSqlConfig *m_pSqlConfig;
 	char m_aMap[64];
-	int m_Port;
 	
 	CGameContext *GameServer() { return m_pGameServer; }
 	IServer *Server() { return m_pServer; }
@@ -46,7 +51,7 @@ class CSqlScore : public IScore
 	
 public:
 	
-	CSqlScore(CGameContext *pGameServer);
+	CSqlScore(CGameContext *pGameServer, const CSqlConfig *pSqlConfig);
 	~CSqlScore();
 	
 	void LoadScore(int ClientID, bool PrintRank);
