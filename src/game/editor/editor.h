@@ -464,7 +464,7 @@ public:
 
 	virtual void Render();
 	CQuad *NewQuad();
-	
+
 	virtual void BrushSelecting(CUIRect Rect);
 	virtual int BrushGrab(CLayerGroup *pBrush, CUIRect Rect);
 	virtual void BrushPlace(CLayer *pBrush, float wx, float wy);

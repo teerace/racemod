@@ -116,7 +116,7 @@ void CRaceDemo::CheckDemo()
 	// stop the demo recording
 	DemoRecorder()->Stop();
 	
-	if(str_comp(m_pClient->m_pMenus->m_aCurrentDemoFolder, "demos") == 0)
+	if(str_comp(m_pClient->m_pMenus->GetCurrentDemoFolder(), "demos") == 0)
 	{
 		char aTmpDemoName[128];
 		Client()->RaceDemo_GetName(aTmpDemoName, sizeof(aTmpDemoName));

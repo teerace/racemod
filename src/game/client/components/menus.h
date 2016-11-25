@@ -318,6 +318,8 @@ public:
 	
 	sorted_array<CDemoItem> m_lDemos;
 	void DemolistPopulate();
+
+	const char *GetCurrentDemoFolder() const { return m_aCurrentDemoFolder; }
 	
 	// ghost
 	struct CGhostItem

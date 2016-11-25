@@ -1699,15 +1699,15 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 
 		// render the game and tele above everything else
 		if(m_Map.m_pGameGroup->m_Visible)
- 		{
- 			m_Map.m_pGameGroup->MapScreen();
+		{
+			m_Map.m_pGameGroup->MapScreen();
 			if(m_Map.m_pGameLayer->m_Visible)
 				m_Map.m_pGameLayer->Render();
 			if(m_Map.m_pTeleLayer && m_Map.m_pTeleLayer->m_Visible)
 				m_Map.m_pTeleLayer->Render();
 			if(m_Map.m_pSpeedupLayer && m_Map.m_pSpeedupLayer->m_Visible)
 				m_Map.m_pSpeedupLayer->Render();
- 		}
+		}
 
 		CLayerTiles *pT = static_cast<CLayerTiles *>(GetSelectedLayerType(0, LAYERTYPE_TILES));
 		if(m_ShowTileInfo && pT && pT->m_Visible && m_ZoomLevel <= 300)
