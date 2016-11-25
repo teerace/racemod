@@ -84,23 +84,23 @@ void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
 		pChr->GiveWeapon(WEAPON_GRENADE, 10);
 }
 
-bool CGameControllerFC::CanSpawn(CPlayer *pPlayer, vec2 *pOutPos)
+bool CGameControllerFC::CanSpawn(int Team, vec2 *pOutPos)
 {
 	CSpawnEval Eval;
 	
 	// spectators can't spawn
-	if(pPlayer->GetTeam() == -1)
+	if(Team == TEAM_SPECTATORS)
 		return false;
 
-	Eval.m_FriendlyTeam = pPlayer->GetTeam();
+	Eval.m_FriendlyTeam = Team;
 	
 	// try first enemy spawns, than normal, than own
-	EvaluateSpawnType(&Eval, 1+((pPlayer->GetTeam()+1)&1));
+	EvaluateSpawnType(&Eval, 1+((Team+1)&1));
 	if(!Eval.m_Got)
 	{
 		EvaluateSpawnType(&Eval, 0);
 		if(!Eval.m_Got)
-			EvaluateSpawnType(&Eval, 1+(pPlayer->GetTeam()&1));
+			EvaluateSpawnType(&Eval, 1+(Team&1));
 	}
 	
 	*pOutPos = Eval.m_Pos;

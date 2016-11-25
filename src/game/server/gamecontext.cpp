@@ -1,7 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
-#include <stdio.h>
 #include <base/math.h>
 #include <engine/config.h>
 #include <engine/shared/config.h>
@@ -589,14 +588,10 @@ void CGameContext::OnTick()
 
 // Server hooks
 #if defined(CONF_TEERACE)
-void CGameContext::OnTeeraceAuth(int ClientID, const char *pStr, int SendRconCmds)
+void CGameContext::OnTeeraceAuth(int ClientID, const char *pToken, int SendRconCmds)
 {
-	if(str_comp_num(pStr, "teerace:", 8) == 0)
-	{
-		char aToken[32];
-		if(m_pWebapp && Server()->GetUserID(ClientID) <= 0 && sscanf(pStr, "teerace:%s", aToken) == 1)
-			m_pWebapp->OnAuth(ClientID, aToken, SendRconCmds);
-	}
+	if(m_pWebapp && Server()->GetUserID(ClientID) <= 0)
+		m_pWebapp->OnAuth(ClientID, pToken, SendRconCmds);
 }
 #endif
 
@@ -1673,7 +1668,7 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 		if(pChr)
 		{
 			pChr->GetCore()->m_Pos = pSelf->m_apPlayers[CID2]->m_ViewPos;
-			pSelf->RaceController()->m_aRace[CID1].m_RaceState = CGameControllerRACE::RACE_FINISHED;
+			pSelf->RaceController()->SetRaceState(CID1, CGameControllerRACE::RACE_FINISHED);
 		}
 		else
 			pSelf->m_apPlayers[CID1]->m_ViewPos = pSelf->m_apPlayers[CID2]->m_ViewPos;
@@ -1691,7 +1686,7 @@ void CGameContext::ConTeleportTo(IConsole::IResult *pResult, void *pUserData)
 		if(pChr)
 		{
 			pChr->GetCore()->m_Pos = TelePos;
-			pSelf->RaceController()->m_aRace[CID].m_RaceState = CGameControllerRACE::RACE_FINISHED;
+			pSelf->RaceController()->SetRaceState(CID, CGameControllerRACE::RACE_FINISHED);
 		}
 		else
 			pSelf->m_apPlayers[CID]->m_ViewPos = TelePos;
@@ -2036,7 +2031,7 @@ void CGameContext::ChatConMapInfo(IConsole::IResult *pResult, void *pUser)
 
 	char aBuf[256];
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "----------- Mapinfo -----------");
-	str_format(aBuf, sizeof(aBuf), "Name: %s", g_Config.m_SvMap);
+	str_format(aBuf, sizeof(aBuf), "Name: %s", pSelf->Server()->GetMapName());
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
 	str_format(aBuf, sizeof(aBuf), "Author: %s", pSelf->m_pWebapp->CurrentMap()->m_aAuthor);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);

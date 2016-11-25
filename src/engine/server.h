@@ -69,6 +69,8 @@ public:
 	virtual void DemoRecorder_HandleAutoStart() = 0;
 	virtual bool DemoRecorder_IsRecording() = 0;
 
+	virtual char *GetMapName() = 0;
+
 #if defined(CONF_TEERACE)
 	virtual const char* GetConfigFilename() = 0;
 	virtual void ReloadMap() = 0;
@@ -80,8 +82,6 @@ public:
 
 	virtual void SetUserName(int ClientID, const char* pUsername) = 0;
 	virtual const char* GetUserName(int ClientID) = 0;
-
-	virtual char *GetMapName() = 0;
 
 	virtual void StaffAuth(int ClientID, int SendRconCmds) = 0;
 

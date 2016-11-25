@@ -1048,7 +1048,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 					int SendRconCmds = Unpacker.GetInt();
 					if(Unpacker.Error() != 0)
 						SendRconCmds = 0;
-					GameServer()->OnTeeraceAuth(ClientID, pPw, SendRconCmds);
+					GameServer()->OnTeeraceAuth(ClientID, pPw+8, SendRconCmds);
 #endif
 					return;
 				}
@@ -1296,16 +1296,19 @@ void CServer::RaceRecorder_Stop(int ClientID)
 {
 	m_aDemoRecorder[ClientID].Stop();
 
+	char aTmpFilename[256];
+	Race_GetPath(aTmpFilename, sizeof(aTmpFilename), ClientID, true);
+
 	if(m_aClients[ClientID].m_SaveDemoTick > -1)
 	{
 		// rename the demo
-		char aOldFilename[256];
 		char aNewFilename[256];
-		Race_GetPath(aOldFilename, sizeof(aOldFilename), ClientID, true);
 		Race_GetPath(aNewFilename, sizeof(aNewFilename), ClientID, false, m_aClients[ClientID].m_SaveDemoTick);
-		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
+		Storage()->RenameFile(aTmpFilename, aNewFilename, IStorage::TYPE_SAVE);
 		m_aClients[ClientID].m_SaveDemoTick = -1;
 	}
+	else
+		Storage()->RemoveFile(aTmpFilename, IStorage::TYPE_SAVE);
 }
 
 bool CServer::RaceRecorder_IsRecording(int ClientID)
@@ -1338,16 +1341,19 @@ void CServer::GhostRecorder_Stop(int ClientID, int Time)
 {
 	m_aGhostRecorder[ClientID].Stop(m_aNumGhostTicks[ClientID], Time);
 
-	if(m_aClients[ClientID].m_SaveGhostTick > -1)
+	char aTmpFilename[256];
+	Ghost_GetPath(aTmpFilename, sizeof(aTmpFilename), ClientID, true);
+
+	if (m_aClients[ClientID].m_SaveGhostTick > -1)
 	{
 		// rename the ghost
-		char aOldFilename[256];
 		char aNewFilename[256];
-		Ghost_GetPath(aOldFilename, sizeof(aOldFilename), ClientID, true);
 		Ghost_GetPath(aNewFilename, sizeof(aNewFilename), ClientID, false, m_aClients[ClientID].m_SaveGhostTick);
-		Storage()->RenameFile(aOldFilename, aNewFilename, IStorage::TYPE_SAVE);
+		Storage()->RenameFile(aTmpFilename, aNewFilename, IStorage::TYPE_SAVE);
 		m_aClients[ClientID].m_SaveGhostTick = -1;
 	}
+	else
+		Storage()->RemoveFile(aTmpFilename, IStorage::TYPE_SAVE);
 }
 
 bool CServer::GhostRecorder_IsRecording(int ClientID)
@@ -1420,15 +1426,11 @@ int CServer::LoadMap(const char *pMapName)
 #if defined(CONF_TEERACE)
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		m_aDemoRecorder[i].Stop();
-		
-		// remove tmp demos
-		if(i < MAX_CLIENTS)
-		{
-			char aPath[256];
-			str_format(aPath, sizeof(aPath), "demos/teerace/%s_%d_tmp.demo", m_aCurrentMap, i);
-			Storage()->RemoveFile(aPath, IStorage::TYPE_SAVE);
-		}
+		if(RaceRecorder_IsRecording(i))
+			RaceRecorder_Stop(i);
+
+		if(GhostRecorder_IsRecording(i))
+			GhostRecorder_Stop(i, 0);
 	}
 #endif
 	m_DemoRecorder.Stop();

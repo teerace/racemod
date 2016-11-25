@@ -218,7 +218,58 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 	return true;
 }
 
+bool CGameControllerRACE::IsStart(int TilePos, vec2 Pos, int Team)
+{
+	return GameServer()->Collision()->GetIndex(TilePos) == TILE_BEGIN
+		|| GameServer()->Collision()->GetIndex(Pos) == TILE_BEGIN;
+}
+
+bool CGameControllerRACE::IsEnd(int TilePos, vec2 Pos, int Team)
+{
+	return GameServer()->Collision()->GetIndex(TilePos) == TILE_END
+		|| GameServer()->Collision()->GetIndex(Pos) == TILE_END;
+}
+
+void CGameControllerRACE::ProcessRaceTile(int ID, int TilePos, vec2 PrevPos, vec2 Pos)
+{
+	int Cp = GameServer()->Collision()->CheckCheckpoint(TilePos);
+	if (Cp != -1)
+		OnCheckpoint(ID, Cp);
+
+	int Team = GameServer()->m_apPlayers[ID]->GetTeam();
+	if(IsStart(TilePos, Pos, Team))
+		OnRaceStart(ID, CalculateStartAddTime(PrevPos, Pos, Team));
+	else if(IsEnd(TilePos, Pos, Team))
+		OnRaceEnd(ID, CalculateFinishTime(GetTime(ID), PrevPos, Pos, Team));
+}
+
 int CGameControllerRACE::GetTime(int ID)
 {
 	return (Server()->Tick() - m_aRace[ID].m_StartTime) * 1000 / Server()->TickSpeed();
+}
+
+int CGameControllerRACE::CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team)
+{
+	int Num = 1000 / Server()->TickSpeed();
+	for (int i = 0; i <= Num; i++)
+	{
+		float a = i / (float)Num;
+		vec2 TmpPos = mix(Pos, PrevPos, a);
+		if (IsStart(-1, TmpPos, Team))
+			return i;
+	}
+	return Num;
+}
+
+int CGameControllerRACE::CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos, int Team)
+{
+	int Num = 1000 / Server()->TickSpeed();
+	for(int i = 0; i <= Num; i++)
+	{
+		float a = i / (float)Num;
+		vec2 TmpPos = mix(PrevPos, Pos, a);
+		if(IsEnd(-1, TmpPos, Team))
+			return Time - Num + i;
+	}
+	return Time;
 }

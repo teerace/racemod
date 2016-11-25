@@ -16,7 +16,7 @@ CSqlScore::CSqlScore(CGameContext *pGameServer, const CSqlConfig *pSqlConfig)
   m_pServer(pGameServer->Server()),
   m_pSqlConfig(pSqlConfig)
 {
-	str_copy(m_aMap, g_Config.m_SvMap, sizeof(m_aMap));
+	str_copy(m_aMap, m_pServer->GetMapName(), sizeof(m_aMap));
 	ClearString(m_aMap, sizeof(m_aMap));
 	
 	if(gs_SqlLock == 0)

@@ -281,9 +281,9 @@ void CLayerTiles::BrushFlipX()
 		}
 
 	if(!m_Game && !m_Tele && !m_Speedup)
-	for(int y = 0; y < m_Height; y++)
-		for(int x = 0; x < m_Width; x++)
-			m_pTiles[y*m_Width+x].m_Flags ^= m_pTiles[y*m_Width+x].m_Flags&TILEFLAG_ROTATE ? TILEFLAG_HFLIP : TILEFLAG_VFLIP;
+		for(int y = 0; y < m_Height; y++)
+			for(int x = 0; x < m_Width; x++)
+				m_pTiles[y*m_Width+x].m_Flags ^= m_pTiles[y*m_Width+x].m_Flags&TILEFLAG_ROTATE ? TILEFLAG_HFLIP : TILEFLAG_VFLIP;
 }
 
 void CLayerTiles::BrushFlipY()
@@ -297,9 +297,9 @@ void CLayerTiles::BrushFlipY()
 		}
 
 	if(!m_Game && !m_Tele && !m_Speedup)
-	for(int y = 0; y < m_Height; y++)
-		for(int x = 0; x < m_Width; x++)
-			m_pTiles[y*m_Width+x].m_Flags ^= m_pTiles[y*m_Width+x].m_Flags&TILEFLAG_ROTATE ? TILEFLAG_VFLIP : TILEFLAG_HFLIP;
+		for(int y = 0; y < m_Height; y++)
+			for(int x = 0; x < m_Width; x++)
+				m_pTiles[y*m_Width+x].m_Flags ^= m_pTiles[y*m_Width+x].m_Flags&TILEFLAG_ROTATE ? TILEFLAG_VFLIP : TILEFLAG_HFLIP;
 }
 
 void CLayerTiles::BrushRotate(float Amount)

@@ -211,7 +211,7 @@ int CCollision::CheckSpeedup(int TilePos)
 
 void CCollision::GetSpeedup(int SpeedupPos, vec2 *Dir, int *Force)
 {
-	float Angle = m_pSpeedup[SpeedupPos].m_Angle * (3.14159265f/180.0f);
+	float Angle = m_pSpeedup[SpeedupPos].m_Angle * (pi/180.0f);
 	*Force = m_pSpeedup[SpeedupPos].m_Force;
 	*Dir = vec2(cos(Angle), sin(Angle));
 }

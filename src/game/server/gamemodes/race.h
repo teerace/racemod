@@ -8,14 +8,17 @@
 
 class CGameControllerRACE : public IGameController
 {
-public:
-	enum
-	{
-		RACE_NONE = 0,
-		RACE_STARTED,
-		RACE_FINISHED,
-	};
+#if defined(CONF_TEERACE)
+	int m_aStopRecordTick[MAX_CLIENTS];
+#endif
 
+	virtual bool OnCheckpoint(int ID, int z);
+
+	int GetTime(int ID);
+	int CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team);
+	int CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos, int Team);
+
+protected:
 	struct CRaceData
 	{
 		int m_RaceState;
@@ -25,7 +28,7 @@ public:
 		int m_aCpCurrent[NUM_CHECKPOINTS];
 		int m_CpTick;
 		int m_CpDiff;
-		
+
 		int m_StartAddTime;
 
 		void Reset()
@@ -36,26 +39,35 @@ public:
 			mem_zero(m_aCpCurrent, sizeof(m_aCpCurrent));
 			m_CpTick = -1;
 			m_CpDiff = 0;
-			m_StartAddTime = 0.0f;
+			m_StartAddTime = 0;
 		}
 	} m_aRace[MAX_CLIENTS];
+
+	virtual bool IsStart(int TilePos, vec2 Pos, int Team);
+	virtual bool IsEnd(int TilePos, vec2 Pos, int Team);
+
+	virtual bool OnRaceStart(int ID, int StartAddTime, bool Check = true);
+	virtual bool OnRaceEnd(int ID, int FinishTime);
+
+public:
+	enum
+	{
+		RACE_NONE = 0,
+		RACE_STARTED,
+		RACE_FINISHED,
+	};
 	
 	CGameControllerRACE(class CGameContext *pGameServer);
 	~CGameControllerRACE();
-	
-#if defined(CONF_TEERACE)
-	int m_aStopRecordTick[MAX_CLIENTS];
-#endif
 
 	virtual void DoWincheck();
 	virtual void Tick();
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 
-	virtual bool OnCheckpoint(int ID, int z);
-	virtual bool OnRaceStart(int ID, int StartAddTime, bool Check=true);
-	virtual bool OnRaceEnd(int ID, int FinishTime);
+	virtual void ProcessRaceTile(int ID, int TilePos, vec2 PrevPos, vec2 Pos);
 
-	int GetTime(int ID);
+	int GetRaceState(int ID) const { return m_aRace[ID].m_RaceState; }
+	void SetRaceState(int ID, int State) { m_aRace[ID].m_RaceState = State; }
 };
 
 #endif

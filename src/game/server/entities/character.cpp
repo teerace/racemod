@@ -65,8 +65,8 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 {
 	m_EmoteStop = -1;
 	m_LastAction = -1;
-	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastNoAmmoSound = -1;
+	m_ActiveWeapon = WEAPON_HAMMER;
 	m_LastWeapon = WEAPON_HAMMER;
 	m_QueuedWeapon = -1;
 
@@ -504,7 +504,7 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 	if(g_Config.m_WaAutoRecord && m_LastAction == Server()->Tick() && GameServer()->Webapp())
 	{
 		int ClientID = m_pPlayer->GetCID();
-		if(!Server()->RaceRecorder_IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && GameServer()->RaceController()->m_aRace[ClientID].m_RaceState == CGameControllerRACE::RACE_NONE)
+		if(!Server()->RaceRecorder_IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && GameServer()->RaceController()->GetRaceState(ClientID) == CGameControllerRACE::RACE_NONE)
 			Server()->RaceRecorder_Start(ClientID);
 	}
 #endif
@@ -571,9 +571,6 @@ void CCharacter::Tick()
 	m_Core.Tick(true);
 
 	// race
-	CGameControllerRACE *pRace = GameServer()->RaceController();
-	CGameControllerFC *pFC = (CGameControllerFC*)GameServer()->m_pController;
-	
 	if(g_Config.m_SvRegen > 0 && (Server()->Tick()%g_Config.m_SvRegen) == 0)
 	{
 		if(m_Health < 10)
@@ -584,25 +581,12 @@ void CCharacter::Tick()
 	
 	// tile pos
 	int TilePos = GameServer()->Collision()->CheckRaceTile(m_PrevPos, m_Pos);
-	
-	int Cp = GameServer()->Collision()->CheckCheckpoint(TilePos);
-	if(Cp != -1)
-		pRace->OnCheckpoint(m_pPlayer->GetCID(), Cp);
-	
-	if(GameServer()->Collision()->GetIndex(TilePos) == TILE_BEGIN
-		|| (GameServer()->m_pController->IsFastCap() && pFC->IsEnemyFlagStand(m_Pos, m_pPlayer->GetTeam())))
-	{
-		pRace->OnRaceStart(m_pPlayer->GetCID(), CalculateStartAddTime(m_PrevPos, m_Pos));
-	}
-	
-	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_END
-		|| (GameServer()->m_pController->IsFastCap() && pFC->IsOwnFlagStand(m_Pos, m_pPlayer->GetTeam())))
-	{
-		int FinishTime = CalculateFinishTime(pRace->GetTime(m_pPlayer->GetCID()), m_PrevPos, m_Pos);
-		pRace->OnRaceEnd(m_pPlayer->GetCID(), FinishTime);
-	}
+
+	CGameControllerRACE *pRace = GameServer()->RaceController();
+	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, m_PrevPos, m_Pos);
+
 	// TODO: move this to gamecore
-	else if(TilePos != -1 && GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPL)
+	if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPL)
 	{
 		if(m_Core.m_Vel.x > 0)
 		{
@@ -611,7 +595,7 @@ void CCharacter::Tick()
 			m_Core.m_Vel.x = 0;
 		}
 	}
-	else if(TilePos != -1 && GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPR)
+	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPR)
 	{
 		if(m_Core.m_Vel.x < 0)
 		{
@@ -620,7 +604,7 @@ void CCharacter::Tick()
 			m_Core.m_Vel.x = 0;
 		}
 	}
-	else if(TilePos != -1 && GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPB)
+	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPB)
 	{
 		if(m_Core.m_Vel.y < 0)
 		{
@@ -629,7 +613,7 @@ void CCharacter::Tick()
 			m_Core.m_Vel.y = 0;
 		}
 	}
-	else if(TilePos != -1 && GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPT)
+	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPT)
 	{
 		if(m_Core.m_Vel.y > 0)
 		{
@@ -787,34 +771,6 @@ void CCharacter::TickDefered()
 		}
 #endif
 	}
-}
-
-int CCharacter::CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos)
-{
-	int Num = 1000/Server()->TickSpeed();
-	for(int i = 0; i <= Num; i++)
-	{
-		float a = i/(float)Num;
-		vec2 TmpPos = mix(PrevPos, Pos, a);
-		if(GameServer()->Collision()->GetIndex(TmpPos) == TILE_END || 
-			(GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsOwnFlagStand(TmpPos, m_pPlayer->GetTeam())))
-			return Time - Num + i;
-	}
-	return Time;
-}
-
-int CCharacter::CalculateStartAddTime(vec2 PrevPos, vec2 Pos)
-{
-	int Num = 1000/Server()->TickSpeed();
-	for(int i = 0; i <= Num; i++)
-	{
-		float a = i/(float)Num;
-		vec2 TmpPos = mix(Pos, PrevPos, a);
-		if(GameServer()->Collision()->GetIndex(TmpPos) == TILE_BEGIN || 
-			(GameServer()->m_pController->IsFastCap() && ((CGameControllerFC*)GameServer()->m_pController)->IsEnemyFlagStand(TmpPos, m_pPlayer->GetTeam())))
-			return i;
-	}
-	return Num;
 }
 
 void CCharacter::TickPaused()

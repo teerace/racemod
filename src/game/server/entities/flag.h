@@ -20,4 +20,5 @@ public:
 	virtual void TickDeferedLate();
 	virtual void Snap(int SnappingClient);
 };
+
 #endif

@@ -35,7 +35,7 @@ void CFlag::Snap(int SnappingClient)
 		return;
 
 	if((!m_pCarryingCharacter && GameServer()->m_apPlayers[SnappingClient]->GetTeam() != m_Team && GameServer()->m_apPlayers[SnappingClient]->GetCharacter()
-		&& GameServer()->RaceController()->m_aRace[SnappingClient].m_RaceState == CGameControllerRACE::RACE_STARTED)
+		&& GameServer()->RaceController()->GetRaceState(SnappingClient) == CGameControllerRACE::RACE_STARTED)
 		||(m_pCarryingCharacter && !GameServer()->m_apPlayers[SnappingClient]->m_ShowOthers && SnappingClient != m_pCarryingCharacter->GetPlayer()->GetCID()))
 		return;
 	

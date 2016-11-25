@@ -1,7 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <new>
-#include <stdio.h>
 #include <engine/shared/config.h>
 #include "player.h"
 
@@ -307,7 +306,7 @@ void CPlayer::TryRespawn()
 {
 	vec2 SpawnPos;
 
-	if(!GameServer()->m_pController->CanSpawn(this, &SpawnPos))
+	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos))
 		return;
 
 	m_Spawning = false;

@@ -50,7 +50,7 @@ void CFileScore::WriteLine(IOHANDLE File, const char *pLine)
 IOHANDLE CFileScore::OpenFile(int Flags)
 {
 	char aFilename[256];
-	str_format(aFilename, sizeof(aFilename), "records/%s_record.dtb", g_Config.m_SvMap);
+	str_format(aFilename, sizeof(aFilename), "records/%s_record.dtb", m_pServer->GetMapName());
 	return m_pGameServer->Storage()->OpenFile(aFilename, Flags, IStorage::TYPE_SAVE);
 }
 

@@ -24,13 +24,6 @@ public:
 	//character's size
 	static const int ms_PhysSize = 28;
 
-	enum
-	{
-		RACE_NONE = 0,
-		RACE_STARTED,
-		RACE_FINISHED,
-	};
-
 	CCharacter(CGameWorld *pWorld);
 
 	virtual void Reset();
@@ -145,9 +138,6 @@ private:
 
 	int m_LastSpeedup;
 	vec2 m_PrevPos;
-	
-	int CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos);
-	int CalculateStartAddTime(vec2 PrevPos, vec2 Pos);
 };
 
 #endif
