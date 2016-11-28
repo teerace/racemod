@@ -596,16 +596,26 @@ void CServer::DoSnapshot()
 	// create snapshots for all clients
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
+		bool OnlyRecord = false;
+		bool Recording = false;
+
+#if defined(CONF_TEERACE)
+		Recording = m_aDemoRecorder[i].IsRecording();
+#endif
+
 		// client must be ingame to recive snapshots
 		if(m_aClients[i].m_State != CClient::STATE_INGAME)
-			continue;
+			OnlyRecord = true;
 
 		// this client is trying to recover, don't spam snapshots
 		if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER && (Tick()%50) != 0)
-			continue;
+			OnlyRecord = true;
 
 		// this client is trying to recover, don't spam snapshots
 		if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_INIT && (Tick()%10) != 0)
+			OnlyRecord = true;
+
+		if(OnlyRecord && !Recording)
 			continue;
 
 		{
@@ -629,8 +639,12 @@ void CServer::DoSnapshot()
 			SnapshotSize = m_SnapshotBuilder.Finish(pData);
 
 #if defined(CONF_TEERACE)
-			if(m_aDemoRecorder[i].IsRecording())
+			if(Recording)
+			{
 				m_aDemoRecorder[i].RecordSnapshot(Tick(), aData, SnapshotSize);
+				if(OnlyRecord)
+					continue;
+			}
 #endif
 				
 			Crc = pData->Crc();
