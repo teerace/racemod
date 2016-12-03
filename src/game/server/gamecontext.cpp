@@ -1251,6 +1251,8 @@ void CGameContext::ConTuneReset(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	CTuningParams TuningParams;
+	TuningParams.m_PlayerCollision = 0;
+	TuningParams.m_PlayerHooking = 0;
 	*pSelf->Tuning() = TuningParams;
 	pSelf->SendTuningParams(-1);
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tuning", "Tuning reset");
@@ -2172,6 +2174,9 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 #endif
 	else
 		m_pScore = new CFileScore(this);
+
+	m_Tuning.m_PlayerCollision = 0;
+	m_Tuning.m_PlayerHooking = 0;
 		
 	// setup core world
 	//for(int i = 0; i < MAX_CLIENTS; i++)
