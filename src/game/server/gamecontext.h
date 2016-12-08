@@ -204,6 +204,11 @@ public:
 	//
 	void LoadMapSettings();
 
+#if defined(CONF_TEERACE)
+	void UpdateTeeraceSkin(int ClientID);
+	void UpdateTeeracePlaytime(int ClientID);
+#endif
+
 	// engine events
 	virtual void OnInit();
 	virtual void OnConsoleInit();

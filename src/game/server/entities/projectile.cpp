@@ -72,14 +72,14 @@ void CProjectile::Tick()
 		GameServer()->m_World.DestroyEntity(this);
 		return;
 	}
-		
+
 	m_LifeSpan--;
 
 	if(Collide || m_LifeSpan < 0 || GameLayerClipped(CurPos))
 	{
 		if(m_LifeSpan >= 0 || m_Weapon == WEAPON_GRENADE)
 			GameServer()->CreateSound(CurPos, m_SoundImpact, CmaskRace(GameServer(), m_Owner));
-		
+
 		if(m_Explosive)
 			GameServer()->CreateExplosion(CurPos, m_Owner, m_Weapon, false);
 
@@ -88,13 +88,13 @@ void CProjectile::Tick()
 
 		GameServer()->m_World.DestroyEntity(this);
 	}
-	
-	
+
+
 	int Tele = GameServer()->Collision()->CheckTeleport(PrevPos, CurPos);
-  	if(Tele && m_Weapon == WEAPON_GRENADE && g_Config.m_SvTeleportGrenade)
-  	{
+	if(Tele && m_Weapon == WEAPON_GRENADE && g_Config.m_SvTeleportGrenade)
+	{
 		m_Pos = GameServer()->Collision()->GetTeleportDestination(Tele);
-  		m_StartTick = Server()->Tick();
+		m_StartTick = Server()->Tick();
 	}
 }
 
