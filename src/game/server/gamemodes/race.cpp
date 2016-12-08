@@ -9,7 +9,6 @@
 #include <game/ghost.h>
 #endif
 #include <game/teerace.h>
-#include <string.h>
 #include "race.h"
 
 CGameControllerRACE::CGameControllerRACE(class CGameContext *pGameServer) : IGameController(pGameServer)
@@ -63,34 +62,20 @@ void CGameControllerRACE::Tick()
 	{
 		CRaceData *p = &m_aRace[i];
 
-		if(p->m_RaceState == RACE_STARTED && Server()->Tick()-p->m_RefreshTime >= Server()->TickSpeed())
+		if(p->m_RaceState == RACE_STARTED)
 		{
-			int Time = GetTime(i);
-
-			char aBuftime[128];
-			char aTmp[128];
-
-			CNetMsg_Sv_RaceTime Msg;
-			Msg.m_Time = Time / 1000;
-			Msg.m_Check = 0;
-			str_format(aBuftime, sizeof(aBuftime), "Current Time: %d min %d sec",
-				Time / (60 * 1000), (Time / 1000) % 60);
-
-			if(p->m_CpTick != -1 && p->m_CpTick > Server()->Tick())
+			bool Checkpoint = p->m_CpTick != -1 && p->m_CpTick > Server()->Tick();
+			if(GameServer()->m_apPlayers[i]->m_RaceClient == 1 && Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed())
 			{
-				Msg.m_Check = p->m_CpDiff / 10;
-				int CpDiff = abs(p->m_CpDiff);
-				str_format(aTmp, sizeof(aTmp), "\nCheckpoint | Diff : %s%3d.%02d",
-					p->m_CpDiff > 0 ? "+" : "-", CpDiff / 1000, (CpDiff % 1000) / 10);
-				strcat(aBuftime, aTmp);
+				GameServer()->SendRaceTime(i, GetTime(i), Checkpoint ? p->m_CpDiff : 0);
+				p->m_RefreshTick = Server()->Tick();
 			}
-
-			if(GameServer()->m_apPlayers[i]->m_IsUsingRaceClient)
-				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
-			else
-				GameServer()->SendBroadcast(aBuftime, i);
-
-			p->m_RefreshTime = Server()->Tick();
+			else if(GameServer()->m_apPlayers[i]->m_RaceClient != 1 && Checkpoint) // only send checkpoints
+			{
+				int Time = GameServer()->m_apPlayers[i]->m_DDNetClient ? GetTime(i) : 0;
+				GameServer()->SendRaceTime(i, Time, p->m_CpDiff);
+				p->m_CpTick = -1;
+			}
 		}
 		
 #if defined(CONF_TEERACE)
@@ -114,6 +99,19 @@ void CGameControllerRACE::Tick()
 			Server()->GhostRecorder_Stop(i, 0);
 #endif
 	}
+}
+
+void CGameControllerRACE::Snap(int SnappingClient)
+{
+	int TmpRoundStartTick = m_RoundStartTick;
+	if(SnappingClient >= 0)
+	{
+		CRaceData *p = &m_aRace[SnappingClient];
+		m_RoundStartTick = p->m_RaceState == RACE_STARTED ? p->m_StartTick : Server()->Tick();
+	}
+
+	IGameController::Snap(SnappingClient);
+	m_RoundStartTick = TmpRoundStartTick;
 }
 
 bool CGameControllerRACE::OnCheckpoint(int ID, int z)
@@ -142,8 +140,8 @@ bool CGameControllerRACE::OnRaceStart(int ID, int StartAddTime, bool Check)
 		return false;
 	
 	p->m_RaceState = RACE_STARTED;
-	p->m_StartTime = Server()->Tick();
-	p->m_RefreshTime = Server()->Tick();
+	p->m_StartTick = Server()->Tick();
+	p->m_RefreshTick = Server()->Tick();
 	p->m_StartAddTime = StartAddTime;
 
 	if(p->m_RaceState != RACE_NONE)
@@ -245,7 +243,7 @@ void CGameControllerRACE::ProcessRaceTile(int ID, int TilePos, vec2 PrevPos, vec
 
 int CGameControllerRACE::GetTime(int ID)
 {
-	return (Server()->Tick() - m_aRace[ID].m_StartTime) * 1000 / Server()->TickSpeed();
+	return (Server()->Tick() - m_aRace[ID].m_StartTick) * 1000 / Server()->TickSpeed();
 }
 
 int CGameControllerRACE::CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team)

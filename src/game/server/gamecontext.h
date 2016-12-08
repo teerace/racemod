@@ -191,6 +191,8 @@ public:
 	void SendBroadcast(const char *pText, int ClientID);
 	
 	void SendRecord(int ClientID);
+	void SendPlayerTime(int ClientID, int Time, int ID);
+	void SendRaceTime(int ClientID, int Time, int CpDiff);
 
 	//
 	void CheckPureTuning();

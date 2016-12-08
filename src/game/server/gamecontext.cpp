@@ -331,6 +331,7 @@ void CGameContext::SendBroadcast(const char *pText, int ClientID)
 
 void CGameContext::SendRecord(int ClientID)
 {
+	// no support for DDNet
 	CNetMsg_Sv_Record Msg;
 	Msg.m_Time = Score()->GetRecord()->m_Time;
 
@@ -338,14 +339,62 @@ void CGameContext::SendRecord(int ClientID)
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(m_apPlayers[i] && m_apPlayers[i]->m_IsUsingRaceClient)
+			if(m_apPlayers[i] && m_apPlayers[i]->m_RaceClient)
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
 		}
 	}
 	else
 	{
-		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_IsUsingRaceClient)
+		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_RaceClient)
 			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
+	}
+}
+
+void CGameContext::SendPlayerTime(int ClientID, int Time, int ID)
+{
+	CNetMsg_Sv_PlayerTime Msg;
+	Msg.m_Time = Time;
+	Msg.m_ClientID = ID;
+
+	CMsgPacker MsgDDNet(29 /* NETMSGTYPE_SV_PLAYERTIME */);
+	MsgDDNet.AddInt(Time / 10);
+	MsgDDNet.AddInt(ID);
+
+	if(ClientID == -1)
+	{
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(m_apPlayers[i]  && m_apPlayers[i]->m_RaceClient)
+				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
+			else if(m_apPlayers[i] && m_apPlayers[i]->m_DDNetClient)
+				Server()->SendMsg(&MsgDDNet, MSGFLAG_VITAL, i);
+		}
+	}
+	else
+	{
+		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_RaceClient)
+			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
+		else if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_DDNetClient)
+			Server()->SendMsg(&MsgDDNet, MSGFLAG_VITAL, ClientID);
+	}
+}
+
+void CGameContext::SendRaceTime(int ClientID, int Time, int CpDiff)
+{
+	if(m_apPlayers[ClientID]->m_RaceClient || m_apPlayers[ClientID]->m_DDNetClient)
+	{
+		CNetMsg_Sv_RaceTime Msg;
+		Msg.m_Time = Time / 1000;
+		Msg.m_Check = CpDiff / 10;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
+	}
+	else if(CpDiff)
+	{
+		char aBuf[128];
+		char aDiff[128];
+		IRace::FormatTimeDiff(aDiff, sizeof(aDiff), CpDiff, false);
+		str_format(aBuf, sizeof(aBuf), "Checkpoint | Diff : %s", aDiff);
+		SendBroadcast(aBuf, ClientID);
 	}
 }
 
@@ -732,8 +781,13 @@ int HslToRgb(int v)
 
 void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 {
-	void *pRawMsg = m_NetObjHandler.SecureUnpackMsg(MsgID, pUnpacker);
 	CPlayer *pPlayer = m_apPlayers[ClientID];
+	if(pPlayer->m_DDNetClient)
+	{
+		if(MsgID == 31)
+			MsgID = NETMSGTYPE_CL_RACESHOWOTHERS;
+	}
+	void *pRawMsg = m_NetObjHandler.SecureUnpackMsg(MsgID, pUnpacker);
 
 	if(!pRawMsg)
 	{
@@ -1098,7 +1152,14 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if (MsgID == NETMSGTYPE_CL_ISRACE)
 		{
-			pPlayer->m_IsUsingRaceClient = true;
+			pPlayer->m_DDNetClient = pUnpacker->GetInt();
+			pPlayer->m_RaceClient = pUnpacker->GetInt();
+
+			if(pUnpacker->Error() && !pPlayer->m_DDNetClient)
+				pPlayer->m_RaceClient = 1;
+			if(pPlayer->m_RaceClient)
+				pPlayer->m_DDNetClient = 0;
+
 			if (!g_Config.m_SvShowTimes)
 				return;
 
@@ -1106,15 +1167,8 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 
 			// send time of all players
 			for (int i = 0; i < MAX_CLIENTS; i++)
-			{
-				if (m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
-				{
-					CNetMsg_Sv_PlayerTime Msg;
-					Msg.m_Time = Score()->PlayerData(i)->m_CurTime;
-					Msg.m_ClientID = i;
-					Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
-				}
-			}
+				if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
+					SendPlayerTime(ClientID, Score()->PlayerData(i)->m_CurTime, i);
 		}
 		else if (MsgID == NETMSGTYPE_CL_RACESHOWOTHERS)
 		{
@@ -1993,7 +2047,7 @@ void CGameContext::ChatConShowOthers(IConsole::IResult *pResult, void *pUser)
 		return;
 	}
 	
-	if(pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_IsUsingRaceClient)
+	if(pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_RaceClient || pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_DDNetClient)
 		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "Please use the settings to switch this option.");
 	else
 		pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_ShowOthers = !pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_ShowOthers;

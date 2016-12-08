@@ -591,7 +591,9 @@ int CMenus::RenderMenubar(CUIRect r)
 		if(DoButton_MenuTab(&s_ServerInfoButton, Localize("Server info"), m_ActivePage==PAGE_SERVER_INFO, &Button, 0))
 			NewPage = PAGE_SERVER_INFO;
 
-		if(m_pClient->m_IsRace)
+		CServerInfo ServerInfo;
+		Client()->GetServerInfo(&ServerInfo);
+		if(IsRace(&ServerInfo))
 		{
 			Box.VSplitLeft(65.0f, &Button, &Box);
 			static int s_GhostButton=0;

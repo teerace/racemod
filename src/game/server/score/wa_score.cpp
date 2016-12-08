@@ -326,14 +326,8 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			{
 				pScore->PlayerData(pUser->m_ClientID)->m_CurTime = Run.m_Time;
 				pPl->m_Score = max(-(Run.m_Time / 1000), pPl->m_Score);
-				CNetMsg_Sv_PlayerTime Msg;
-				Msg.m_Time = Run.m_Time;
-				Msg.m_ClientID = pUser->m_ClientID;
-				for(int i = 0; i < MAX_CLIENTS; i++) // send time to all players
-				{
-					if(pScore->GameServer()->m_apPlayers[i] && pScore->GameServer()->m_apPlayers[i]->m_IsUsingRaceClient)
-						pScore->Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
-				}
+
+				pScore->GameServer()->SendPlayerTime(-1, Run.m_Time, pUser->m_ClientID);
 			}
 		}
 

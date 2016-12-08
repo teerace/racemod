@@ -28,7 +28,8 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 		m_ShowOthers = true;
 		
 	m_ResetPickups = true;
-	m_IsUsingRaceClient = false;
+	m_DDNetClient = 0;
+	m_RaceClient = 0;
 }
 
 CPlayer::~CPlayer()

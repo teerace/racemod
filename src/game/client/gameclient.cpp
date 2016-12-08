@@ -102,6 +102,54 @@ const char *CGameClient::Version() { return GAME_VERSION; }
 const char *CGameClient::NetVersion() { return GAME_NETVERSION; }
 const char *CGameClient::GetItemName(int Type) { return m_NetObjHandler.GetObjName(Type); }
 
+// TODO: find a better place for this
+bool IsVanilla(const CServerInfo *pInfo)
+{
+	return !str_comp(pInfo->m_aGameType, "DM")
+		|| !str_comp(pInfo->m_aGameType, "TDM")
+		|| !str_comp(pInfo->m_aGameType, "CTF");
+}
+
+bool IsCatch(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "catch");
+}
+
+bool IsInsta(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "idm")
+		|| str_find_nocase(pInfo->m_aGameType, "itdm")
+		|| str_find_nocase(pInfo->m_aGameType, "ictf");
+}
+
+bool IsFNG(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "fng");
+}
+
+bool IsRace(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "race")
+		|| str_find_nocase(pInfo->m_aGameType, "fastcap");
+}
+
+bool IsFastCap(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "fastcap");
+}
+
+bool IsDDRace(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "ddrace")
+		|| str_find_nocase(pInfo->m_aGameType, "mkrace");
+}
+
+bool IsDDNet(const CServerInfo *pInfo)
+{
+	return str_find_nocase(pInfo->m_aGameType, "ddracenet")
+		|| str_find_nocase(pInfo->m_aGameType, "ddnet");
+}
+
 void CGameClient::OnConsoleInit()
 {
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
@@ -289,7 +337,6 @@ void CGameClient::OnInit()
 
 	m_ServerMode = SERVERMODE_PURE;
 	
-	m_IsRace = false;
 	m_RaceMsgSent = false;
 	m_ShowOthers = -1;
 	for(int i = 0; i < 2; i++)
@@ -397,7 +444,6 @@ void CGameClient::OnReset()
 	m_Tuning = CTuningParams();
 
 	// Race
-	m_IsRace = false;
 	m_RaceMsgSent = false;
 	m_ShowOthers = -1;
 }
@@ -526,6 +572,10 @@ void CGameClient::OnRelease()
 
 void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 {
+	CServerInfo ServerInfo;
+	Client()->GetServerInfo(&ServerInfo);
+	bool DDNet = IsDDNet(&ServerInfo);
+
 	// special messages
 	if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
 	{
@@ -544,6 +594,16 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		// apply new tuning
 		m_Tuning = NewTuning;
 		return;
+	}
+
+	if(DDNet)
+	{
+		if(MsgId == 27)
+			MsgId = NETMSGTYPE_SV_RACETIME;
+		else if(MsgId == 28)
+			MsgId = NETMSGTYPE_SV_RECORD;
+		else if (MsgId == 29)
+			MsgId = NETMSGTYPE_SV_PLAYERTIME;
 	}
 
 	void *pRawMsg = m_NetObjHandler.SecureUnpackMsg(MsgId, pUnpacker);
@@ -588,12 +648,13 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 	else if(MsgId == NETMSGTYPE_SV_PLAYERTIME)
 	{
 		CNetMsg_Sv_PlayerTime *pMsg = (CNetMsg_Sv_PlayerTime *)pRawMsg;
+		if(DDNet) pMsg->m_Time *= 10;
 		m_aClients[pMsg->m_ClientID].m_Score = pMsg->m_Time;
 	}
 	else if(MsgId == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
-		if(pMsg->m_ClientID == -1)
+		if(pMsg->m_ClientID == -1 && IsRace(&ServerInfo))
 		{
 			// store the name
 			char aPlayername[MAX_NAME_LENGTH];
@@ -928,13 +989,16 @@ void CGameClient::OnNewSnapshot()
 			m_aClients[i].m_Friend = true;
 	}
 
+	CServerInfo CurrentServerInfo;
+	Client()->GetServerInfo(&CurrentServerInfo);
+
 	// sort player infos by score
 	mem_copy(m_Snap.m_paInfoByScore, m_Snap.m_paPlayerInfos, sizeof(m_Snap.m_paInfoByScore));
 	for(int k = 0; k < MAX_CLIENTS-1; k++) // ffs, bubblesort
 	{
 		for(int i = 0; i < MAX_CLIENTS-k-1; i++)
 		{
-			if(m_IsRace)
+			if(IsRace(&CurrentServerInfo))
 			{
 				if(m_Snap.m_paInfoByScore[i+1] && (!m_Snap.m_paInfoByScore[i] || m_aClients[m_Snap.m_paInfoByScore[i]->m_ClientID].m_Score == 0 || (m_aClients[m_Snap.m_paInfoByScore[i]->m_ClientID].m_Score > m_aClients[m_Snap.m_paInfoByScore[i+1]->m_ClientID].m_Score && m_aClients[m_Snap.m_paInfoByScore[i+1]->m_ClientID].m_Score != 0)))
 				{
@@ -967,8 +1031,6 @@ void CGameClient::OnNewSnapshot()
 	}
 
 	CTuningParams StandardTuning;
-	CServerInfo CurrentServerInfo;
-	Client()->GetServerInfo(&CurrentServerInfo);
 	if(CurrentServerInfo.m_aGameType[0] != '0')
 	{
 		if(str_comp(CurrentServerInfo.m_aGameType, "DM") != 0 && str_comp(CurrentServerInfo.m_aGameType, "TDM") != 0 && str_comp(CurrentServerInfo.m_aGameType, "CTF") != 0)
@@ -982,14 +1044,10 @@ void CGameClient::OnNewSnapshot()
 	// send race msg
 	if(m_Snap.m_pLocalInfo)
 	{
-		CServerInfo CurrentServerInfo;
-		Client()->GetServerInfo(&CurrentServerInfo);
-		if(str_find_nocase(CurrentServerInfo.m_aGameType, "race") || str_find_nocase(CurrentServerInfo.m_aGameType, "fastcap"))
+		if(IsRace(&CurrentServerInfo))
 		{
-			if(!m_IsRace)
+			if(!m_RaceMsgSent)
 			{
-				m_IsRace = true;
-				
 				// send login
 				if(ServerBrowser()->IsTeerace(CurrentServerInfo.m_NetAddr) && g_Config.m_WaApiToken[0])
 				{
@@ -997,15 +1055,12 @@ void CGameClient::OnNewSnapshot()
 					str_format(aLogin, sizeof(aLogin), "teerace:%s", g_Config.m_WaApiToken);
 					Client()->RconAuth("", aLogin);
 				}
-			}
-			
-			if(str_find_nocase(CurrentServerInfo.m_aGameType, "fastcap"))
-				m_IsFastCap = true;
-			
-			if(!m_RaceMsgSent && m_Snap.m_pLocalInfo)
-			{
-				CNetMsg_Cl_IsRace Msg;
-				Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
+
+				CMsgPacker Msg(NETMSGTYPE_CL_ISRACE);
+				Msg.AddInt(1); // we have basic DDNet functionality
+				Msg.AddInt(2); // race client version
+				Client()->SendMsg(&Msg, MSGFLAG_VITAL);
+
 				m_RaceMsgSent = true;
 			}
 			
@@ -1015,25 +1070,30 @@ void CGameClient::OnNewSnapshot()
 					m_ShowOthers = 1;
 				else
 				{
-					CNetMsg_Cl_RaceShowOthers Msg;
-					Msg.m_Active = g_Config.m_ClShowOthers;
-					Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
-					
 					m_ShowOthers = g_Config.m_ClShowOthers;
+					if(IsDDNet(&CurrentServerInfo))
+					{
+						CMsgPacker Msg(31 /* NETMSGTYPE_CL_SHOWOTHERS */);
+						Msg.AddInt(m_ShowOthers);
+						Client()->SendMsg(&Msg, MSGFLAG_VITAL);
+					}
+					else
+					{
+						CNetMsg_Cl_RaceShowOthers Msg;
+						Msg.m_Active = m_ShowOthers;
+						Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
+					}
 				}
+			}
+
+			for(int i = 0; i < MAX_CLIENTS; i++)
+			{
+				if (!Online[i])
+					m_aClients[i].m_Score = 0;
 			}
 		}
 	}
 	
-	// reset all scores of offline players
-	if(m_IsRace)
-	{
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(!Online[i])
-				m_aClients[i].m_Score = 0;
-		}
-	}
 	// add tuning to demo
 	if(DemoRecorder()->IsRecording() && mem_comp(&StandardTuning, &m_Tuning, sizeof(CTuningParams)) != 0)
 	{

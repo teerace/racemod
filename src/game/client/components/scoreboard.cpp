@@ -125,6 +125,10 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 	if(Team == TEAM_SPECTATORS)
 		return;
 
+	CServerInfo ServerInfo;
+	Client()->GetServerInfo(&ServerInfo);
+	bool Race = IsRace(&ServerInfo);
+
 	float h = 760.0f;
 
 	// background
@@ -152,7 +156,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		if(m_pClient->m_Snap.m_pGameDataObj)
 		{
 			int Score = Team == TEAM_RED ? m_pClient->m_Snap.m_pGameDataObj->m_TeamscoreRed : m_pClient->m_Snap.m_pGameDataObj->m_TeamscoreBlue;
-			if(!m_pClient->m_IsRace)
+			if(!Race)
 				str_format(aBuf, sizeof(aBuf), "%d", Score);
 		}
 	}
@@ -167,7 +171,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		else if(m_pClient->m_Snap.m_pLocalInfo)
 		{
 			int Score = m_pClient->m_Snap.m_pLocalInfo->m_Score;
-			if(!m_pClient->m_IsRace)
+			if(!Race)
 				str_format(aBuf, sizeof(aBuf), "%d", Score);
 		}
 	}
@@ -195,12 +199,12 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
  	}
 	
 	float RaceOffset = 0.0f;
-	if(m_pClient->m_IsRace)
+	if(Race)
 		RaceOffset = 30.0f;
 	
-	float ScoreOffset = x+10.0f, ScoreLength = m_pClient->m_IsRace ? 125.0f : 60.0f;
+	float ScoreOffset = x+10.0f, ScoreLength = Race ? 125.0f : 60.0f;
 	float TeeOffset = ScoreOffset+ScoreLength, TeeLength = 60*TeeSizeMod;
-	float NameOffset = TeeOffset+TeeLength, NameLength = m_pClient->m_IsRace ? 250-TeeLength : 300.0f-TeeLength;
+	float NameOffset = TeeOffset+TeeLength, NameLength = Race ? 250-TeeLength : 300.0f-TeeLength;
 	float PingOffset = x+610.0f+RaceOffset, PingLength = 65.0f;
 	float CountryOffset = PingOffset-(LineHeight-Spacing-TeeSizeMod*5.0f)*2.0f, CountryLength = (LineHeight-Spacing-TeeSizeMod*5.0f)*2.0f;
 	float ClanOffset = x+370.0f+RaceOffset, ClanLength = 230.0f-CountryLength;
@@ -209,7 +213,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 	y += 50.0f;
 	float HeadlineFontsize = 22.0f;
 	tw = TextRender()->TextWidth(0, HeadlineFontsize, Localize("Score"), -1);
-	if(m_pClient->m_IsRace)
+	if(Race)
 		TextRender()->Text(0, ScoreOffset+ScoreLength/2-tw/2, y, HeadlineFontsize, Localize("Score"), -1);
 	else
 		TextRender()->Text(0, ScoreOffset+ScoreLength-tw, y, HeadlineFontsize, Localize("Score"), -1);
@@ -245,7 +249,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		}
 
 		// score
-		if(m_pClient->m_IsRace)
+		if(Race)
 		{
 			// reset time
 			if(pInfo->m_Score == -9999)
@@ -363,7 +367,9 @@ void CScoreboard::OnRender()
 	float w = 700.0f;
 	
 	// resize scoreboard for race
-	if(m_pClient->m_IsRace)
+	CServerInfo ServerInfo;
+	Client()->GetServerInfo(&ServerInfo);
+	if(IsRace(&ServerInfo))
 		w += 40.0f;
 		
 	if(m_pClient->m_Snap.m_pGameInfoObj)

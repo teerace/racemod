@@ -2,7 +2,6 @@
 #ifndef GAME_SERVER_GAMEMODES_RACE_H
 #define GAME_SERVER_GAMEMODES_RACE_H
 
-#include <game/server/gamecontext.h>
 #include <game/server/gamecontroller.h>
 #include <game/server/score.h>
 
@@ -22,8 +21,8 @@ protected:
 	struct CRaceData
 	{
 		int m_RaceState;
-		int m_StartTime;
-		int m_RefreshTime;
+		int m_StartTick;
+		int m_RefreshTick;
 
 		int m_aCpCurrent[NUM_CHECKPOINTS];
 		int m_CpTick;
@@ -34,8 +33,8 @@ protected:
 		void Reset()
 		{
 			m_RaceState = RACE_NONE;
-			m_StartTime = -1;
-			m_RefreshTime = -1;
+			m_StartTick = -1;
+			m_RefreshTick = -1;
 			mem_zero(m_aCpCurrent, sizeof(m_aCpCurrent));
 			m_CpTick = -1;
 			m_CpDiff = 0;
@@ -62,6 +61,7 @@ public:
 
 	virtual void DoWincheck();
 	virtual void Tick();
+	virtual void Snap(int SnappingClient);
 	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 
 	virtual void ProcessRaceTile(int ID, int TilePos, vec2 PrevPos, vec2 Pos);

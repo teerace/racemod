@@ -101,7 +101,8 @@ public:
 	bool m_ResetPickups;
 	bool m_ShowOthers;
 	
-	bool m_IsUsingRaceClient;
+	int m_DDNetClient;
+	int m_RaceClient;
 	
 private:
 	CCharacter *m_pCharacter;

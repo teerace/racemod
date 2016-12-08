@@ -35,14 +35,16 @@ void CHud::OnReset()
 	m_CheckpointTick = 0;
 	m_CheckpointDiff = 0;
 	m_RaceTime = 0;
-	m_Record = 0;
-	m_LastReceivedTimeTick = -1;
-	m_RaceState = RACE_NONE;
+	m_ServerRecord = 0;
+	m_OldTimer = false;
 }
 
 void CHud::RenderGameTimer()
 {
 	float Half = 300.0f*Graphics()->ScreenAspect()/2.0f;
+
+	CServerInfo ServerInfo;
+	Client()->GetServerInfo(&ServerInfo);
 
 	if(!(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags&GAMESTATEFLAG_SUDDENDEATH))
 	{
@@ -50,21 +52,27 @@ void CHud::RenderGameTimer()
 		int Time = 0;
 		if(m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit && !m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer)
 		{
-			Time = m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit*60 - ((Client()->GameTick()-m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick)/Client()->GameTickSpeed());
+			Time = m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit*60*10 - ((Client()->GameTick()-m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick)*10/Client()->GameTickSpeed());
 
 			if(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags&GAMESTATEFLAG_GAMEOVER)
 				Time = 0;
 		}
 		else
-			Time = (Client()->GameTick()-m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick)/Client()->GameTickSpeed();
+			Time = (Client()->GameTick()-m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick)*10/Client()->GameTickSpeed();
 
-		str_format(Buf, sizeof(Buf), "%d:%02d", Time/60, Time%60);
+		int Sec = Time / 10;
+		if(IsRace(&ServerInfo) && !m_OldTimer)
+			str_format(Buf, sizeof(Buf), "%d:%02d.%d", Sec/60, Sec%60, Time%10);
+		else if(m_OldTimer)
+			str_format(Buf, sizeof(Buf), "%d:%02d", m_RaceTime/60, m_RaceTime%60);
+		else
+			str_format(Buf, sizeof(Buf), "%d:%02d", Sec/60, Sec%60);
 		float FontSize = 10.0f;
 		float w = TextRender()->TextWidth(0, FontSize, Buf, -1);
 		// last 60 sec red, last 10 sec blink
-		if(m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit && Time <= 60 && !m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer)
+		if(m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit && Sec <= 60 && !m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer)
 		{
-			float Alpha = Time <= 10 && (2*time_get()/time_freq()) % 2 ? 0.5f : 1.0f;
+			float Alpha = Sec <= 10 && (2*time_get()/time_freq()) % 2 ? 0.5f : 1.0f;
 			TextRender()->TextColor(1.0f, 0.25f, 0.25f, Alpha);
 		}
 		TextRender()->Text(0, Half-w/2, 2, FontSize, Buf, -1);
@@ -111,7 +119,8 @@ void CHud::RenderSuddenDeath()
 void CHud::RenderScoreHud()
 {
 	// render small score hud
-	if(!m_pClient->m_IsRace && !(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags&GAMESTATEFLAG_GAMEOVER))
+
+	if(!(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags&GAMESTATEFLAG_GAMEOVER))
 	{
 		int GameFlags = m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags;
 		float Whole = 300*Graphics()->ScreenAspect();
@@ -315,9 +324,6 @@ void CHud::RenderConnectionWarning()
 
 void CHud::RenderTeambalanceWarning()
 {
-	if(m_pClient->m_IsRace)
-		return;
-	
 	// render prompt about team-balance
 	bool Flash = time_get()/(time_freq()/2)%2 == 0;
 	if(m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_TEAMS)
@@ -556,73 +562,41 @@ void CHud::RenderSpeedmeter()
 	TextRender()->Text(0, m_Width-5-TextRender()->TextWidth(0,12,aBuf,-1), 226, 12, aBuf, -1);
 }
 
-void CHud::RenderTime()
+void CHud::RenderCheckpoint()
 {
-	if(!m_pClient->m_IsRace)
-		return;
-	
-	char aBuf[64];
-	if(m_FinishTime && m_RaceState == RACE_FINISHED)
+	if(g_Config.m_ClShowCheckpointDiff && m_CheckpointTick+Client()->GameTickSpeed()*6 > Client()->GameTick())
 	{
-		str_format(aBuf, sizeof(aBuf), "%s: %02d:%02d.%03d", Localize("Finish time"),
-			m_FinishTime / (60 * 1000), (m_FinishTime / 1000) % 60, m_FinishTime % 1000);
-		TextRender()->Text(0, 150*Graphics()->ScreenAspect()-TextRender()->TextWidth(0,12,aBuf,-1)/2, 20, 12, aBuf, -1);
-	}
-		
-	if(m_RaceTime)
-	{
-		if(m_RaceState == RACE_STARTED)
+		char aBuf[64];
+		IRace::FormatTimeDiff(aBuf, sizeof(aBuf), m_CheckpointDiff, false);
+			
+		// calculate alpha (4 sec 1 than get lower the next 2 sec)
+		float a = 1.0f;
+		if(m_CheckpointTick+Client()->GameTickSpeed()*4 < Client()->GameTick() && m_CheckpointTick+Client()->GameTickSpeed()*6 > Client()->GameTick())
 		{
-			str_format(aBuf, sizeof(aBuf), "%02d:%02d.%d", m_RaceTime/60, m_RaceTime%60, m_RaceTick/10);
-			TextRender()->Text(0, 150*Graphics()->ScreenAspect()-TextRender()->TextWidth(0,12,"00:00.0",-1)/2, 20, 12, aBuf, -1); // use fixed value for text width so its not shaky
+			// lower the alpha slowly to blend text out
+			a = ((float)(m_CheckpointTick+Client()->GameTickSpeed()*6) - (float)Client()->GameTick()) / (float)(Client()->GameTickSpeed()*2);
 		}
-	
-		if(g_Config.m_ClShowCheckpointDiff && m_CheckpointTick+Client()->GameTickSpeed()*6 > Client()->GameTick())
-		{
-			str_format(aBuf, sizeof(aBuf), "%+5.2f", m_CheckpointDiff);
 			
-			// calculate alpha (4 sec 1 than get lower the next 2 sec)
-			float a = 1.0f;
-			if(m_CheckpointTick+Client()->GameTickSpeed()*4 < Client()->GameTick() && m_CheckpointTick+Client()->GameTickSpeed()*6 > Client()->GameTick())
-			{
-				// lower the alpha slowly to blend text out
-				a = ((float)(m_CheckpointTick+Client()->GameTickSpeed()*6) - (float)Client()->GameTick()) / (float)(Client()->GameTickSpeed()*2);
-			}
+		if(m_CheckpointDiff > 0)
+			TextRender()->TextColor(1.0f,0.5f,0.5f,a); // red
+		else if(m_CheckpointDiff < 0)
+			TextRender()->TextColor(0.5f,1.0f,0.5f,a); // green
+		else if(!m_CheckpointDiff)
+			TextRender()->TextColor(1,1,1,a); // white
+		TextRender()->Text(0, 150*Graphics()->ScreenAspect()-TextRender()->TextWidth(0, 10, aBuf, -1)/2, 33, 10, aBuf, -1);
 			
-			if(m_CheckpointDiff > 0)
-				TextRender()->TextColor(1.0f,0.5f,0.5f,a); // red
-			else if(m_CheckpointDiff < 0)
-				TextRender()->TextColor(0.5f,1.0f,0.5f,a); // green
-			else if(!m_CheckpointDiff)
-				TextRender()->TextColor(1,1,1,a); // white
-			TextRender()->Text(0, 150*Graphics()->ScreenAspect()-TextRender()->TextWidth(0, 10, aBuf, -1)/2, 33, 10, aBuf, -1);
-			
-			TextRender()->TextColor(1,1,1,1);
-		}
+		TextRender()->TextColor(1,1,1,1);
 	}
-	
-	static int LastChangeTick = 0;
-	if(LastChangeTick != Client()->PredGameTick())
-	{	
-		m_RaceTick += 100/Client()->GameTickSpeed();
-		LastChangeTick = Client()->PredGameTick();
-	}
-	
-	if(m_RaceTick >= 100)
-		m_RaceTick = 0;
 }
 
 void CHud::RenderRecord()
 {	
-	if(!m_pClient->m_IsRace)
-		return;
-	
 	// TODO: fix this
-	if(m_Record && g_Config.m_ClShowServerRecord && g_Config.m_ClShowRecords)
+	if(m_ServerRecord && g_Config.m_ClShowServerRecord && g_Config.m_ClShowRecords)
 	{
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "%s: %02d:%02d.%03d", Localize("Server best"),
-			m_Record / (60 * 1000), (m_Record / 1000) % 60, m_Record  % 1000);
+			m_ServerRecord / (60 * 1000), (m_ServerRecord / 1000) % 60, m_ServerRecord  % 1000);
 		TextRender()->Text(0, 5, 40, 6, aBuf, -1);
 	}
 }
@@ -631,6 +605,10 @@ void CHud::OnRender()
 {
 	if(!m_pClient->m_Snap.m_pGameInfoObj)
 		return;
+
+	CServerInfo ServerInfo;
+	Client()->GetServerInfo(&ServerInfo);
+	bool Race = IsRace(&ServerInfo);
 
 	m_Width = 300.0f*Graphics()->ScreenAspect();
 	m_Height = 300.0f;
@@ -642,7 +620,7 @@ void CHud::OnRender()
 		{
 			RenderHealthAndAmmo(m_pClient->m_Snap.m_pLocalCharacter);
 			RenderSpeedmeter();
-			RenderTime();
+			if(Race) RenderCheckpoint();
 		}
 		else if(m_pClient->m_Snap.m_SpecInfo.m_Active)
 		{
@@ -654,34 +632,33 @@ void CHud::OnRender()
 		RenderGameTimer();
 		RenderPauseNotification();
 		RenderSuddenDeath();
-		RenderScoreHud();
+		if(!Race) RenderScoreHud();
 		RenderWarmupTimer();
 		RenderFps();
 		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderConnectionWarning();
-		RenderTeambalanceWarning();
+		if(!Race) RenderTeambalanceWarning();
 		RenderVoting();
+		if(Race) RenderRecord();
 	}
-	RenderRecord();
 	RenderCursor();
 }
 
 void CHud::OnMessage(int MsgType, void *pRawMsg)
 {
+	CServerInfo ServerInfo;
+	Client()->GetServerInfo(&ServerInfo);
+
 	if(MsgType == NETMSGTYPE_SV_RACETIME)
 	{
-		// activate racestate just in case
-		m_RaceState = RACE_STARTED;
-		
 		CNetMsg_Sv_RaceTime *pMsg = (CNetMsg_Sv_RaceTime *)pRawMsg;
 		m_RaceTime = pMsg->m_Time;
-		m_RaceTick = 0;
-		
-		m_LastReceivedTimeTick = Client()->GameTick();
+		if(!IsDDNet(&ServerInfo) && m_RaceTime)
+			m_OldTimer = true;
 		
 		if(pMsg->m_Check)
 		{
-			m_CheckpointDiff = (float)pMsg->m_Check/100;
+			m_CheckpointDiff = pMsg->m_Check * 10;
 			m_CheckpointTick = Client()->GameTick();
 		}
 	}
@@ -692,26 +669,12 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 		{
 			m_CheckpointTick = 0;
 			m_RaceTime = 0;
-			m_RaceState = RACE_NONE;
 		}
 	}
 	else if(MsgType == NETMSGTYPE_SV_RECORD)
 	{
 		CNetMsg_Sv_Record *pMsg = (CNetMsg_Sv_Record *)pRawMsg;
-		m_Record = pMsg->m_Time;
-	}
-	else if(MsgType == NETMSGTYPE_SV_CHAT)
-	{
-		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
-		if(pMsg->m_ClientID)
-		{
-			char aPlayerName[MAX_NAME_LENGTH];
-			int Time = IRace::TimeFromFinishMessage(pMsg->m_pMessage, aPlayerName, sizeof(aPlayerName));
-			if(Time && str_comp(aPlayerName, m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientID].m_aName) == 0)
-			{
-				m_RaceState = RACE_FINISHED;
-				m_FinishTime = Time;
-			}
-		}
+		if(IsDDNet(&ServerInfo)) pMsg->m_Time *= 10;
+		m_ServerRecord = pMsg->m_Time;
 	}
 }
