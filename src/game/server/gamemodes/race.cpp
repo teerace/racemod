@@ -62,20 +62,12 @@ void CGameControllerRACE::Tick()
 	{
 		CRaceData *p = &m_aRace[i];
 
-		if(p->m_RaceState == RACE_STARTED)
+		if(p->m_RaceState == RACE_STARTED && GameServer()->m_apPlayers[i]->m_RaceClient == 1 &&
+			Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed())
 		{
 			bool Checkpoint = p->m_CpTick != -1 && p->m_CpTick > Server()->Tick();
-			if(GameServer()->m_apPlayers[i]->m_RaceClient == 1 && Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed())
-			{
-				GameServer()->SendRaceTime(i, GetTime(i), Checkpoint ? p->m_CpDiff : 0);
-				p->m_RefreshTick = Server()->Tick();
-			}
-			else if(GameServer()->m_apPlayers[i]->m_RaceClient != 1 && Checkpoint) // only send checkpoints
-			{
-				int Time = GameServer()->m_apPlayers[i]->m_DDNetClient ? GetTime(i) : 0;
-				GameServer()->SendRaceTime(i, Time, p->m_CpDiff);
-				p->m_CpTick = -1;
-			}
+			GameServer()->SendRaceTime(i, GetTime(i), Checkpoint ? p->m_CpDiff : 0);
+			p->m_RefreshTick = Server()->Tick();
 		}
 		
 #if defined(CONF_TEERACE)
@@ -125,8 +117,18 @@ bool CGameControllerRACE::OnCheckpoint(int ID, int z)
 
 	if(pBest->m_Time && pBest->m_aCpTime[z] != 0)
 	{
-		p->m_CpDiff = p->m_aCpCurrent[z] - pBest->m_aCpTime[z];
-		p->m_CpTick = Server()->Tick() + Server()->TickSpeed()*2;
+		int Diff = p->m_aCpCurrent[z] - pBest->m_aCpTime[z];
+		if(GameServer()->m_apPlayers[ID]->m_RaceClient == 1)
+		{
+			p->m_CpDiff = Diff;
+			p->m_CpTick = Server()->Tick() + Server()->TickSpeed() * 2;
+		}
+		else if(Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed() / 2)
+		{
+			int Time = GameServer()->m_apPlayers[ID]->m_DDNetClient ? GetTime(ID) : 0;
+			GameServer()->SendRaceTime(ID, Time, Diff);
+			p->m_RefreshTick = Server()->Tick();
+		}
 	}
 
 	return true;

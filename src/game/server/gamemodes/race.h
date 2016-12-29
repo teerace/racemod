@@ -25,6 +25,7 @@ protected:
 		int m_RefreshTick;
 
 		int m_aCpCurrent[NUM_CHECKPOINTS];
+		// only used for old client
 		int m_CpTick;
 		int m_CpDiff;
 
