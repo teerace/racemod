@@ -32,7 +32,7 @@ CHud::CHud()
 
 void CHud::OnReset()
 {
-	m_CheckpointTick = 0;
+	m_CheckpointTick = -1;
 	m_CheckpointDiff = 0;
 	m_RaceTime = 0;
 	m_ServerRecord = 0;
@@ -564,17 +564,18 @@ void CHud::RenderSpeedmeter()
 
 void CHud::RenderCheckpoint()
 {
-	if(g_Config.m_ClShowCheckpointDiff && m_CheckpointTick+Client()->GameTickSpeed()*6 > Client()->GameTick())
+	int TicksSinceCheckpoint = Client()->GameTick() - m_CheckpointTick;
+	if(m_CheckpointTick != -1 && TicksSinceCheckpoint < Client()->GameTickSpeed()*4)
 	{
 		char aBuf[64];
 		IRace::FormatTimeDiff(aBuf, sizeof(aBuf), m_CheckpointDiff, false);
 			
-		// calculate alpha (4 sec 1 than get lower the next 2 sec)
+		// calculate alpha (2 sec 1 than get lower the next 2 sec)
 		float a = 1.0f;
-		if(m_CheckpointTick+Client()->GameTickSpeed()*4 < Client()->GameTick() && m_CheckpointTick+Client()->GameTickSpeed()*6 > Client()->GameTick())
+		if(TicksSinceCheckpoint > Client()->GameTickSpeed()*2)
 		{
 			// lower the alpha slowly to blend text out
-			a = ((float)(m_CheckpointTick+Client()->GameTickSpeed()*6) - (float)Client()->GameTick()) / (float)(Client()->GameTickSpeed()*2);
+			a = (Client()->GameTickSpeed()*4 - TicksSinceCheckpoint) / (float)(Client()->GameTickSpeed()*2);
 		}
 			
 		if(m_CheckpointDiff > 0)
@@ -620,7 +621,7 @@ void CHud::OnRender()
 		{
 			RenderHealthAndAmmo(m_pClient->m_Snap.m_pLocalCharacter);
 			RenderSpeedmeter();
-			if(Race) RenderCheckpoint();
+			if(Race && g_Config.m_ClShowCheckpointDiff) RenderCheckpoint();
 		}
 		else if(m_pClient->m_Snap.m_SpecInfo.m_Active)
 		{
@@ -667,7 +668,7 @@ void CHud::OnMessage(int MsgType, void *pRawMsg)
 		CNetMsg_Sv_KillMsg *pMsg = (CNetMsg_Sv_KillMsg *)pRawMsg;
 		if(pMsg->m_Victim == m_pClient->m_Snap.m_LocalClientID)
 		{
-			m_CheckpointTick = 0;
+			m_CheckpointTick = -1;
 			m_RaceTime = 0;
 		}
 	}
