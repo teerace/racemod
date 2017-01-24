@@ -497,6 +497,8 @@ void CGameClient::UpdatePositions()
 static void Evolve(CNetObj_Character *pCharacter, int Tick)
 {
 	CWorldCore TempWorld;
+	// TODO: server info
+	TempWorld.m_Teleport = g_Config.m_ClPredictTeleport;
 	CCharacterCore TempCore;
 	mem_zero(&TempCore, sizeof(TempCore));
 	TempCore.Init(&TempWorld, g_GameClient.Collision());
