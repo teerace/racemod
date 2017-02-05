@@ -104,7 +104,7 @@ void CMenus::RenderGame(CUIRect MainView)
 
 	static int s_DemoButton = 0;
 	bool Recording = DemoRecorder()->IsRecording();
-	if(DoButton_Menu(&s_DemoButton, Localize(Recording ? "Stop record" : "Record demo"), 0, &Button))	// Localize("Stop record");Localize("Record demo");
+	if(DoButton_Menu(&s_DemoButton, Recording ? Localize("Stop record") : Localize("Record demo"), 0, &Button))
 	{
 		if(!Recording)
 			Client()->DemoRecorder_Start("demo", true);
@@ -909,7 +909,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 	bool Delete = !pGhost->HasFile();
 	const char *pText = pGhost->Active() ? (Delete ? Localize("Delete") : Localize("Deactivate")) : Localize("Activate");
 	
-	if(DoButton_Menu(&s_GhostButton, Localize(pText), 0, &Button) || (NewSelected != -1 && Input()->MouseDoubleClick()))
+	if(DoButton_Menu(&s_GhostButton, pText, 0, &Button) || (NewSelected != -1 && Input()->MouseDoubleClick()))
 	{
 		if(pGhost->Active())
 		{
