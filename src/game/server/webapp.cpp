@@ -75,7 +75,7 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 	Server()->SendHttp(pInfo, pRequest);
 }
 
-CServerWebapp::CServerWebapp(CGameContext *pGameServer) : m_LastPing(-1), m_pGameServer(pGameServer), m_LastMapListLoad(-1)
+CServerWebapp::CServerWebapp(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
@@ -385,6 +385,8 @@ void CServerWebapp::OnAuth(int ClientID, const char *pToken, int SendRconCmds)
 
 void CServerWebapp::Tick()
 {
+	int64 Now = time_get();
+
 	// do uploads
 	for(int i = 0; i < m_lUploads.size(); i++)
 	{
@@ -396,58 +398,12 @@ void CServerWebapp::Tick()
 		}
 	}
 
-	// load maplist every 20 minutes
-	if(m_LastMapListLoad == -1 || m_LastMapListLoad + Server()->TickSpeed() * 60 * 20 < Server()->Tick())
-	{
+	// reload maplist regularly
+	if(m_LastMapListLoad < 0 || m_LastMapListLoad + time_freq() * 60 * g_Config.m_WaMaplistRefreshInterval < Now)
 		LoadMapList();
-		m_LastMapListLoad = Server()->Tick();
-	}
 
-	if(m_LastPing == -1 || m_LastPing+Server()->TickSpeed()*60 < Server()->Tick())
-	{
-		json_value *pData = json_object_new(3);
-		json_value *pUsers = json_object_new(0);
-		json_value *pAnonymous = json_array_new(0);
-		int Num = 0;
-		for(int i = 0; i < MAX_CLIENTS; i++)
-		{
-			if(GameServer()->m_apPlayers[i])
-			{
-				if(Server()->GetUserID(i) > 0)
-				{
-					char aBuf[16];
-					str_format(aBuf, sizeof(aBuf), "%d", Server()->GetUserID(i));
-					char aName[MAX_NAME_LENGTH];
-					str_copy(aName, Server()->ClientName(i), sizeof(aName));
-					str_sanitize_strong(aName);
-					json_object_push(pUsers, aBuf, json_string_new(aName));
-				}
-				else
-				{
-					char aName[MAX_NAME_LENGTH];
-					str_copy(aName, Server()->ClientName(i), sizeof(aName));
-					str_sanitize_strong(aName);
-					json_array_push(pAnonymous, json_string_new(aName));
-					Num++;
-				}
-			}
-		}
-		json_object_push(pData, "users", pUsers);
-		json_object_push(pData, "anonymous", pAnonymous);
-		json_object_push(pData, "map", json_string_new(g_Config.m_SvMap));
-		char *pJson = new char[json_measure(pData)];
-		json_serialize(pJson, pData);
-		json_builder_free(pData);
-			
-		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/ping/");
-		pRequest->SetBody(pJson, str_length(pJson), "application/json");
-		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-		pInfo->SetCallback(CServerWebapp::OnPingPing, this);
-		Server()->SendHttp(pInfo, pRequest);
-		delete[] pJson;
-			
-		m_LastPing = Server()->Tick();
-	}
+	if(m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now)
+		SendPing();
 }
 
 void CServerWebapp::LoadMapList()
@@ -459,6 +415,54 @@ void CServerWebapp::LoadMapList()
 	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 	pInfo->SetCallback(OnMapList, this);
 	Server()->SendHttp(pInfo, pRequest);
+
+	m_LastMapListLoad = time_get();
+}
+
+void CServerWebapp::SendPing()
+{
+	json_value *pData = json_object_new(3);
+	json_value *pUsers = json_object_new(0);
+	json_value *pAnonymous = json_array_new(0);
+	int Num = 0;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(GameServer()->m_apPlayers[i])
+		{
+			if(Server()->GetUserID(i) > 0)
+			{
+				char aBuf[16];
+				str_format(aBuf, sizeof(aBuf), "%d", Server()->GetUserID(i));
+				char aName[MAX_NAME_LENGTH];
+				str_copy(aName, Server()->ClientName(i), sizeof(aName));
+				str_sanitize_strong(aName);
+				json_object_push(pUsers, aBuf, json_string_new(aName));
+			}
+			else
+			{
+				char aName[MAX_NAME_LENGTH];
+				str_copy(aName, Server()->ClientName(i), sizeof(aName));
+				str_sanitize_strong(aName);
+				json_array_push(pAnonymous, json_string_new(aName));
+				Num++;
+			}
+		}
+	}
+	json_object_push(pData, "users", pUsers);
+	json_object_push(pData, "anonymous", pAnonymous);
+	json_object_push(pData, "map", json_string_new(g_Config.m_SvMap));
+	char *pJson = new char[json_measure(pData)];
+	json_serialize(pJson, pData);
+	json_builder_free(pData);
+
+	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/ping/");
+	pRequest->SetBody(pJson, str_length(pJson), "application/json");
+	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo->SetCallback(CServerWebapp::OnPingPing, this);
+	Server()->SendHttp(pInfo, pRequest);
+	delete[] pJson;
+
+	m_LastPing = time_get();
 }
 
 void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime)

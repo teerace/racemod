@@ -32,8 +32,6 @@ public:
 		bool operator<(const CMapInfo& Other) { return this->m_ID < Other.m_ID; }
 	};
 
-	int m_LastPing;
-
 	// helper functions
 	static class CBufferRequest *CreateAuthedApiRequest(int Method, const char *pURI);
 	static void RegisterFields(IRequest *pRequest);
@@ -46,6 +44,8 @@ public:
 	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
 	int GetMapCount() { return m_lMapList.size(); }
 	void LoadMapList();
+	void SendPing();
+
 	void OnInit();
 	void OnAuth(int ClientID, const char *pToken, int SendRconCmds);
 	void Tick();
@@ -98,7 +98,8 @@ private:
 
 	array<CUpload> m_lUploads;
 
-	int m_LastMapListLoad;
+	int64 m_LastPing;
+	int64 m_LastMapListLoad;
 	sorted_array<CMapInfo> m_lMapList;
 	CMapInfo m_CurrentMap;
 

@@ -157,7 +157,7 @@ void CGameContext::ConPing(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(pSelf->m_pWebapp)
-		pSelf->m_pWebapp->m_LastPing = -1;
+		pSelf->m_pWebapp->SendPing();
 }
 
 void CGameContext::ConMaplist(IConsole::IResult *pResult, void *pUserData)
