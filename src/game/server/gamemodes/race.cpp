@@ -179,17 +179,35 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 
 	p->m_RaceState = RACE_FINISHED;
 
+	// TODO:
+	// move all this into the scoring classes so the selected
+	// scoring backend can decide how to handle the situation
+
+	// run is invalid if tuning is modified
+	if(!GameServer()->IsPureTuning())
+	{
+#if defined(CONF_TEERACE)
+	if(Server()->RaceRecorder_IsRecording(ID))
+		Server()->RaceRecorder_Stop(ID);
+	if(Server()->GhostRecorder_IsRecording(ID))
+		Server()->GhostRecorder_Stop(ID, 0);
+#endif
+		return true;
+	}
+
 	// add the time from the start
 	FinishTime += p->m_StartAddTime;
 	
 	GameServer()->m_apPlayers[ID]->m_Score = max(-(FinishTime / 1000), GameServer()->m_apPlayers[ID]->m_Score);
 
 	int Improved = FinishTime - pBest->m_Time;
-	bool NewRecord = pBest->Check(FinishTime, p->m_aCpCurrent);
+	bool NewPersonalRecord = pBest->Check(FinishTime, p->m_aCpCurrent);
 
 	// save the score
-	GameServer()->Score()->SaveScore(ID, FinishTime, p->m_aCpCurrent, NewRecord);
-	if(NewRecord && GameServer()->Score()->CheckRecord(ID) && g_Config.m_SvShowTimes)
+	GameServer()->Score()->SaveScore(ID, FinishTime, p->m_aCpCurrent, NewPersonalRecord);
+
+	// check for map record
+	if(NewPersonalRecord && GameServer()->Score()->CheckRecord(ID) && g_Config.m_SvShowTimes)
 		GameServer()->SendRecord(-1);
 
 	char aBuf[128];
@@ -213,6 +231,8 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 #if defined(CONF_TEERACE)
 	if(Server()->RaceRecorder_IsRecording(ID))
 		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
+	if(Server()->GhostRecorder_IsRecording(ID))
+		Server()->GhostRecorder_Stop(ID, FinishTime);
 #endif
 
 	return true;

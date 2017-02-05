@@ -397,6 +397,14 @@ void CGameContext::AbortVoteKickOnDisconnect(int ClientID)
 		m_VoteCloseTime = -1;
 }
 
+bool CGameContext::IsPureTuning() const
+{
+	CTuningParams Tuning;
+	Tuning.m_PlayerCollision = 0;
+	Tuning.m_PlayerHooking = 0;
+
+	return mem_comp(&Tuning, &m_Tuning, sizeof(Tuning)) == 0;
+}
 
 void CGameContext::CheckPureTuning()
 {

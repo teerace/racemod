@@ -110,10 +110,6 @@ void CWebappScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecor
 		// higher run count
 		Webapp()->CurrentMap()->m_RunCount++;
 	}
-	
-	// stop ghost record
-	if(Server()->GhostRecorder_IsRecording(ClientID))
-		Server()->GhostRecorder_Stop(ClientID, Time);
 }
 
 void CWebappScore::ShowTop5(int ClientID, int Debut)

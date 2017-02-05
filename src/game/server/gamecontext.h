@@ -195,6 +195,7 @@ public:
 	void SendRaceTime(int ClientID, int Time, int CpDiff);
 
 	//
+	bool IsPureTuning() const;
 	void CheckPureTuning();
 	void SendTuningParams(int ClientID);
 
