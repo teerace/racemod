@@ -158,7 +158,7 @@ bool CGameControllerFC::OnRaceEnd(int ID, int FinishTime)
 
 void CGameControllerFC::Snap(int SnappingClient)
 {
-	IGameController::Snap(SnappingClient);
+	CGameControllerRACE::Snap(SnappingClient);
 
 	CNetObj_GameData *pGameDataObj = (CNetObj_GameData *)Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData));
 	if(!pGameDataObj)
