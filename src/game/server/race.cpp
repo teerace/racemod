@@ -185,147 +185,63 @@ void CGameContext::ConReloadMaplist(IConsole::IResult *pResult, void *pUserData)
 		pSelf->m_pWebapp->LoadMapList();
 }
 
-void CGameContext::ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData)
+void SaveVoteToFile(IOHANDLE File, CServerWebapp::CMapInfo *pMapInfo)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
-	if(!pSelf->m_pWebapp)
+	if(pMapInfo->m_State != CServerWebapp::CMapInfo::MAPSTATE_COMPLETE)
 		return;
 
+	char aVoteDescription[128];
+	if(str_find(g_Config.m_WaVoteDescription, "%s"))
+		str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
+	else
+		str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
+
+	char aCommand[128];
+	str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
+
 	char aBuf[256];
-
-	// open config file
-	IOHANDLE File = 0;
-	if(!g_Config.m_WaAutoAddMaps) // only save to config if we dont add votes automatically
-	{
-		File = pSelf->Storage()->OpenFile(pSelf->Server()->GetConfigFilename(), IOFLAG_UPDATE, IStorage::TYPE_ALL);
-		if(!File)
-		{
-			str_format(aBuf, sizeof(aBuf), "failed to save vote option to config file %s", pSelf->Server()->GetConfigFilename());
-			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-		}
-	}
-
-	bool First = true;
-	int Argument = pResult->NumArguments() ? clamp(pResult->GetInteger(0), 0, pSelf->m_pWebapp->GetMapCount()-1) : -1;
-	for(int i = 0; i < pSelf->m_pWebapp->GetMapCount(); i++)
-	{
-		int ID = pResult->NumArguments() ? Argument : i;
-		CServerWebapp::CMapInfo *pMapInfo = pSelf->m_pWebapp->GetMap(ID);
-
-		char aVoteDescription[128];
-		if(str_find(g_Config.m_WaVoteDescription, "%s"))
-			str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
-		else
-			str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
-
-		// check for duplicate entry
-		int OptionFound = false;
-		CVoteOptionServer *pOption = pSelf->m_pVoteOptionFirst;
-		while(pOption)
-		{
-			if(str_comp_nocase(aVoteDescription, pOption->m_aDescription) == 0)
-			{
-				str_format(aBuf, sizeof(aBuf), "option '%s' already exists", aVoteDescription);
-				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-				OptionFound = true;
-				break;
-			}
-			pOption = pOption->m_pNext;
-		}
-
-		if(OptionFound)
-			continue;
-
-		// add the option
-		++pSelf->m_NumVoteOptions;
-		char aCommand[128];
-		str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
-		int Len = str_length(aCommand);
-
-		pOption = (CVoteOptionServer *)pSelf->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
-		pOption->m_pNext = 0;
-		pOption->m_pPrev = pSelf->m_pVoteOptionLast;
-		if(pOption->m_pPrev)
-			pOption->m_pPrev->m_pNext = pOption;
-		pSelf->m_pVoteOptionLast = pOption;
-		if(!pSelf->m_pVoteOptionFirst)
-			pSelf->m_pVoteOptionFirst = pOption;
-
-		str_copy(pOption->m_aDescription, aVoteDescription, sizeof(pOption->m_aDescription));
-		mem_copy(pOption->m_aCommand, aCommand, Len+1);
-		str_format(aBuf, sizeof(aBuf), "added option '%s' '%s'", pOption->m_aDescription, pOption->m_aCommand);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-
-		// inform clients about added option
-		CNetMsg_Sv_VoteOptionAdd OptionMsg;
-		OptionMsg.m_pDescription = pOption->m_aDescription;
-		pSelf->Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
-
-		if(File)
-		{
-			if(First)
-			{
-				io_seek(File, 0, IOSEEK_END); // seek to the end
-				First = false;
-			}
-			str_format(aBuf, sizeof(aBuf), "\nadd_vote \"%s\" \"%s\"", aVoteDescription, aCommand);
-			io_write(File, aBuf, str_length(aBuf));
-		}
-	}
-
-	if(File)
-		io_close(File);
+	str_format(aBuf, sizeof(aBuf), "\nadd_vote \"%s\" \"%s\"", aVoteDescription, aCommand);
+	io_write(File, aBuf, str_length(aBuf));
 }
 
-void CGameContext::ConchainSpecialMapTypes(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+void CGameContext::ConSaveMapVotes(IConsole::IResult *pResult, void *pUserData)
 {
-	char aTypeList[128];
-	str_copy(aTypeList, pResult->GetString(0), sizeof(aTypeList));
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!pSelf->m_pWebapp || g_Config.m_WaAutoAddMaps)
+		return;
 
-	// allways put the default for current gametype in the configuration
-	char aCurGametype[32];
-	if(str_find_nocase(g_Config.m_SvGametype, "cap"))
+	// TODO: config var for the path instead of the one from the command line arguments?
+	// open config file
+	IOHANDLE File = pSelf->Storage()->OpenFile(pSelf->Server()->GetConfigFilename(), IOFLAG_UPDATE, IStorage::TYPE_ALL);
+	if(!File)
 	{
-		if(g_Config.m_SvNoItems)
-			str_copy(aCurGametype, "fastcap-no-weapons", sizeof(aCurGametype));
-		else
-			str_copy(aCurGametype, "fastcap", sizeof(aCurGametype));
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "failed to save vote option to config file %s", pSelf->Server()->GetConfigFilename());
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
+		return;
+	}
+
+	io_seek(File, 0, IOSEEK_END); // seek to the end
+
+	if(pResult->NumArguments() > 0)
+	{
+		int Argument = clamp(pResult->GetInteger(0), 0, pSelf->m_pWebapp->GetMapCount() - 1);
+		SaveVoteToFile(File, pSelf->m_pWebapp->GetMap(Argument));
 	}
 	else
-		str_copy(aCurGametype, "race", sizeof(aCurGametype));
-
-	bool GameTypeFound = false;
-	const char *pCurrentGametype = aCurGametype;
-	int CurrentGametypeLen = str_length(aCurGametype);
-	const char *pNextType = aTypeList;
-	while(*pNextType)
 	{
-		int WordLen = 0;
-		while(pNextType[WordLen] && pNextType[WordLen] != ' ')
-			WordLen++;
-
-		if(WordLen == CurrentGametypeLen && str_comp_num(pNextType, pCurrentGametype, CurrentGametypeLen) == 0)
-		{
-			pNextType += CurrentGametypeLen;
-			while(*pNextType && *pNextType == ' ')
-				pNextType++;
-
-			GameTypeFound = true;
-			break;
-		}
-
-		pNextType++;
+		for(int i = 0; i < pSelf->m_pWebapp->GetMapCount(); i++)
+			SaveVoteToFile(File, pSelf->m_pWebapp->GetMap(i));
 	}
 
-	if(!GameTypeFound)
-	{
-		char aBuf[32];
-		str_format(aBuf, sizeof(aBuf), " %s", aCurGametype);
-		str_append(aTypeList, aBuf, sizeof(aTypeList));
-		pResult->ChangeArgument(0, aTypeList);
-	}
+	io_close(File);
+}
 
-	pfnCallback(pResult, pCallbackUserData);
+void CGameContext::ConReloadMapVotes(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(pSelf->m_pWebapp)
+		pSelf->m_pWebapp->UpdateMapVotes();
 }
 #endif
 

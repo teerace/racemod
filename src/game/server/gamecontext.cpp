@@ -871,7 +871,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				str_format(aCmd, sizeof(aCmd), "set_team %d -1 %d", SpectateID, g_Config.m_SvVoteSpectateRejoindelay);
 			}
 
-			if(aCmd[0])
+			if(aCmd[0] && str_comp(aCmd, "info") != 0)
 			{
 				SendChat(-1, CGameContext::CHAT_ALL, aChatmsg);
 				StartVote(aDesc, aCmd, pReason);
@@ -1321,7 +1321,7 @@ void CGameContext::ConAddVote(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	// check for valid option
-	if(!pSelf->Console()->LineIsValid(pCommand) || str_length(pCommand) >= VOTE_CMD_LENGTH)
+	if(str_comp(pCommand, "info") != 0 && (!pSelf->Console()->LineIsValid(pCommand) || str_length(pCommand) >= VOTE_CMD_LENGTH))
 	{
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), "skipped invalid command '%s'", pCommand);
@@ -1596,9 +1596,8 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "Checks if the webapp is online");
 	Console()->Register("maplist", "?i", CFGFLAG_SERVER, ConMaplist, this, "Shows the current map list with map ID's");
 	Console()->Register("reload_maplist", "", CFGFLAG_SERVER, ConReloadMaplist, this, "Reloads the map list");
-	Console()->Register("update_map_votes", "?i", CFGFLAG_SERVER, ConUpdateMapVote, this, "Updates the map votes and stores it into the config");
-
-	Console()->Chain("wa_map_types", ConchainSpecialMapTypes, this);
+	Console()->Register("save_map_votes", "?i", CFGFLAG_SERVER, ConSaveMapVotes, this, "Stores the map votes into the config");
+	Console()->Register("reload_map_votes", "", CFGFLAG_SERVER, ConReloadMapVotes, this, "Updates the map votes");
 #endif
 }
 
@@ -1625,9 +1624,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		if(pConfig)
 			pConfig->Reset(CFGFLAG_MAPSETTINGS);
 		LoadMapSettings();
-		if(str_find_nocase(g_Config.m_SvMap, "no-weapons"))
-			g_Config.m_SvNoItems = true;
 	}
+
+	if(str_find_nocase(g_Config.m_SvMap, "no-weapons") || str_find_nocase(g_Config.m_SvGametype, "no-weapons"))
+		g_Config.m_SvNoItems = true;
 
 	InitChatConsole();
 
@@ -1660,8 +1660,37 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		m_pWebapp = 0;
 	}
 
+	char aCurGametype[32];
+	if(str_find_nocase(g_Config.m_SvGametype, "cap"))
+	{
+		if(g_Config.m_SvNoItems)
+			str_copy(aCurGametype, "fastcap-no-weapons", sizeof(aCurGametype));
+		else
+			str_copy(aCurGametype, "fastcap", sizeof(aCurGametype));
+	}
+	else
+		str_copy(aCurGametype, "race", sizeof(aCurGametype));
+
+	// search for current gametype in maptype list
+	bool FoundMapType = false;
+	const char *pType = str_find_nocase(g_Config.m_WaMapTypes, aCurGametype);
+	if(pType)
+	{
+		int Len = str_length(aCurGametype);
+		if((g_Config.m_WaMapTypes == pType || pType[-1] == ' ') && (pType[Len] == 0 || pType[Len] == ' '))
+			FoundMapType = true;
+	}
+
+	if(!FoundMapType)
+	{
+		str_copy(g_Config.m_WaMapTypes, aCurGametype, sizeof(g_Config.m_WaMapTypes));
+		if(m_pWebapp)
+			m_pWebapp->LoadMapList(true);
+	}
+
+	// TODO: check if we really need to reload
 	if(m_pWebapp)
-		m_pWebapp->OnInit();
+		m_pWebapp->LoadMapList(true);
 #endif
 
 	// TODO: remove when the upper TODO is fixed

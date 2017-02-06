@@ -84,8 +84,8 @@ class CGameContext : public IGameServer
 	static void ConPing(IConsole::IResult *pResult, void *pUserData);
 	static void ConMaplist(IConsole::IResult *pResult, void *pUserData);
 	static void ConReloadMaplist(IConsole::IResult *pResult, void *pUserData);
-	static void ConUpdateMapVote(IConsole::IResult *pResult, void *pUserData);
-	static void ConchainSpecialMapTypes(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConSaveMapVotes(IConsole::IResult *pResult, void *pUserData);
+	static void ConReloadMapVotes(IConsole::IResult *pResult, void *pUserData);
 #endif
 
 	CGameContext(int Resetting);

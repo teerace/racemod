@@ -75,7 +75,8 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 	Server()->SendHttp(pInfo, pRequest);
 }
 
-CServerWebapp::CServerWebapp(CGameContext *pGameServer) : m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1)
+CServerWebapp::CServerWebapp(CGameContext *pGameServer)
+	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
@@ -200,7 +201,11 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 	{
 		char aFilename[256];
 		const char *pPath = "/maps/teerace/%s.map";
-		bool Change = false;
+		bool Changed = false;
+
+		// mark all entries as missing
+		for(int i = 0; i < pWebapp->m_lMapList.size(); i++)
+			pWebapp->m_lMapList[i].m_ID = -1;
 
 		for(unsigned int i = 0; i < pJsonData->u.array.length; i++)
 		{
@@ -226,38 +231,68 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
 				pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
 			}
-			else if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
+			else
 			{
-				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
-				r.front() = Info;
-				dbg_msg("webapp", "updated map info: '%s' (%d)", Info.m_aName, Info.m_ID);
-
-				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-				pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
-			}
-			else if(r.front().m_Crc == Info.m_Crc) // we already have this 
-			{
-				if(r.front().m_State == CMapInfo::MAPSTATE_INFO_MISSING)
+				if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
 				{
-					Info.m_State = CMapInfo::MAPSTATE_COMPLETE;
-					r.front() = Info;
-					dbg_msg("webapp", "added map info: '%s' (%d)", r.front().m_aName, r.front().m_ID);
-					Change = true;
-				}
-				else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
-				{
-					r.front().m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+					Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
 					str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+					dbg_msg("webapp", "updating map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 					pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
 				}
+				else // we already have this
+				{
+					if(r.front().m_State == CMapInfo::MAPSTATE_INFO_MISSING)
+					{
+						Info.m_State = CMapInfo::MAPSTATE_COMPLETE;
+						dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+						Changed = true;
+					}
+					else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
+					{
+						Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+						str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+						dbg_msg("webapp", "downloading missing map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+						pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
+					}
+					else // keep state
+						Info.m_State = r.front().m_State;
+				}
+
+				// update info
+				r.front() = Info;
 			}
 		}
 
-		if(Change)
+		// check for removed entries
+		for(int i = 0; i < pWebapp->m_lMapList.size(); i++)
 		{
-			pWebapp->m_lMapList.sort_range();
-			pWebapp->OnInit();
+			CMapInfo *pMapInfo = &pWebapp->m_lMapList[i];
+			if(pMapInfo->m_ID == -1)
+			{
+				if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
+				{
+					// info was removed from list; file exists
+					pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
+					Changed = true;
+				}
+				else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
+				{
+					// info was removed from list; file missing
+					pWebapp->m_lMapList.remove_index(i);
+					i--;
+				}
+				else
+					continue;
+				dbg_msg("webapp", "removed map info: '%s'", pMapInfo->m_aName);
+			}
 		}
+
+		if(pWebapp->m_CurrentMap.m_ID == -1)
+			pWebapp->OnInit();
+
+		if(Changed)
+			pWebapp->UpdateMapVotes();
 	}
 	else
 		dbg_msg("json", aError);
@@ -329,7 +364,7 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename, unsigned C
 	{
 		Info.m_State = CMapInfo::MAPSTATE_INFO_MISSING;
 		int Num = m_lMapList.add(Info);
-		dbg_msg("", "added map: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+		dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 		return &m_lMapList[Num];
 	}
 	else if(r.front().m_State == CMapInfo::MAPSTATE_DOWNLOADING) // entry already exists
@@ -337,9 +372,9 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename, unsigned C
 		if(r.front().m_Crc == Info.m_Crc)
 		{
 			r.front().m_State = CMapInfo::MAPSTATE_COMPLETE;
-			dbg_msg("", "added map: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+			dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 			m_lMapList.sort_range();
-			AddMapVotes();
+			UpdateMapVotes();
 			return &r.front();
 		}
 		// something went wrong
@@ -350,16 +385,12 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename, unsigned C
 
 void CServerWebapp::OnInit()
 {
-	m_CurrentMap.m_ID = -1;
 	str_copy(m_CurrentMap.m_aName, g_Config.m_SvMap, sizeof(m_CurrentMap.m_aName));
 	array<CMapInfo>::range r = find_linear(m_lMapList.all(), m_CurrentMap);
 	if(!r.empty() && r.front().m_State == CMapInfo::MAPSTATE_COMPLETE)
 	{
 		m_CurrentMap = r.front();
 		dbg_msg("webapp", "current map: '%s' (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
-
-		// add votes
-		AddMapVotes();
 	}
 }
 
@@ -406,8 +437,25 @@ void CServerWebapp::Tick()
 		SendPing();
 }
 
-void CServerWebapp::LoadMapList()
+void CServerWebapp::LoadMapList(bool Clear)
 {
+	if(Clear)
+	{
+		dbg_msg("webapp", "clear maplist");
+		m_CurrentMap.m_ID = -1;
+		for(int i = 0; i < m_lMapList.size(); i++)
+		{
+			CMapInfo *pMapInfo = &m_lMapList[i];
+			if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
+				pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
+			else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
+			{
+				m_lMapList.remove_index(i);
+				i--;
+			}
+		}
+	}
+
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", g_Config.m_WaMapTypes);
 
@@ -470,63 +518,58 @@ void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const cha
 	m_lUploads.add(CUpload(pFilename, pURL, pUploadName, pfnCallback, StartTime));
 }
 
-void CServerWebapp::AddMapVotes()
+void CServerWebapp::UpdateMapVotes()
 {
-	if(g_Config.m_WaAutoAddMaps && m_CurrentMap.m_ID != -1)
+	// TODO: timer
+	if(!g_Config.m_WaAutoAddMaps)
+		return;
+
+	dbg_msg("webapp", "updating map votes");
+
+	// clear votes
+	CNetMsg_Sv_VoteClearOptions VoteClearOptionsMsg;
+	Server()->SendPackMsg(&VoteClearOptionsMsg, MSGFLAG_VITAL, -1);
+	GameServer()->m_pVoteOptionHeap->Reset();
+	GameServer()->m_pVoteOptionFirst = 0;
+	GameServer()->m_pVoteOptionLast = 0;
+	GameServer()->m_NumVoteOptions = 0;
+
+	if(g_Config.m_WaVoteHeaderFile[0])
+		GameServer()->Console()->ExecuteFile(g_Config.m_WaVoteHeaderFile);
+
+	for(int i = 0; i < m_lMapList.size(); i++)
 	{
-		for(int i = 0; i < m_lMapList.size(); i++)
+		CMapInfo *pMapInfo = &m_lMapList[i];
+		if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
 		{
-			CMapInfo *pMapInfo = &m_lMapList[i];
-			if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
-			{
-				char aVoteDescription[128];
-				if(str_find(g_Config.m_WaVoteDescription, "%s"))
-					str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
-				else
-					str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
+			char aVoteDescription[128];
+			if(str_find(g_Config.m_WaVoteDescription, "%s"))
+				str_format(aVoteDescription, sizeof(aVoteDescription), g_Config.m_WaVoteDescription, pMapInfo->m_aName);
+			else
+				str_format(aVoteDescription, sizeof(aVoteDescription), "change map to %s", pMapInfo->m_aName);
 
-				// check for duplicate entry
-				int OptionFound = false;
-				CVoteOptionServer *pOption = GameServer()->m_pVoteOptionFirst;
-				while(pOption)
-				{
-					if(str_comp_nocase(aVoteDescription, pOption->m_aDescription) == 0)
-					{
-						OptionFound = true;
-						break;
-					}
-					pOption = pOption->m_pNext;
-				}
+			char aCommand[128];
+			str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
+			int Len = str_length(aCommand);
 
-				if(OptionFound)
-					continue;
+			// add the option
+			++GameServer()->m_NumVoteOptions;
+			CVoteOptionServer *pOption = (CVoteOptionServer *)GameServer()->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
+			pOption->m_pNext = 0;
+			pOption->m_pPrev = GameServer()->m_pVoteOptionLast;
+			if(pOption->m_pPrev)
+				pOption->m_pPrev->m_pNext = pOption;
+			GameServer()->m_pVoteOptionLast = pOption;
+			if(!GameServer()->m_pVoteOptionFirst)
+				GameServer()->m_pVoteOptionFirst = pOption;
 
-				// add the option
-				++GameServer()->m_NumVoteOptions;
-				char aCommand[128];
-				str_format(aCommand, sizeof(aCommand), "sv_map %s", pMapInfo->m_aName);
-				int Len = str_length(aCommand);
+			str_copy(pOption->m_aDescription, aVoteDescription, sizeof(pOption->m_aDescription));
+			mem_copy(pOption->m_aCommand, aCommand, Len+1);
 
-				pOption = (CVoteOptionServer *)GameServer()->m_pVoteOptionHeap->Allocate(sizeof(CVoteOptionServer) + Len);
-				pOption->m_pNext = 0;
-				pOption->m_pPrev = GameServer()->m_pVoteOptionLast;
-				if(pOption->m_pPrev)
-					pOption->m_pPrev->m_pNext = pOption;
-				GameServer()->m_pVoteOptionLast = pOption;
-				if(!GameServer()->m_pVoteOptionFirst)
-					GameServer()->m_pVoteOptionFirst = pOption;
-
-				str_copy(pOption->m_aDescription, aVoteDescription, sizeof(pOption->m_aDescription));
-				mem_copy(pOption->m_aCommand, aCommand, Len+1);
-				char aBuf[256];
-				str_format(aBuf, sizeof(aBuf), "added option '%s' '%s'", pOption->m_aDescription, pOption->m_aCommand);
-				GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
-
-				// inform clients about added option
-				CNetMsg_Sv_VoteOptionAdd OptionMsg;
-				OptionMsg.m_pDescription = pOption->m_aDescription;
-				GameServer()->Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
-			}
+			// inform clients about added option
+			CNetMsg_Sv_VoteOptionAdd OptionMsg;
+			OptionMsg.m_pDescription = pOption->m_aDescription;
+			Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
 		}
 	}
 }

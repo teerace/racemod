@@ -29,7 +29,7 @@ public:
 		char m_aAuthor[32];
 
 		bool operator==(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) == 0; }
-		bool operator<(const CMapInfo& Other) { return this->m_ID < Other.m_ID; }
+		bool operator<(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) < 0; }
 	};
 
 	// helper functions
@@ -43,8 +43,10 @@ public:
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
 	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
 	int GetMapCount() { return m_lMapList.size(); }
-	void LoadMapList();
+
+	void LoadMapList(bool Clear = false);
 	void SendPing();
+	void UpdateMapVotes();
 
 	void OnInit();
 	void OnAuth(int ClientID, const char *pToken, int SendRconCmds);
@@ -117,7 +119,6 @@ private:
 
 	CMapInfo *AddMap(const char *pFilename, unsigned Crc);
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
-	void AddMapVotes();
 
 	void Download(const char *pFilename, const char *pURI, FHttpCallback pfnCallback);
 	void Upload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback);

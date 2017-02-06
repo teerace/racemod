@@ -109,15 +109,15 @@ MACRO_CONFIG_INT(SvReservedSlots, sv_reserved_slots, 0, 0, 12, CFGFLAG_SERVER, "
 MACRO_CONFIG_STR(SvReservedSlotsPass, sv_reserved_slots_pass, 32, "", CFGFLAG_SERVER, "Password for reserved slots")
 
 /* race - server*/
-MACRO_CONFIG_INT(SvRegen, sv_regen, 0, 0, 50, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Set regeneration")
-MACRO_CONFIG_INT(SvStrip, sv_strip, 0, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Enable or disable keeping weapon after teleporting")
-MACRO_CONFIG_INT(SvInfiniteAmmo, sv_infinite_ammo, 0, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Enable or disable infinite ammo")
-MACRO_CONFIG_INT(SvNoItems, sv_no_items, 0, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "removes any items from the map if there are any")
-MACRO_CONFIG_INT(SvTeleportGrenade, sv_teleport_grenade, 0, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Enable or disable teleport of grenade")
-MACRO_CONFIG_INT(SvTeleportVelReset, sv_teleport_vel_reset, 0, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Reset velocity after teleport")
-MACRO_CONFIG_INT(SvDeleteGrenadesAfterDeath, sv_delete_grenades_after_death, 1, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Delete grenades after the player dies")
-MACRO_CONFIG_INT(SvRocketJumpDamage, sv_rocket_jump_damage, 1, 0, 1, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Enable or disable rocket jump damage")
-MACRO_CONFIG_INT(SvPickupRespawn, sv_pickup_respawn, -1, -1, 120, CFGFLAG_SERVER|CFGFLAG_MAPSETTINGS, "Time before a pickup respawn")
+MACRO_CONFIG_INT(SvRegen, sv_regen, 0, 0, 50, CFGFLAG_MAPSETTINGS, "Set regeneration")
+MACRO_CONFIG_INT(SvStrip, sv_strip, 0, 0, 1, CFGFLAG_MAPSETTINGS, "Enable or disable keeping weapon after teleporting")
+MACRO_CONFIG_INT(SvInfiniteAmmo, sv_infinite_ammo, 0, 0, 1, CFGFLAG_MAPSETTINGS, "Enable or disable infinite ammo")
+MACRO_CONFIG_INT(SvNoItems, sv_no_items, 0, 0, 1, CFGFLAG_MAPSETTINGS, "removes any items from the map if there are any")
+MACRO_CONFIG_INT(SvTeleportGrenade, sv_teleport_grenade, 0, 0, 1, CFGFLAG_MAPSETTINGS, "Enable or disable teleport of grenade")
+MACRO_CONFIG_INT(SvTeleportVelReset, sv_teleport_vel_reset, 0, 0, 1, CFGFLAG_MAPSETTINGS, "Reset velocity after teleport")
+MACRO_CONFIG_INT(SvDeleteGrenadesAfterDeath, sv_delete_grenades_after_death, 1, 0, 1, CFGFLAG_MAPSETTINGS, "Delete grenades after the player dies")
+MACRO_CONFIG_INT(SvRocketJumpDamage, sv_rocket_jump_damage, 1, 0, 1, CFGFLAG_MAPSETTINGS, "Enable or disable rocket jump damage")
+MACRO_CONFIG_INT(SvPickupRespawn, sv_pickup_respawn, -1, -1, 120, CFGFLAG_MAPSETTINGS, "Time before a pickup respawn")
 
 MACRO_CONFIG_INT(SvScoreIP, sv_score_ip, 1, 0, 1, CFGFLAG_SERVER, "Check score for ip, too")
 MACRO_CONFIG_INT(SvCheckpointSave, sv_checkpoint_save, 1, 0, 1, CFGFLAG_SERVER, "Save checkpoint times to score file")
@@ -150,6 +150,7 @@ MACRO_CONFIG_INT(WaAutoRecord, wa_auto_record, 1, 0, 1, CFGFLAG_SERVER, "Enables
 MACRO_CONFIG_INT(WaAutoAddMaps, wa_auto_add_maps, 0, 0, 1, CFGFLAG_SERVER, "Enables auto adding maps")
 MACRO_CONFIG_INT(WaMaplistRefreshInterval, wa_maplist_refresh_interval, 30, 10, 24*60, CFGFLAG_SERVER, "Maplist refresh interval")
 
+MACRO_CONFIG_STR(WaVoteHeaderFile, wa_vote_header_file, 128, "", CFGFLAG_SERVER, "")
 MACRO_CONFIG_STR(WaVoteDescription, wa_vote_description, 64, "change map to %s", CFGFLAG_SERVER, "Vote description for update map vote command")
 
 MACRO_CONFIG_STR(WaMapTypes, wa_map_types, 128, "race", CFGFLAG_SERVER, "The type of maps to be fetched from teerace (e.g. 'race long')")
