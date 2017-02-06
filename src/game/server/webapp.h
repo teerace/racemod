@@ -44,7 +44,7 @@ public:
 	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
 	int GetMapCount() { return m_lMapList.size(); }
 
-	void LoadMapList(bool Clear = false);
+	void LoadMapList();
 	void SendPing();
 	void UpdateMapVotes();
 

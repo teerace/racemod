@@ -1682,15 +1682,15 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	}
 
 	if(!FoundMapType)
-	{
 		str_copy(g_Config.m_WaMapTypes, aCurGametype, sizeof(g_Config.m_WaMapTypes));
-		if(m_pWebapp)
-			m_pWebapp->LoadMapList(true);
-	}
 
-	// TODO: check if we really need to reload
 	if(m_pWebapp)
-		m_pWebapp->LoadMapList(true);
+	{
+		// reset map
+		m_pWebapp->CurrentMap()->m_ID = -1;
+		// TODO: check if we really need to reload
+		m_pWebapp->LoadMapList();
+	}
 #endif
 
 	// TODO: remove when the upper TODO is fixed

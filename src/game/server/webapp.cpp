@@ -437,25 +437,8 @@ void CServerWebapp::Tick()
 		SendPing();
 }
 
-void CServerWebapp::LoadMapList(bool Clear)
+void CServerWebapp::LoadMapList()
 {
-	if(Clear)
-	{
-		dbg_msg("webapp", "clear maplist");
-		m_CurrentMap.m_ID = -1;
-		for(int i = 0; i < m_lMapList.size(); i++)
-		{
-			CMapInfo *pMapInfo = &m_lMapList[i];
-			if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
-				pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
-			else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
-			{
-				m_lMapList.remove_index(i);
-				i--;
-			}
-		}
-	}
-
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", g_Config.m_WaMapTypes);
 
