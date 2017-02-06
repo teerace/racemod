@@ -144,9 +144,15 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pWebapp->GameServer()->Console(), pResponse);
 
-	dbg_msg("webapp", "webapp is%s online", Error ? " not" : "");
+	if(!Error && g_Config.m_Debug)
+		dbg_msg("webapp", "webapp is online");
+
 	if(Error)
+	{
+		pWebapp->GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD,
+			"webapp", "WARNING: Webapp is not responding");
 		return;
+	}
 
 	json_settings JsonSettings;
 	mem_zero(&JsonSettings, sizeof(JsonSettings));
@@ -226,7 +232,8 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 			{
 				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
 				pWebapp->m_lMapList.add(Info);
-				dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+				if(g_Config.m_Debug)
+					dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
 
 				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
 				pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
@@ -245,7 +252,8 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 					if(r.front().m_State == CMapInfo::MAPSTATE_INFO_MISSING)
 					{
 						Info.m_State = CMapInfo::MAPSTATE_COMPLETE;
-						dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+						if(g_Config.m_Debug)
+							dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
 						Changed = true;
 					}
 					else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
@@ -284,7 +292,8 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 				}
 				else
 					continue;
-				dbg_msg("webapp", "removed map info: '%s'", pMapInfo->m_aName);
+				if(g_Config.m_Debug)
+					dbg_msg("webapp", "removed map info: '%s'", pMapInfo->m_aName);
 			}
 		}
 
