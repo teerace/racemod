@@ -433,7 +433,7 @@ void CServerWebapp::Tick()
 	if(m_LastMapListLoad < 0 || m_LastMapListLoad + time_freq() * 60 * g_Config.m_WaMaplistRefreshInterval < Now)
 		LoadMapList();
 
-	if(m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now)
+	if(g_Config.m_SvRegister && (m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now))
 		SendPing();
 }
 
