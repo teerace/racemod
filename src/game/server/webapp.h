@@ -102,8 +102,11 @@ private:
 
 	int64 m_LastPing;
 	int64 m_LastMapListLoad;
+	int64 m_LastMapVoteUpdate;
 	sorted_array<CMapInfo> m_lMapList;
 	CMapInfo m_CurrentMap;
+
+	bool m_NeedMapVoteUpdate;
 
 	// http callbacks
 	static void OnUserAuth(class IResponse *pResponse, bool ConnError, void *pUserData);

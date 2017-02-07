@@ -76,7 +76,7 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 }
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1)
+	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1), m_LastMapVoteUpdate(-1), m_NeedMapVoteUpdate(false)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
@@ -301,7 +301,7 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 			pWebapp->OnInit();
 
 		if(Changed)
-			pWebapp->UpdateMapVotes();
+			pWebapp->m_NeedMapVoteUpdate = true;
 	}
 	else
 		dbg_msg("json", aError);
@@ -383,7 +383,7 @@ CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename, unsigned C
 			r.front().m_State = CMapInfo::MAPSTATE_COMPLETE;
 			dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 			m_lMapList.sort_range();
-			UpdateMapVotes();
+			m_NeedMapVoteUpdate = true;
 			return &r.front();
 		}
 		// something went wrong
@@ -442,8 +442,14 @@ void CServerWebapp::Tick()
 	if(m_LastMapListLoad < 0 || m_LastMapListLoad + time_freq() * 60 * g_Config.m_WaMaplistRefreshInterval < Now)
 		LoadMapList();
 
+	// ping every minute
 	if(g_Config.m_SvRegister && (m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now))
 		SendPing();
+
+	// only one vote update every 5 seconds
+	// TODO: check resend buffer size
+	if(g_Config.m_WaAutoAddMaps && m_NeedMapVoteUpdate && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 5 < Now))
+		UpdateMapVotes();
 }
 
 void CServerWebapp::LoadMapList()
@@ -512,10 +518,6 @@ void CServerWebapp::AddUpload(const char *pFilename, const char *pURL, const cha
 
 void CServerWebapp::UpdateMapVotes()
 {
-	// TODO: timer
-	if(!g_Config.m_WaAutoAddMaps)
-		return;
-
 	dbg_msg("webapp", "updating map votes");
 
 	// clear votes
@@ -564,6 +566,9 @@ void CServerWebapp::UpdateMapVotes()
 			Server()->SendPackMsg(&OptionMsg, MSGFLAG_VITAL, -1);
 		}
 	}
+
+	m_NeedMapVoteUpdate = false;
+	m_LastMapVoteUpdate = time_get();
 }
 
 CServerWebapp::CUpload::CUpload(const char* pFilename, const char* pURL, const char* pUploadname, FHttpCallback pfnCallback, int64 StartTime)
