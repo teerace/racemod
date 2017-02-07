@@ -5,33 +5,53 @@
 #include <base/tl/sorted_array.h>
 #include <engine/shared/http.h>
 
+class CMapInfo
+{
+public:
+	enum
+	{
+		MAPSTATE_NONE,
+		MAPSTATE_INFO_MISSING,
+		MAPSTATE_FILE_MISSING,
+		MAPSTATE_DOWNLOADING,
+		MAPSTATE_COMPLETE
+	};
+	CMapInfo() : m_State(MAPSTATE_NONE), m_ID(-1) { }
+	int m_State;
+	int m_RunCount;
+	int m_ID;
+	char m_aName[128];
+	unsigned m_Crc;
+	char m_aURL[128];
+	char m_aAuthor[32];
+
+	bool operator==(const CMapInfo& Other) const { return str_comp(this->m_aName, Other.m_aName) == 0; }
+	bool operator<(const CMapInfo& Other) const { return str_comp(this->m_aName, Other.m_aName) < 0; }
+};
+
+class CMapList
+{
+public:
+	bool m_Changed;
+
+	CMapList() : m_Changed(false) { m_aMapTypes[0] = 0; }
+
+	bool Update(class CServerWebapp *pWebapp, const char *pMapTypes, const char *pData, int Size);
+	const CMapInfo *AddMapFile(const char *pFilename, unsigned Crc);
+	const CMapInfo *FindMap(const char *pName) const;
+
+	const char *GetMapTypes() const { return m_aMapTypes; };
+	const CMapInfo *GetMap(int Index) const { return &m_lMaps[Index]; };
+	int GetMapCount() const { return m_lMaps.size(); };
+
+private:
+	sorted_array<CMapInfo> m_lMaps;
+	char m_aMapTypes[128];
+};
+
 class CServerWebapp
 {
 public:
-	class CMapInfo
-	{
-	public:
-		enum
-		{
-			MAPSTATE_NONE,
-			MAPSTATE_INFO_MISSING,
-			MAPSTATE_FILE_MISSING,
-			MAPSTATE_DOWNLOADING,
-			MAPSTATE_COMPLETE
-		};
-		CMapInfo() : m_State(MAPSTATE_NONE), m_ID(-1) { }
-		int m_State;
-		int m_RunCount;
-		int m_ID;
-		char m_aName[128];
-		unsigned m_Crc;
-		char m_aURL[128];
-		char m_aAuthor[32];
-
-		bool operator==(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) == 0; }
-		bool operator<(const CMapInfo& Other) { return str_comp(this->m_aName, Other.m_aName) < 0; }
-	};
-
 	// helper functions
 	static class CBufferRequest *CreateAuthedApiRequest(int Method, const char *pURI);
 	static void RegisterFields(IRequest *pRequest);
@@ -41,8 +61,7 @@ public:
 	virtual ~CServerWebapp() { }
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
-	CMapInfo *GetMap(int Index) { return &m_lMapList[Index]; }
-	int GetMapCount() { return m_lMapList.size(); }
+	const CMapList *MapList() const { return &m_MapList; }
 
 	void LoadMapList();
 	void SendPing();
@@ -51,6 +70,8 @@ public:
 	void OnInit();
 	void OnAuth(int ClientID, const char *pToken, int SendRconCmds);
 	void Tick();
+
+	void DownloadMap(const char *pFilename, const char *pURI) { Download(pFilename, pURI, OnDownloadMap); }
 
 	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime = -1);
 	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, int64 StartTime = -1)
@@ -74,6 +95,13 @@ private:
 	public:
 		CUserAuthData(CServerWebapp *pWebapp) : CWebData(pWebapp) { }
 		int m_SendRconCmds;
+	};
+
+	class CMapListData : public CWebData
+	{
+	public:
+		CMapListData(CServerWebapp *pWebapp) : CWebData(pWebapp) { }
+		char m_aMapTypes[128];
 	};
 
 	class CUploadData : public CWebData
@@ -103,10 +131,9 @@ private:
 	int64 m_LastPing;
 	int64 m_LastMapListLoad;
 	int64 m_LastMapVoteUpdate;
-	sorted_array<CMapInfo> m_lMapList;
-	CMapInfo m_CurrentMap;
 
-	bool m_NeedMapVoteUpdate;
+	CMapList m_MapList;
+	CMapInfo m_CurrentMap;
 
 	// http callbacks
 	static void OnUserAuth(class IResponse *pResponse, bool ConnError, void *pUserData);
@@ -120,7 +147,6 @@ private:
 	class IScore *Score();
 	class IStorage *Storage();
 
-	CMapInfo *AddMap(const char *pFilename, unsigned Crc);
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 
 	void Download(const char *pFilename, const char *pURI, FHttpCallback pfnCallback);

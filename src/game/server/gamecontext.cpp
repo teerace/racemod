@@ -1688,8 +1688,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	{
 		// reset map
 		m_pWebapp->CurrentMap()->m_ID = -1;
-		// TODO: check if we really need to reload
-		m_pWebapp->LoadMapList();
+		if(str_comp(g_Config.m_WaMapTypes, m_pWebapp->MapList()->GetMapTypes()) == 0)
+			m_pWebapp->OnInit();
+		else
+			m_pWebapp->LoadMapList();
 	}
 #endif
 

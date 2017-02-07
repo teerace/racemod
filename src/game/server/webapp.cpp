@@ -18,6 +18,157 @@
 #include "webapp.h"
 #include "score.h"
 
+bool CMapList::Update(CServerWebapp *pWebapp, const char *pMapTypes, const char *pData, int Size)
+{
+	json_settings JsonSettings;
+	mem_zero(&JsonSettings, sizeof(JsonSettings));
+	char aError[256];
+
+	json_value *pJsonData = json_parse_ex(&JsonSettings, pData, Size, aError);
+	if(!pJsonData)
+	{
+		dbg_msg("json", aError);
+		json_value_free(pJsonData);
+		return false;
+	}
+
+	str_copy(m_aMapTypes, pMapTypes, sizeof(m_aMapTypes));
+
+	char aFilename[256];
+	const char *pPath = "/maps/teerace/%s.map";
+
+	// mark all entries as missing
+	for(int i = 0; i < m_lMaps.size(); i++)
+		m_lMaps[i].m_ID = -1;
+
+	for(unsigned int i = 0; i < pJsonData->u.array.length; i++)
+	{
+		const json_value &Map = (*pJsonData)[i];
+		if(Map["crc"].type != json_string)
+			continue; // skip maps without crc
+
+		CMapInfo Info;
+		str_copy(Info.m_aName, Map["name"], sizeof(Info.m_aName));
+		sscanf(Map["crc"], "%08x", &Info.m_Crc);
+		Info.m_ID = Map["id"].u.integer;
+		Info.m_RunCount = Map["run_count"].u.integer;
+		str_copy(Info.m_aURL, Map["get_download_url"], sizeof(Info.m_aURL));
+		str_copy(Info.m_aAuthor, Map["author"], sizeof(Info.m_aAuthor));
+
+		array<CMapInfo>::range r = find_linear(m_lMaps.all(), Info);
+		if(r.empty()) // new entry
+		{
+			Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+			m_lMaps.add(Info);
+			if(g_Config.m_Debug)
+				dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+
+			str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+			pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
+		}
+		else
+		{
+			if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
+			{
+				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+				dbg_msg("webapp", "updating map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+				pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
+			}
+			else // we already have this
+			{
+				if(r.front().m_State == CMapInfo::MAPSTATE_INFO_MISSING)
+				{
+					Info.m_State = CMapInfo::MAPSTATE_COMPLETE;
+					if(g_Config.m_Debug)
+						dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
+					m_Changed = true;
+				}
+				else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
+				{
+					Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
+					str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
+					dbg_msg("webapp", "downloading missing map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+					pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
+				}
+				else // keep state
+					Info.m_State = r.front().m_State;
+			}
+
+			// update info
+			r.front() = Info;
+		}
+	}
+
+	// check for removed entries
+	for(int i = 0; i < m_lMaps.size(); i++)
+	{
+		CMapInfo *pMapInfo = &m_lMaps[i];
+		if(pMapInfo->m_ID == -1)
+		{
+			if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
+			{
+				// info was removed from list; file exists
+				pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
+				m_Changed = true;
+			}
+			else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
+			{
+				// info was removed from list; file missing
+				m_lMaps.remove_index(i);
+				i--;
+			}
+			else
+				continue;
+			if(g_Config.m_Debug)
+				dbg_msg("webapp", "removed map info: '%s'", pMapInfo->m_aName);
+		}
+	}
+
+	json_value_free(pJsonData);
+	return true;
+}
+
+const CMapInfo *CMapList::FindMap(const char *pName) const
+{
+	CMapInfo Info;
+	str_copy(Info.m_aName, pName, sizeof(Info.m_aName));
+	array<CMapInfo>::range r = find_linear(m_lMaps.all(), Info);
+	if(r.empty() || r.front().m_State != CMapInfo::MAPSTATE_COMPLETE)
+		return 0;
+	return &r.front();
+}
+
+const CMapInfo *CMapList::AddMapFile(const char *pFilename, unsigned Crc)
+{
+	CMapInfo Info;
+	Info.m_Crc = Crc;
+	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName), str_length(pFilename) - 3));
+
+	array<CMapInfo>::range r = find_linear(m_lMaps.all(), Info);
+	if (r.empty()) // new entry
+	{
+		Info.m_State = CMapInfo::MAPSTATE_INFO_MISSING;
+		int Num = m_lMaps.add(Info);
+		dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+		return &m_lMaps[Num];
+	}
+	else if (r.front().m_State == CMapInfo::MAPSTATE_DOWNLOADING) // entry already exists
+	{
+		if (r.front().m_Crc == Info.m_Crc)
+		{
+			r.front().m_State = CMapInfo::MAPSTATE_COMPLETE;
+			dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
+			m_lMaps.sort_range();
+			m_Changed = true;
+			return &r.front();
+		}
+		// something went wrong
+		r.front().m_State = CMapInfo::MAPSTATE_FILE_MISSING;
+	}
+	return 0;
+}
+
 IServer *CServerWebapp::Server() { return m_pGameServer->Server(); }
 IScore *CServerWebapp::Score() { return m_pGameServer->Score(); }
 IStorage *CServerWebapp::Storage() { return m_pGameServer->Storage(); }
@@ -76,7 +227,7 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 }
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1), m_LastMapVoteUpdate(-1), m_NeedMapVoteUpdate(false)
+	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1), m_LastMapVoteUpdate(-1)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
@@ -190,122 +341,23 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 
 void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CServerWebapp *pWebapp = (CServerWebapp*)pUserData;
+	CMapListData *pUser = (CMapListData*)pUserData;
+	CServerWebapp *pWebapp = pUser->m_pWebapp;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pWebapp->GameServer()->Console(), pResponse);
 
 	if(Error)
+	{
+		delete pUser;
 		return;
-
-	json_settings JsonSettings;
-	mem_zero(&JsonSettings, sizeof(JsonSettings));
-	char aError[256];
+	}
 
 	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
-	if(pJsonData)
-	{
-		char aFilename[256];
-		const char *pPath = "/maps/teerace/%s.map";
-		bool Changed = false;
+	bool Res = pWebapp->m_MapList.Update(pWebapp, pUser->m_aMapTypes, pBody, pResponse->Size());
+	if(Res && pWebapp->m_CurrentMap.m_ID == -1)
+		pWebapp->OnInit();
 
-		// mark all entries as missing
-		for(int i = 0; i < pWebapp->m_lMapList.size(); i++)
-			pWebapp->m_lMapList[i].m_ID = -1;
-
-		for(unsigned int i = 0; i < pJsonData->u.array.length; i++)
-		{
-			const json_value &Map = (*pJsonData)[i];
-			if(Map["crc"].type != json_string)
-				continue; // skip maps without crc
-
-			CMapInfo Info;
-			str_copy(Info.m_aName, Map["name"], sizeof(Info.m_aName));
-			sscanf(Map["crc"], "%08x", &Info.m_Crc);
-			Info.m_ID = Map["id"].u.integer;
-			Info.m_RunCount = Map["run_count"].u.integer;
-			str_copy(Info.m_aURL, Map["get_download_url"], sizeof(Info.m_aURL));
-			str_copy(Info.m_aAuthor, Map["author"], sizeof(Info.m_aAuthor));
-
-			array<CMapInfo>::range r = find_linear(pWebapp->m_lMapList.all(), Info);
-			if(r.empty()) // new entry
-			{
-				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
-				pWebapp->m_lMapList.add(Info);
-				if(g_Config.m_Debug)
-					dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
-
-				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-				pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
-			}
-			else
-			{
-				if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
-				{
-					Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
-					str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-					dbg_msg("webapp", "updating map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-					pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
-				}
-				else // we already have this
-				{
-					if(r.front().m_State == CMapInfo::MAPSTATE_INFO_MISSING)
-					{
-						Info.m_State = CMapInfo::MAPSTATE_COMPLETE;
-						if(g_Config.m_Debug)
-							dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
-						Changed = true;
-					}
-					else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
-					{
-						Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
-						str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
-						dbg_msg("webapp", "downloading missing map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-						pWebapp->Download(aFilename, Map["get_download_url"], OnDownloadMap);
-					}
-					else // keep state
-						Info.m_State = r.front().m_State;
-				}
-
-				// update info
-				r.front() = Info;
-			}
-		}
-
-		// check for removed entries
-		for(int i = 0; i < pWebapp->m_lMapList.size(); i++)
-		{
-			CMapInfo *pMapInfo = &pWebapp->m_lMapList[i];
-			if(pMapInfo->m_ID == -1)
-			{
-				if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
-				{
-					// info was removed from list; file exists
-					pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
-					Changed = true;
-				}
-				else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
-				{
-					// info was removed from list; file missing
-					pWebapp->m_lMapList.remove_index(i);
-					i--;
-				}
-				else
-					continue;
-				if(g_Config.m_Debug)
-					dbg_msg("webapp", "removed map info: '%s'", pMapInfo->m_aName);
-			}
-		}
-
-		if(pWebapp->m_CurrentMap.m_ID == -1)
-			pWebapp->OnInit();
-
-		if(Changed)
-			pWebapp->m_NeedMapVoteUpdate = true;
-	}
-	else
-		dbg_msg("json", aError);
-	json_value_free(pJsonData);
+	delete pUser;
 }
 
 void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -317,7 +369,7 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 
 	if(!Error)
 	{
-		CMapInfo *pInfo = pWebapp->GameServer()->Webapp()->AddMap(pRes->GetFilename(), pRes->GetCrc());
+		const CMapInfo *pInfo = pWebapp->m_MapList.AddMapFile(pRes->GetFilename(), pRes->GetCrc());
 		if(pInfo && str_comp(pInfo->m_aName, g_Config.m_SvMap) == 0)
 			pWebapp->Server()->ReloadMap();
 		if(!pInfo)
@@ -357,48 +409,17 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 		unsigned MapSize = 0;
 		if(!CDataFileReader::GetCrcSize(pWebapp->Storage(), aFile, IStorage::TYPE_SAVE, &MapCrc, &MapSize))
 			return 0;
-		pWebapp->AddMap(pName, MapCrc);
-	}
-	return 0;
-}
-
-CServerWebapp::CMapInfo *CServerWebapp::AddMap(const char *pFilename, unsigned Crc)
-{
-	CMapInfo Info;
-	Info.m_Crc = Crc;
-	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName),str_length(pFilename)-3));
-
-	array<CMapInfo>::range r = find_linear(m_lMapList.all(), Info);
-	if(r.empty()) // new entry
-	{
-		Info.m_State = CMapInfo::MAPSTATE_INFO_MISSING;
-		int Num = m_lMapList.add(Info);
-		dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-		return &m_lMapList[Num];
-	}
-	else if(r.front().m_State == CMapInfo::MAPSTATE_DOWNLOADING) // entry already exists
-	{
-		if(r.front().m_Crc == Info.m_Crc)
-		{
-			r.front().m_State = CMapInfo::MAPSTATE_COMPLETE;
-			dbg_msg("webapp", "added map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-			m_lMapList.sort_range();
-			m_NeedMapVoteUpdate = true;
-			return &r.front();
-		}
-		// something went wrong
-		r.front().m_State = CMapInfo::MAPSTATE_FILE_MISSING;
+		pWebapp->m_MapList.AddMapFile(pName, MapCrc);
 	}
 	return 0;
 }
 
 void CServerWebapp::OnInit()
 {
-	str_copy(m_CurrentMap.m_aName, g_Config.m_SvMap, sizeof(m_CurrentMap.m_aName));
-	array<CMapInfo>::range r = find_linear(m_lMapList.all(), m_CurrentMap);
-	if(!r.empty() && r.front().m_State == CMapInfo::MAPSTATE_COMPLETE)
+	const CMapInfo *pMap = m_MapList.FindMap(g_Config.m_SvMap);
+	if(pMap)
 	{
-		m_CurrentMap = r.front();
+		m_CurrentMap = *pMap;
 		dbg_msg("webapp", "current map: '%s' (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
 	}
 }
@@ -448,18 +469,23 @@ void CServerWebapp::Tick()
 
 	// only one vote update every 5 seconds
 	// TODO: check resend buffer size
-	if(g_Config.m_WaAutoAddMaps && m_NeedMapVoteUpdate && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 5 < Now))
+	if(g_Config.m_WaAutoAddMaps && m_MapList.m_Changed && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 5 < Now))
 		UpdateMapVotes();
 }
 
 void CServerWebapp::LoadMapList()
 {
+	dbg_msg("webapp", "updating map list");
+
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", g_Config.m_WaMapTypes);
 
+	CMapListData *pUserData = new CMapListData(this);
+	str_copy(pUserData->m_aMapTypes, g_Config.m_WaMapTypes, sizeof(pUserData->m_aMapTypes));
+
 	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, aBuf);
 	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-	pInfo->SetCallback(OnMapList, this);
+	pInfo->SetCallback(OnMapList, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 
 	m_LastMapListLoad = time_get();
@@ -531,9 +557,9 @@ void CServerWebapp::UpdateMapVotes()
 	if(g_Config.m_WaVoteHeaderFile[0])
 		GameServer()->Console()->ExecuteFile(g_Config.m_WaVoteHeaderFile);
 
-	for(int i = 0; i < m_lMapList.size(); i++)
+	for(int i = 0; i < m_MapList.GetMapCount(); i++)
 	{
-		CMapInfo *pMapInfo = &m_lMapList[i];
+		const CMapInfo *pMapInfo = m_MapList.GetMap(i);
 		if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
 		{
 			char aVoteDescription[128];
@@ -567,7 +593,7 @@ void CServerWebapp::UpdateMapVotes()
 		}
 	}
 
-	m_NeedMapVoteUpdate = false;
+	m_MapList.m_Changed = false;
 	m_LastMapVoteUpdate = time_get();
 }
 

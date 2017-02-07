@@ -166,12 +166,14 @@ void CGameContext::ConMaplist(IConsole::IResult *pResult, void *pUserData)
 	if(!pSelf->m_pWebapp)
 		return;
 
-	int MapListSize = pSelf->m_pWebapp->GetMapCount();
+	const CMapList *pMapList = pSelf->m_pWebapp->MapList();
+
+	int MapListSize = pMapList->GetMapCount();
 	int Page = pResult->NumArguments() ? clamp(pResult->GetInteger(0), 0, (int)(MapListSize/21)) : 0;
 	int Start = max(0, MapListSize - 20*(Page+1));
 	for(int i = Start; i < Start+20; i++)
 	{
-		CServerWebapp::CMapInfo *pMapInfo = pSelf->m_pWebapp->GetMap(i);
+		const CMapInfo *pMapInfo = pMapList->GetMap(i);
 		char aBuf[256];
 		str_format(aBuf, sizeof(aBuf), "%d. %s by %s", i, pMapInfo->m_aName, pMapInfo->m_aAuthor);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "teerace", aBuf);
@@ -185,9 +187,9 @@ void CGameContext::ConReloadMaplist(IConsole::IResult *pResult, void *pUserData)
 		pSelf->m_pWebapp->LoadMapList();
 }
 
-void SaveVoteToFile(IOHANDLE File, CServerWebapp::CMapInfo *pMapInfo)
+void SaveVoteToFile(IOHANDLE File, const CMapInfo *pMapInfo)
 {
-	if(pMapInfo->m_State != CServerWebapp::CMapInfo::MAPSTATE_COMPLETE)
+	if(pMapInfo->m_State != CMapInfo::MAPSTATE_COMPLETE)
 		return;
 
 	char aVoteDescription[128];
@@ -223,15 +225,17 @@ void CGameContext::ConSaveMapVotes(IConsole::IResult *pResult, void *pUserData)
 
 	io_seek(File, 0, IOSEEK_END); // seek to the end
 
+	const CMapList *pMapList = pSelf->m_pWebapp->MapList();
+
 	if(pResult->NumArguments() > 0)
 	{
-		int Argument = clamp(pResult->GetInteger(0), 0, pSelf->m_pWebapp->GetMapCount() - 1);
-		SaveVoteToFile(File, pSelf->m_pWebapp->GetMap(Argument));
+		int Argument = clamp(pResult->GetInteger(0), 0, pMapList->GetMapCount() - 1);
+		SaveVoteToFile(File, pMapList->GetMap(Argument));
 	}
 	else
 	{
-		for(int i = 0; i < pSelf->m_pWebapp->GetMapCount(); i++)
-			SaveVoteToFile(File, pSelf->m_pWebapp->GetMap(i));
+		for(int i = 0; i < pMapList->GetMapCount(); i++)
+			SaveVoteToFile(File, pMapList->GetMap(i));
 	}
 
 	io_close(File);
