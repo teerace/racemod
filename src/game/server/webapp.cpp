@@ -18,7 +18,27 @@
 #include "webapp.h"
 #include "score.h"
 
-bool CMapList::Update(CServerWebapp *pWebapp, const char *pMapTypes, const char *pData, int Size)
+void CMapList::Reset(const char *pMapTypes)
+{
+	m_Changed = false;
+	m_LastReload = -1;
+	str_copy(m_aMapTypes, pMapTypes, sizeof(m_aMapTypes));
+
+	// remove map info
+	for(int i = 0; i < m_lMaps.size(); i++)
+	{
+		CMapInfo *pMapInfo = &m_lMaps[i];
+		if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
+			pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
+		else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
+		{
+			m_lMaps.remove_index(i);
+			i--;
+		}
+	}
+}
+
+bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 {
 	json_settings JsonSettings;
 	mem_zero(&JsonSettings, sizeof(JsonSettings));
@@ -31,8 +51,6 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pMapTypes, const char 
 		json_value_free(pJsonData);
 		return false;
 	}
-
-	str_copy(m_aMapTypes, pMapTypes, sizeof(m_aMapTypes));
 
 	char aFilename[256];
 	const char *pPath = "/maps/teerace/%s.map";
@@ -146,7 +164,7 @@ const CMapInfo *CMapList::AddMapFile(const char *pFilename, unsigned Crc)
 	str_copy(Info.m_aName, pFilename, min((int)sizeof(Info.m_aName), str_length(pFilename) - 3));
 
 	array<CMapInfo>::range r = find_linear(m_lMaps.all(), Info);
-	if (r.empty()) // new entry
+	if(r.empty()) // new entry
 	{
 		Info.m_State = CMapInfo::MAPSTATE_INFO_MISSING;
 		int Num = m_lMaps.add(Info);
@@ -227,11 +245,12 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 }
 
 CServerWebapp::CServerWebapp(CGameContext *pGameServer)
-	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapListLoad(-1), m_LastMapVoteUpdate(-1)
+	: m_pGameServer(pGameServer), m_LastPing(-1), m_LastMapVoteUpdate(-1)
 {
 	// load maps
 	Storage()->ListDirectory(IStorage::TYPE_SAVE, "maps/teerace", MaplistFetchCallback, this);
 	m_lUploads.clear();
+	m_pCurrentMapList = &m_aCachedMapLists[0];
 }
 
 void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -352,10 +371,15 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 		return;
 	}
 
-	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-	bool Res = pWebapp->m_MapList.Update(pWebapp, pUser->m_aMapTypes, pBody, pResponse->Size());
-	if(Res && pWebapp->m_CurrentMap.m_ID == -1)
-		pWebapp->OnInit();
+	for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
+		if(str_comp(pWebapp->m_aCachedMapLists[i].GetMapTypes(), pUser->m_aMapTypes) == 0)
+		{
+			const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+			bool Res = pWebapp->m_aCachedMapLists[i].Update(pWebapp, pBody, pResponse->Size());
+			if(Res && pWebapp->m_CurrentMap.m_ID == -1)
+				pWebapp->OnInit();
+			break;
+		}
 
 	delete pUser;
 }
@@ -369,10 +393,20 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 
 	if(!Error)
 	{
-		const CMapInfo *pInfo = pWebapp->m_MapList.AddMapFile(pRes->GetFilename(), pRes->GetCrc());
-		if(pInfo && str_comp(pInfo->m_aName, g_Config.m_SvMap) == 0)
+		bool Added = false;
+		char aName[128];
+		for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
+		{
+			const CMapInfo *pInfo = pWebapp->m_aCachedMapLists[i].AddMapFile(pRes->GetFilename(), pRes->GetCrc());
+			if(pInfo)
+			{
+				Added = true;
+				str_copy(aName, pInfo->m_aName, sizeof(aName));
+			}
+		}
+		if(Added && str_comp(aName, g_Config.m_SvMap) == 0)
 			pWebapp->Server()->ReloadMap();
-		if(!pInfo)
+		if(!Added)
 			pWebapp->Storage()->RemoveFile(pRes->GetPath(), IStorage::TYPE_SAVE);
 	}
 	else
@@ -409,14 +443,15 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 		unsigned MapSize = 0;
 		if(!CDataFileReader::GetCrcSize(pWebapp->Storage(), aFile, IStorage::TYPE_SAVE, &MapCrc, &MapSize))
 			return 0;
-		pWebapp->m_MapList.AddMapFile(pName, MapCrc);
+		for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
+			pWebapp->m_aCachedMapLists[i].AddMapFile(pName, MapCrc);
 	}
 	return 0;
 }
 
 void CServerWebapp::OnInit()
 {
-	const CMapInfo *pMap = m_MapList.FindMap(g_Config.m_SvMap);
+	const CMapInfo *pMap = m_pCurrentMapList->FindMap(g_Config.m_SvMap);
 	if(pMap)
 	{
 		m_CurrentMap = *pMap;
@@ -460,8 +495,11 @@ void CServerWebapp::Tick()
 	}
 
 	// reload maplist regularly
-	if(m_LastMapListLoad < 0 || m_LastMapListLoad + time_freq() * 60 * g_Config.m_WaMaplistRefreshInterval < Now)
+	if(m_pCurrentMapList->m_LastReload < 0 || m_pCurrentMapList->m_LastReload + time_freq() * 60 * g_Config.m_WaMaplistRefreshInterval < Now)
+	{
+		UpdateMapList();
 		LoadMapList();
+	}
 
 	// ping every minute
 	if(g_Config.m_SvRegister && (m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now))
@@ -469,26 +507,64 @@ void CServerWebapp::Tick()
 
 	// only one vote update every 5 seconds
 	// TODO: check resend buffer size
-	if(g_Config.m_WaAutoAddMaps && m_MapList.m_Changed && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 5 < Now))
+	if(g_Config.m_WaAutoAddMaps && m_pCurrentMapList->m_Changed && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 5 < Now))
 		UpdateMapVotes();
+}
+
+bool CServerWebapp::UpdateMapList()
+{
+	if(str_comp(m_pCurrentMapList->GetMapTypes(), g_Config.m_WaMapTypes) != 0)
+	{
+		for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
+			if(str_comp(m_aCachedMapLists[i].GetMapTypes(), g_Config.m_WaMapTypes) == 0)
+			{
+				dbg_msg("webapp", "switching map list");
+				m_pCurrentMapList = &m_aCachedMapLists[i];
+				m_pCurrentMapList->m_Changed = true;
+				return false;
+			}
+
+		// empty
+		for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
+			if(m_aCachedMapLists[i].GetMapTypes()[0] == 0)
+			{
+				dbg_msg("webapp", "loading new map list");
+				m_pCurrentMapList = &m_aCachedMapLists[i];
+				m_pCurrentMapList->Reset(g_Config.m_WaMapTypes);
+				return true;
+			}
+
+		CMapList *pOldest = &m_aCachedMapLists[0];
+		for(int i = 1; i < NUM_CACHED_MAPLISTS; i++)
+		{
+			if(m_aCachedMapLists[i].m_LastReload < pOldest->m_LastReload)
+				pOldest = &m_aCachedMapLists[i];
+		}
+
+		dbg_msg("webapp", "loading new map list");
+		m_pCurrentMapList = pOldest;
+		m_pCurrentMapList->Reset(g_Config.m_WaMapTypes);
+		return true;
+	}
+	return false;
 }
 
 void CServerWebapp::LoadMapList()
 {
-	dbg_msg("webapp", "updating map list");
+	dbg_msg("webapp", "reloading map list");
 
 	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", g_Config.m_WaMapTypes);
+	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", m_pCurrentMapList->GetMapTypes());
 
 	CMapListData *pUserData = new CMapListData(this);
-	str_copy(pUserData->m_aMapTypes, g_Config.m_WaMapTypes, sizeof(pUserData->m_aMapTypes));
+	str_copy(pUserData->m_aMapTypes, m_pCurrentMapList->GetMapTypes(), sizeof(pUserData->m_aMapTypes));
 
 	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, aBuf);
 	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 	pInfo->SetCallback(OnMapList, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 
-	m_LastMapListLoad = time_get();
+	m_pCurrentMapList->m_LastReload = time_get();
 }
 
 void CServerWebapp::SendPing()
@@ -557,9 +633,9 @@ void CServerWebapp::UpdateMapVotes()
 	if(g_Config.m_WaVoteHeaderFile[0])
 		GameServer()->Console()->ExecuteFile(g_Config.m_WaVoteHeaderFile);
 
-	for(int i = 0; i < m_MapList.GetMapCount(); i++)
+	for(int i = 0; i < m_pCurrentMapList->GetMapCount(); i++)
 	{
-		const CMapInfo *pMapInfo = m_MapList.GetMap(i);
+		const CMapInfo *pMapInfo = m_pCurrentMapList->GetMap(i);
 		if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
 		{
 			char aVoteDescription[128];
@@ -593,7 +669,7 @@ void CServerWebapp::UpdateMapVotes()
 		}
 	}
 
-	m_MapList.m_Changed = false;
+	m_pCurrentMapList->m_Changed = false;
 	m_LastMapVoteUpdate = time_get();
 }
 

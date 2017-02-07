@@ -180,11 +180,24 @@ void CGameContext::ConMaplist(IConsole::IResult *pResult, void *pUserData)
 	}
 }
 
+void CGameContext::ConUpdateMaplist(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(pSelf->m_pWebapp)
+	{
+		if(pSelf->m_pWebapp->UpdateMapList())
+			pSelf->m_pWebapp->LoadMapList();
+	}
+}
+
 void CGameContext::ConReloadMaplist(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(pSelf->m_pWebapp)
+	{
+		pSelf->m_pWebapp->UpdateMapList();
 		pSelf->m_pWebapp->LoadMapList();
+	}
 }
 
 void SaveVoteToFile(IOHANDLE File, const CMapInfo *pMapInfo)
@@ -241,7 +254,7 @@ void CGameContext::ConSaveMapVotes(IConsole::IResult *pResult, void *pUserData)
 	io_close(File);
 }
 
-void CGameContext::ConReloadMapVotes(IConsole::IResult *pResult, void *pUserData)
+void CGameContext::ConUpdateMapVotes(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(pSelf->m_pWebapp)

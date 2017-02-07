@@ -1595,9 +1595,10 @@ void CGameContext::OnConsoleInit()
 #if defined(CONF_TEERACE)
 	Console()->Register("ping", "", CFGFLAG_SERVER, ConPing, this, "Checks if the webapp is online");
 	Console()->Register("maplist", "?i", CFGFLAG_SERVER, ConMaplist, this, "Shows the current map list with map ID's");
+	Console()->Register("update_maplist", "", CFGFLAG_SERVER, ConUpdateMaplist, this, "Updates the map list");
 	Console()->Register("reload_maplist", "", CFGFLAG_SERVER, ConReloadMaplist, this, "Reloads the map list");
 	Console()->Register("save_map_votes", "?i", CFGFLAG_SERVER, ConSaveMapVotes, this, "Stores the map votes into the config");
-	Console()->Register("reload_map_votes", "", CFGFLAG_SERVER, ConReloadMapVotes, this, "Updates the map votes");
+	Console()->Register("update_map_votes", "", CFGFLAG_SERVER, ConUpdateMapVotes, this, "Updates the map votes");
 #endif
 }
 
@@ -1688,10 +1689,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	{
 		// reset map
 		m_pWebapp->CurrentMap()->m_ID = -1;
-		if(str_comp(g_Config.m_WaMapTypes, m_pWebapp->MapList()->GetMapTypes()) == 0)
-			m_pWebapp->OnInit();
-		else
+		if(m_pWebapp->UpdateMapList())
 			m_pWebapp->LoadMapList();
+		else
+			m_pWebapp->OnInit();
 	}
 #endif
 

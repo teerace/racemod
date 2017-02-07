@@ -33,10 +33,13 @@ class CMapList
 {
 public:
 	bool m_Changed;
+	int64 m_LastReload;
 
-	CMapList() : m_Changed(false) { m_aMapTypes[0] = 0; }
+	CMapList() : m_Changed(false), m_LastReload(-1) { m_aMapTypes[0] = 0; }
 
-	bool Update(class CServerWebapp *pWebapp, const char *pMapTypes, const char *pData, int Size);
+	void Reset(const char *pMapTypes);
+
+	bool Update(class CServerWebapp *pWebapp, const char *pData, int Size);
 	const CMapInfo *AddMapFile(const char *pFilename, unsigned Crc);
 	const CMapInfo *FindMap(const char *pName) const;
 
@@ -61,8 +64,9 @@ public:
 	virtual ~CServerWebapp() { }
 	
 	CMapInfo *CurrentMap() { return &m_CurrentMap; }
-	const CMapList *MapList() const { return &m_MapList; }
+	const CMapList *MapList() const { return m_pCurrentMapList; }
 
+	bool UpdateMapList();
 	void LoadMapList();
 	void SendPing();
 	void UpdateMapVotes();
@@ -80,6 +84,11 @@ public:
 	}
 
 private:
+	enum
+	{
+		NUM_CACHED_MAPLISTS=4
+	};
+
 	class CWebData
 	{
 	public:
@@ -129,10 +138,10 @@ private:
 	array<CUpload> m_lUploads;
 
 	int64 m_LastPing;
-	int64 m_LastMapListLoad;
 	int64 m_LastMapVoteUpdate;
 
-	CMapList m_MapList;
+	CMapList *m_pCurrentMapList;
+	CMapList m_aCachedMapLists[NUM_CACHED_MAPLISTS];
 	CMapInfo m_CurrentMap;
 
 	// http callbacks

@@ -83,9 +83,10 @@ class CGameContext : public IGameServer
 #if defined(CONF_TEERACE)
 	static void ConPing(IConsole::IResult *pResult, void *pUserData);
 	static void ConMaplist(IConsole::IResult *pResult, void *pUserData);
+	static void ConUpdateMaplist(IConsole::IResult *pResult, void *pUserData);
 	static void ConReloadMaplist(IConsole::IResult *pResult, void *pUserData);
 	static void ConSaveMapVotes(IConsole::IResult *pResult, void *pUserData);
-	static void ConReloadMapVotes(IConsole::IResult *pResult, void *pUserData);
+	static void ConUpdateMapVotes(IConsole::IResult *pResult, void *pUserData);
 #endif
 
 	CGameContext(int Resetting);
