@@ -237,16 +237,16 @@ CServerWebapp::CServerWebapp(CGameContext *pGameServer)
 void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUserData)
 {
 	CUserAuthData *pUser = (CUserAuthData*)pUserData;
-	CServerWebapp *pWenapp = pUser->m_pWebapp;
+	CServerWebapp *pWebapp = pUser->m_pWebapp;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
-	CheckStatusCode(pWenapp->GameServer()->Console(), pResponse);
+	CheckStatusCode(pWebapp->GameServer()->Console(), pResponse);
 
 	int ClientID = pUser->m_ClientID;
-	if(pWenapp->GameServer()->m_apPlayers[ClientID])
+	if(pWebapp->GameServer()->m_apPlayers[ClientID])
 	{
 		if(Error)
 		{
-			pWenapp->GameServer()->SendChatTarget(ClientID, "unknown error");
+			pWebapp->GameServer()->SendChatTarget(ClientID, "unknown error");
 			delete pUser;
 			return;
 		}
@@ -269,20 +269,20 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 		if(UserID > 0)
 		{
 			char aBuf[512];
-			str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pWenapp->Server()->ClientName(ClientID), (const char*)(*pJsonData)["username"]);
-			pWenapp->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-			pWenapp->Server()->SetUserID(ClientID, UserID);
-			pWenapp->Server()->SetUserName(ClientID, (*pJsonData)["username"]);
+			str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pWebapp->Server()->ClientName(ClientID), (const char*)(*pJsonData)["username"]);
+			pWebapp->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+			pWebapp->Server()->SetUserID(ClientID, UserID);
+			pWebapp->Server()->SetUserName(ClientID, (*pJsonData)["username"]);
 
 			// auth staff members
 			if((bool)(*pJsonData)["is_staff"])
-				pWenapp->Server()->StaffAuth(ClientID, SendRconCmds);
+				pWebapp->Server()->StaffAuth(ClientID, SendRconCmds);
 
-			pWenapp->Score()->LoadScore(ClientID, true);
+			pWebapp->Score()->LoadScore(ClientID, true);
 		}
 		else
 		{
-			pWenapp->GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
+			pWebapp->GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
 		}
 		json_value_free(pJsonData);
 	}
