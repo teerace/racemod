@@ -486,7 +486,7 @@ void CServerWebapp::Tick()
 	// do uploads
 	for(int i = 0; i < m_lUploads.size(); i++)
 	{
-		if(m_lUploads[i].m_StartTime <= time_get())
+		if(m_lUploads[i].m_StartTime <= Now)
 		{
 			Upload(m_lUploads[i].m_aFilename, m_lUploads[i].m_aURL, m_lUploads[i].m_aUploadname, m_lUploads[i].m_pfnCallback);
 			m_lUploads.remove_index_fast(i);
