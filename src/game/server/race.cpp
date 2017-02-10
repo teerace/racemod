@@ -421,16 +421,13 @@ void CGameContext::LoadMapSettings()
 	if(pItem && pItem->m_Settings > -1)
 	{
 		// load settings
-		if(pItem->m_Settings > -1)
+		int Size = pMap->GetUncompressedDataSize(pItem->m_Settings);
+		const char *pTmp = (char*)pMap->GetData(pItem->m_Settings);
+		const char *pEnd = pTmp + Size;
+		while(pTmp < pEnd)
 		{
-			int Size = pMap->GetUncompressedDataSize(pItem->m_Settings);
-			const char *pTmp = (char*)pMap->GetData(pItem->m_Settings);
-			const char *pEnd = pTmp + Size;
-			while(pTmp < pEnd)
-			{
-				Console()->ExecuteLineFlag(pTmp, CFGFLAG_MAPSETTINGS);
-				pTmp += str_length(pTmp) + 1;
-			}
+			Console()->ExecuteLineFlag(pTmp, CFGFLAG_MAPSETTINGS);
+			pTmp += str_length(pTmp) + 1;
 		}
 	}
 }

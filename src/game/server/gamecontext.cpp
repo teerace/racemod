@@ -1619,13 +1619,10 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	m_Layers.Init(Kernel());
 	m_Collision.Init(&m_Layers);
 
-	if(g_Config.m_SvLoadMapDefaults)
-	{
-		IConfig *pConfig = Kernel()->RequestInterface<IConfig>();
-		if(pConfig)
-			pConfig->Reset(CFGFLAG_MAPSETTINGS);
-		LoadMapSettings();
-	}
+	IConfig *pConfig = Kernel()->RequestInterface<IConfig>();
+	if(pConfig)
+		pConfig->Reset(CFGFLAG_MAPSETTINGS);
+	LoadMapSettings();
 
 	if(str_find_nocase(g_Config.m_SvMap, "no-weapons") || str_find_nocase(g_Config.m_SvGametype, "no-weapons"))
 		g_Config.m_SvNoItems = true;
