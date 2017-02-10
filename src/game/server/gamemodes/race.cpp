@@ -89,14 +89,16 @@ void CGameControllerRACE::Tick()
 void CGameControllerRACE::Snap(int SnappingClient)
 {
 	int TmpRoundStartTick = m_RoundStartTick;
-	if(SnappingClient >= 0)
+	int TmpTimeLimit = g_Config.m_SvTimelimit;
+	if(SnappingClient >= 0 && m_aRace[SnappingClient].m_RaceState == RACE_STARTED)
 	{
-		CRaceData *p = &m_aRace[SnappingClient];
-		m_RoundStartTick = p->m_RaceState == RACE_STARTED ? p->m_StartTick : Server()->Tick();
+		m_RoundStartTick = m_aRace[SnappingClient].m_StartTick;
+		g_Config.m_SvTimelimit = 0;
 	}
 
 	IGameController::Snap(SnappingClient);
 	m_RoundStartTick = TmpRoundStartTick;
+	g_Config.m_SvTimelimit = TmpTimeLimit;
 }
 
 bool CGameControllerRACE::OnCheckpoint(int ID, int z)
