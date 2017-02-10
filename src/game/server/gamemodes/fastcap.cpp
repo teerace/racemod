@@ -20,6 +20,9 @@ CGameControllerFC::CGameControllerFC(class CGameContext *pGameServer)
 
 bool CGameControllerFC::OnEntity(int Index, vec2 Pos)
 {
+	if(Index == ENTITY_POWERUP_NINJA)
+		return false;
+
 	if(IGameController::OnEntity(Index, Pos))
 		return true;
 	
