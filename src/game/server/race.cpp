@@ -115,7 +115,7 @@ void CGameContext::ConTeleport(IConsole::IResult *pResult, void *pUserData)
 		if(pChr)
 		{
 			pChr->GetCore()->m_Pos = pSelf->m_apPlayers[CID2]->m_ViewPos;
-			pSelf->RaceController()->SetRaceState(CID1, CGameControllerRACE::RACE_FINISHED);
+			pSelf->RaceController()->StopRace(CID1);
 		}
 		else
 			pSelf->m_apPlayers[CID1]->m_ViewPos = pSelf->m_apPlayers[CID2]->m_ViewPos;
@@ -133,7 +133,7 @@ void CGameContext::ConTeleportTo(IConsole::IResult *pResult, void *pUserData)
 		if(pChr)
 		{
 			pChr->GetCore()->m_Pos = TelePos;
-			pSelf->RaceController()->SetRaceState(CID, CGameControllerRACE::RACE_FINISHED);
+			pSelf->RaceController()->StopRace(CID);
 		}
 		else
 			pSelf->m_apPlayers[CID]->m_ViewPos = TelePos;

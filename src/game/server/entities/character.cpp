@@ -504,7 +504,9 @@ void CCharacter::OnPredictedInput(CNetObj_PlayerInput *pNewInput)
 	if(g_Config.m_WaAutoRecord && m_LastAction == Server()->Tick() && GameServer()->Webapp())
 	{
 		int ClientID = m_pPlayer->GetCID();
-		if(!Server()->RaceRecorder_IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && GameServer()->RaceController()->GetRaceState(ClientID) == CGameControllerRACE::RACE_NONE)
+		if(!Server()->RaceRecorder_IsRecording(ClientID) && Server()->GetUserID(ClientID) > 0
+			&& GameServer()->Webapp()->CurrentMap()->m_ID > -1 && GameServer()->IsPureTuning()
+			&& GameServer()->RaceController()->CanStartRace(ClientID))
 			Server()->RaceRecorder_Start(ClientID);
 	}
 #endif

@@ -13,9 +13,9 @@ class CGameControllerRACE : public IGameController
 
 	virtual bool OnCheckpoint(int ID, int z);
 
-	int GetTime(int ID);
-	int CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team);
-	int CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos, int Team);
+	int GetTime(int ID) const;
+	int CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team) const;
+	int CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos, int Team) const;
 
 protected:
 	struct CRaceData
@@ -43,11 +43,12 @@ protected:
 		}
 	} m_aRace[MAX_CLIENTS];
 
-	virtual bool IsStart(int TilePos, vec2 Pos, int Team);
-	virtual bool IsEnd(int TilePos, vec2 Pos, int Team);
+	virtual bool IsStart(int TilePos, vec2 Pos, int Team) const;
+	virtual bool IsEnd(int TilePos, vec2 Pos, int Team) const;
+	virtual bool CanEndRace(int ID) const;
 
-	virtual bool OnRaceStart(int ID, int StartAddTime, bool Check = true);
-	virtual bool OnRaceEnd(int ID, int FinishTime);
+	virtual void OnRaceStart(int ID, int StartAddTime);
+	virtual void OnRaceEnd(int ID, int FinishTime);
 
 public:
 	enum
@@ -67,8 +68,11 @@ public:
 
 	virtual void ProcessRaceTile(int ID, int TilePos, vec2 PrevPos, vec2 Pos);
 
+	virtual bool CanStartRace(int ID) const;
+
+	void StopRace(int ID) { OnRaceEnd(ID, 0); }
+
 	int GetRaceState(int ID) const { return m_aRace[ID].m_RaceState; }
-	void SetRaceState(int ID, int State) { m_aRace[ID].m_RaceState = State; }
 };
 
 #endif

@@ -7,12 +7,15 @@ class CGameControllerFC : public CGameControllerRACE
 	class CFlag *m_apFlags[2];
 	class CFlag *m_apPlFlags[MAX_CLIENTS];
 
-	bool IsOwnFlagStand(vec2 Pos, int Team);
-	bool IsEnemyFlagStand(vec2 Pos, int Team);
+	bool IsOwnFlagStand(vec2 Pos, int Team) const;
+	bool IsEnemyFlagStand(vec2 Pos, int Team) const;
 
 protected:
-	virtual bool IsStart(int TilePos, vec2 Pos, int Team) { return IsEnemyFlagStand(Pos, Team); }
-	virtual bool IsEnd(int TilePos, vec2 Pos, int Team) { return IsOwnFlagStand(Pos, Team); }
+	virtual bool IsStart(int TilePos, vec2 Pos, int Team) const { return IsEnemyFlagStand(Pos, Team); }
+	virtual bool IsEnd(int TilePos, vec2 Pos, int Team) const { return IsOwnFlagStand(Pos, Team); }
+
+	virtual void OnRaceStart(int ID, int StartAddTime);
+	virtual void OnRaceEnd(int ID, int FinishTime);
 
 public:
 	CGameControllerFC(class CGameContext *pGameServer);
@@ -20,14 +23,12 @@ public:
 	virtual bool CanBeMovedOnBalance(int Cid);
 	
 	virtual bool OnEntity(int Index, vec2 Pos);
-	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 	virtual void OnCharacterSpawn(class CCharacter *pChr);
 	virtual bool CanSpawn(int Team, vec2 *pOutPos);
 	
 	virtual bool IsFastCap() const { return true; }
 
-	virtual bool OnRaceStart(int ID, int StartAddTime, bool Check);
-	virtual bool OnRaceEnd(int ID, int FinishTime);
+	virtual bool CanStartRace(int ID) const;
 	
 	virtual void Snap(int SnappingClient);
 };

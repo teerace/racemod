@@ -31,16 +31,8 @@ CGameControllerRACE::~CGameControllerRACE()
 int CGameControllerRACE::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
 	int ClientID = pVictim->GetPlayer()->GetCID();
+	StopRace(ClientID);
 	m_aRace[ClientID].Reset();
-	
-#if defined(CONF_TEERACE)
-	if(Server()->RaceRecorder_IsRecording(ClientID))
-		Server()->RaceRecorder_Stop(ClientID);
-	
-	if(Server()->GhostRecorder_IsRecording(ClientID))
-		Server()->GhostRecorder_Stop(ClientID, 0);
-#endif
-
 	return 0;
 }
 
@@ -58,9 +50,14 @@ void CGameControllerRACE::Tick()
 	IGameController::Tick();
 	DoWincheck();
 
+	bool PureTuning = GameServer()->IsPureTuning();
+
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		CRaceData *p = &m_aRace[i];
+
+		if(p->m_RaceState == RACE_STARTED && !PureTuning)
+			StopRace(i);
 
 		if(p->m_RaceState == RACE_STARTED && GameServer()->m_apPlayers[i]->m_RaceClient == 1 &&
 			Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed())
@@ -73,21 +70,17 @@ void CGameControllerRACE::Tick()
 #if defined(CONF_TEERACE)
 		// stop recording at the finish
 		CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
-		if(Server()->RaceRecorder_IsRecording(i))
+		bool NewBest = !pBest->m_Time || GetTime(i) < pBest->m_Time;
+
+		if(Server()->RaceRecorder_IsRecording(i) && 
+			(Server()->Tick() == m_aStopRecordTick[i] || (m_aRace[i].m_RaceState == RACE_STARTED && !NewBest) || !PureTuning))
 		{
-			if(Server()->Tick() == m_aStopRecordTick[i])
-			{
-				m_aStopRecordTick[i] = -1;
-				Server()->RaceRecorder_Stop(i);
-				continue;
-			}
-			
-			if(m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
-				Server()->RaceRecorder_Stop(i);
+			m_aStopRecordTick[i] = -1;
+			Server()->RaceRecorder_Stop(i);
 		}
 		
 		// stop ghost if time is bigger then best time
-		if(Server()->GhostRecorder_IsRecording(i) && m_aRace[i].m_RaceState == RACE_STARTED && pBest->m_Time > 0 && pBest->m_Time < GetTime(i))
+		if(Server()->GhostRecorder_IsRecording(i) && m_aRace[i].m_RaceState == RACE_STARTED && !NewBest)
 			Server()->GhostRecorder_Stop(i, 0);
 #endif
 	}
@@ -134,17 +127,10 @@ bool CGameControllerRACE::OnCheckpoint(int ID, int z)
 	return true;
 }
 
-bool CGameControllerRACE::OnRaceStart(int ID, int StartAddTime, bool Check)
+void CGameControllerRACE::OnRaceStart(int ID, int StartAddTime)
 {
 	CRaceData *p = &m_aRace[ID];
 	CCharacter *pChr = GameServer()->GetPlayerChar(ID);
-	if(Check && (pChr->HasWeapon(WEAPON_GRENADE) || pChr->Armor()) && (p->m_RaceState == RACE_FINISHED || p->m_RaceState == RACE_STARTED))
-		return false;
-	
-	p->m_RaceState = RACE_STARTED;
-	p->m_StartTick = Server()->Tick();
-	p->m_RefreshTick = Server()->Tick();
-	p->m_StartAddTime = StartAddTime;
 
 	if(p->m_RaceState != RACE_NONE)
 	{
@@ -152,6 +138,11 @@ bool CGameControllerRACE::OnRaceStart(int ID, int StartAddTime, bool Check)
 		if(!pChr->HasWeapon(WEAPON_GRENADE))
 			GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
 	}
+	
+	p->m_RaceState = RACE_STARTED;
+	p->m_StartTick = Server()->Tick();
+	p->m_RefreshTick = Server()->Tick();
+	p->m_StartAddTime = StartAddTime;
 
 #if defined(CONF_TEERACE)
 	if(g_Config.m_WaAutoRecord && GameServer()->Webapp() && Server()->GetUserID(ID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && !Server()->GhostRecorder_IsRecording(ID))
@@ -166,34 +157,32 @@ bool CGameControllerRACE::OnRaceStart(int ID, int StartAddTime, bool Check)
 		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_SKIN, (const char*)&Skin, sizeof(Skin));
 	}
 #endif
-
-	return true;
 }
 
-bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
+void CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 {
 	CRaceData *p = &m_aRace[ID];
 	CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
-	if(p->m_RaceState != RACE_STARTED)
-		return false;
 
 	p->m_RaceState = RACE_FINISHED;
+
+	if(!FinishTime)
+	{
+#if defined(CONF_TEERACE)
+		if(Server()->RaceRecorder_IsRecording(ID))
+		{
+			m_aStopRecordTick[ID] = -1;
+			Server()->RaceRecorder_Stop(ID);
+		}
+		if(Server()->GhostRecorder_IsRecording(ID))
+			Server()->GhostRecorder_Stop(ID, FinishTime);
+#endif
+		return;
+	}
 
 	// TODO:
 	// move all this into the scoring classes so the selected
 	// scoring backend can decide how to handle the situation
-
-	// run is invalid if tuning is modified
-	if(!GameServer()->IsPureTuning())
-	{
-#if defined(CONF_TEERACE)
-	if(Server()->RaceRecorder_IsRecording(ID))
-		Server()->RaceRecorder_Stop(ID);
-	if(Server()->GhostRecorder_IsRecording(ID))
-		Server()->GhostRecorder_Stop(ID, 0);
-#endif
-		return true;
-	}
 
 	// add the time from the start
 	FinishTime += p->m_StartAddTime;
@@ -230,21 +219,19 @@ bool CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 
 #if defined(CONF_TEERACE)
 	if(Server()->RaceRecorder_IsRecording(ID))
-		m_aStopRecordTick[ID] = Server()->Tick()+Server()->TickSpeed();
+		m_aStopRecordTick[ID] = Server()->Tick() + Server()->TickSpeed();
 	if(Server()->GhostRecorder_IsRecording(ID))
 		Server()->GhostRecorder_Stop(ID, FinishTime);
 #endif
-
-	return true;
 }
 
-bool CGameControllerRACE::IsStart(int TilePos, vec2 Pos, int Team)
+bool CGameControllerRACE::IsStart(int TilePos, vec2 Pos, int Team) const
 {
 	return GameServer()->Collision()->GetIndex(TilePos) == TILE_BEGIN
 		|| GameServer()->Collision()->GetIndex(Pos) == TILE_BEGIN;
 }
 
-bool CGameControllerRACE::IsEnd(int TilePos, vec2 Pos, int Team)
+bool CGameControllerRACE::IsEnd(int TilePos, vec2 Pos, int Team) const
 {
 	return GameServer()->Collision()->GetIndex(TilePos) == TILE_END
 		|| GameServer()->Collision()->GetIndex(Pos) == TILE_END;
@@ -253,35 +240,46 @@ bool CGameControllerRACE::IsEnd(int TilePos, vec2 Pos, int Team)
 void CGameControllerRACE::ProcessRaceTile(int ID, int TilePos, vec2 PrevPos, vec2 Pos)
 {
 	int Cp = GameServer()->Collision()->CheckCheckpoint(TilePos);
-	if (Cp != -1)
+	if(Cp != -1)
 		OnCheckpoint(ID, Cp);
 
 	int Team = GameServer()->m_apPlayers[ID]->GetTeam();
-	if(IsStart(TilePos, Pos, Team))
+	if(CanStartRace(ID) && IsStart(TilePos, Pos, Team))
 		OnRaceStart(ID, CalculateStartAddTime(PrevPos, Pos, Team));
-	else if(IsEnd(TilePos, Pos, Team))
+	else if(CanEndRace(ID) && IsEnd(TilePos, Pos, Team))
 		OnRaceEnd(ID, CalculateFinishTime(GetTime(ID), PrevPos, Pos, Team));
 }
 
-int CGameControllerRACE::GetTime(int ID)
+bool CGameControllerRACE::CanStartRace(int ID) const
+{
+	CCharacter *pChr = GameServer()->GetPlayerChar(ID);
+	return (m_aRace[ID].m_RaceState == RACE_NONE || (!pChr->HasWeapon(WEAPON_GRENADE) && !pChr->Armor())) && GameServer()->IsPureTuning();
+}
+
+bool CGameControllerRACE::CanEndRace(int ID) const
+{
+	return m_aRace[ID].m_RaceState == RACE_STARTED;
+}
+
+int CGameControllerRACE::GetTime(int ID) const
 {
 	return (Server()->Tick() - m_aRace[ID].m_StartTick) * 1000 / Server()->TickSpeed();
 }
 
-int CGameControllerRACE::CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team)
+int CGameControllerRACE::CalculateStartAddTime(vec2 PrevPos, vec2 Pos, int Team) const
 {
 	int Num = 1000 / Server()->TickSpeed();
-	for (int i = 0; i <= Num; i++)
+	for(int i = 0; i <= Num; i++)
 	{
 		float a = i / (float)Num;
 		vec2 TmpPos = mix(Pos, PrevPos, a);
-		if (IsStart(-1, TmpPos, Team))
+		if(IsStart(-1, TmpPos, Team))
 			return i;
 	}
 	return Num;
 }
 
-int CGameControllerRACE::CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos, int Team)
+int CGameControllerRACE::CalculateFinishTime(int Time, vec2 PrevPos, vec2 Pos, int Team) const
 {
 	int Num = 1000 / Server()->TickSpeed();
 	for(int i = 0; i <= Num; i++)

@@ -34,12 +34,11 @@ bool CGameControllerFC::OnEntity(int Index, vec2 Pos)
 	return true;
 }
 
-bool CGameControllerFC::IsOwnFlagStand(vec2 Pos, int Team)
+bool CGameControllerFC::IsOwnFlagStand(vec2 Pos, int Team) const
 {
 	for(int fi = 0; fi < 2; fi++)
 	{
 		CFlag *F = m_apFlags[fi];
-			
 		if(F && F->m_Team == Team && distance(F->m_Pos, Pos) < 32)
 			return true;
 	}
@@ -47,29 +46,16 @@ bool CGameControllerFC::IsOwnFlagStand(vec2 Pos, int Team)
 	return false;
 }
 
-bool CGameControllerFC::IsEnemyFlagStand(vec2 Pos, int Team)
+bool CGameControllerFC::IsEnemyFlagStand(vec2 Pos, int Team) const
 {
 	for(int fi = 0; fi < 2; fi++)
 	{
 		CFlag *F = m_apFlags[fi];
-			
 		if(F && F->m_Team != Team && distance(F->m_Pos, Pos) < 32)
 			return true;
 	}
 	
 	return false;
-}
-
-int CGameControllerFC::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
-{
-	int ID = pVictim->GetPlayer()->GetCID();
-	if(m_apPlFlags[ID])
-	{
-		m_apPlFlags[ID]->Reset();
-		m_apPlFlags[ID] = 0;
-	}
-
-	return CGameControllerRACE::OnCharacterDeath(pVictim, pKiller, Weapon);
 }
 
 void CGameControllerFC::OnCharacterSpawn(class CCharacter *pChr)
@@ -122,38 +108,34 @@ bool CGameControllerFC::CanBeMovedOnBalance(int Cid)
 	return true;
 }
 
-bool CGameControllerFC::OnRaceStart(int ID, int StartAddTime, bool Check)
+void CGameControllerFC::OnRaceStart(int ID, int StartAddTime)
 {
-	CRaceData *p = &m_aRace[ID];
-	if(p->m_RaceState == RACE_STARTED)
-		return false;
-	
-	CGameControllerRACE::OnRaceStart(ID, StartAddTime, false);
+	CGameControllerRACE::OnRaceStart(ID, StartAddTime);
 	
 	m_apPlFlags[ID] = new CFlag(&GameServer()->m_World, GameServer()->m_apPlayers[ID]->GetTeam()^1, GameServer()->GetPlayerChar(ID)->m_Pos, GameServer()->GetPlayerChar(ID));
 	GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, ID);
-
-	return true;
 }
 
-bool CGameControllerFC::OnRaceEnd(int ID, int FinishTime)
+void CGameControllerFC::OnRaceEnd(int ID, int FinishTime)
 {
-	if(!CGameControllerRACE::OnRaceEnd(ID, FinishTime))
-		return false;
+	CGameControllerRACE::OnRaceEnd(ID, FinishTime);
 
 	if(m_apPlFlags[ID])
 	{
 		m_apPlFlags[ID]->Reset();
 		m_apPlFlags[ID] = 0;
 
-		// reset pickups
-		GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
-
-		// sound \o/
-		GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE, ID);
+		if(FinishTime)
+		{
+			GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
+			GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE, ID);
+		}
 	}
+}
 
-	return true;
+bool CGameControllerFC::CanStartRace(int ID) const
+{
+	return m_aRace[ID].m_RaceState != RACE_STARTED && GameServer()->IsPureTuning();
 }
 
 void CGameControllerFC::Snap(int SnappingClient)
