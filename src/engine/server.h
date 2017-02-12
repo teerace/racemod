@@ -35,7 +35,9 @@ public:
 
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags, int ClientID) = 0;
 
+#if defined(CONF_TEERACE)
 	virtual void SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest) = 0;
+#endif
 
 	template<class T>
 	int SendPackMsg(T *pMsg, int Flags, int ClientID)

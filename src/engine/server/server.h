@@ -144,7 +144,10 @@ public:
 	CNetServer m_NetServer;
 	CEcon m_Econ;
 	CServerBan m_ServerBan;
+
+#if defined(CONF_TEERACE)
 	CHttpClient m_HttpClient;
+#endif
 
 	IEngineMap *m_pMap;
 
@@ -213,7 +216,9 @@ public:
 	static int NewClientCallback(int ClientID, void *pUser);
 	static int DelClientCallback(int ClientID, const char *pReason, void *pUser);
 
+#if defined(CONF_TEERACE)
 	virtual void SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest);
+#endif
 
 	void SendMap(int ClientID);
 	void SendConnectionReady(int ClientID);

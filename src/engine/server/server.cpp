@@ -780,10 +780,12 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	return 0;
 }
 
+#if defined(CONF_TEERACE)
 void CServer::SendHttp(class CRequestInfo *pInfo, class IRequest *pRequest)
 {
 	m_HttpClient.Send(pInfo, pRequest);
 }
+#endif
 
 void CServer::SendMap(int ClientID)
 {
@@ -1262,7 +1264,9 @@ void CServer::PumpNetwork()
 	m_ServerBan.Update();
 	m_Econ.Update();
 
+#if defined(CONF_TEERACE)
 	m_HttpClient.Update();
+#endif
 }
 
 #if defined(CONF_TEERACE)
@@ -1516,7 +1520,9 @@ int CServer::Run()
 
 	m_Econ.Init(Console(), &m_ServerBan);
 
+#if defined(CONF_TEERACE)
 	m_HttpClient.Init(Kernel()->RequestInterface<IEngine>());
+#endif
 
 	char aBuf[256];
 	str_format(aBuf, sizeof(aBuf), "server name is '%s'", g_Config.m_SvName);
