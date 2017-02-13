@@ -507,7 +507,7 @@ void CServerWebapp::Tick()
 
 	// only one vote update every 5 seconds
 	// TODO: check resend buffer size
-	if(g_Config.m_WaAutoAddMaps && m_pCurrentMapList->m_Changed && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 5 < Now))
+	if(g_Config.m_WaAutoAddMaps && m_pCurrentMapList->m_Changed && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 3 < Now))
 		UpdateMapVotes();
 }
 
