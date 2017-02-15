@@ -11,10 +11,8 @@
 #endif
 
 #include "../gamemodes/race.h"
-#include "../gamemodes/fastcap.h"
 
 #include "character.h"
-#include "flag.h"
 #include "laser.h"
 #include "projectile.h"
 
@@ -72,11 +70,11 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	m_pPlayer = pPlayer;
 	m_Pos = Pos;
-	m_PrevPos = Pos;
 
 	m_Core.Reset();
 	m_Core.Init(&GameServer()->m_World.m_Core, GameServer()->Collision());
 	m_Core.m_Pos = m_Pos;
+	m_Core.m_PrevPos = m_Pos;
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
 
 	m_ReckoningTick = 0;
@@ -85,8 +83,6 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	GameServer()->m_World.InsertEntity(this);
 	m_Alive = true;
-
-	m_LastSpeedup = -1;
 	
 	GameServer()->m_pController->OnCharacterSpawn(this);
 
@@ -565,9 +561,6 @@ void CCharacter::Tick()
 
 		m_pPlayer->m_ForceBalanced = false;
 	}
-
-	// save jumping state
-	int Jumped = m_Core.m_Jumped;
 	
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
@@ -582,73 +575,17 @@ void CCharacter::Tick()
 	}
 	
 	// tile pos
-	int TilePos = GameServer()->Collision()->CheckRaceTile(m_PrevPos, m_Pos);
+	int TilePos = GameServer()->Collision()->CheckRaceTile(m_Core.m_PrevPos, m_Pos, CCollision::RACECHECK_TILES_MAIN);
 
 	CGameControllerRACE *pRace = GameServer()->RaceController();
-	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, m_PrevPos, m_Pos);
-
-	// TODO: move this to gamecore
-	if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPL)
-	{
-		if(m_Core.m_Vel.x > 0)
-		{
-			if((int)GameServer()->Collision()->GetPos(TilePos).x < (int)m_Core.m_Pos.x)
-				m_Core.m_Pos.x = m_PrevPos.x;
-			m_Core.m_Vel.x = 0;
-		}
-	}
-	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPR)
-	{
-		if(m_Core.m_Vel.x < 0)
-		{
-			if((int)GameServer()->Collision()->GetPos(TilePos).x > (int)m_Core.m_Pos.x)
-				m_Core.m_Pos.x = m_PrevPos.x;
-			m_Core.m_Vel.x = 0;
-		}
-	}
-	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPB)
-	{
-		if(m_Core.m_Vel.y < 0)
-		{
-			if((int)GameServer()->Collision()->GetPos(TilePos).y > (int)m_Core.m_Pos.y)
-				m_Core.m_Pos.y = m_PrevPos.y;
-			m_Core.m_Vel.y = 0;
-		}
-	}
-	else if(GameServer()->Collision()->GetIndex(TilePos) == TILE_STOPT)
-	{
-		if(m_Core.m_Vel.y > 0)
-		{
-			if((int)GameServer()->Collision()->GetPos(TilePos).y < (int)m_Core.m_Pos.y)
-				m_Core.m_Pos.y = m_PrevPos.y;
-			if(Jumped&3 && m_Core.m_Jumped != Jumped) // check double jump
-				m_Core.m_Jumped = Jumped;
-			m_Core.m_Vel.y = 0;
-		}
-	}
-	
-	// handle speedup tiles
-	int SpeedupPos = GameServer()->Collision()->CheckSpeedup(TilePos);
-	bool SpeedupTouch = false;
-	if(m_LastSpeedup != SpeedupPos && SpeedupPos > -1)
-	{
-		vec2 Direction;
-		int Force;
-		GameServer()->Collision()->GetSpeedup(SpeedupPos, &Direction, &Force);
-		
-		m_Core.m_Vel += Direction*Force;
-		
-		SpeedupTouch = true;
-	}
-	
-	m_LastSpeedup = SpeedupPos;
+	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, m_Core.m_PrevPos, m_Pos);
 
 	if(m_Core.m_Teleported && g_Config.m_SvStrip)
 	{
 		m_ActiveWeapon = WEAPON_HAMMER;
 		m_LastWeapon = WEAPON_HAMMER;
 		m_aWeapons[0].m_Got = true;
-		for (int i = 1; i < NUM_WEAPONS; i++)
+		for(int i = 1; i < NUM_WEAPONS; i++)
 			m_aWeapons[i].m_Got = false;
 	}
 	
@@ -656,7 +593,7 @@ void CCharacter::Tick()
 	m_Pos = m_Core.m_Pos;
 	
 	// handle death-tiles and leaving gamelayer
-	if(!SpeedupTouch &&
+	if(!m_Core.m_SpeedupTouch &&
 		(GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
 		GameServer()->Collision()->GetCollisionAt(m_Pos.x+m_ProximityRadius/3.f, m_Pos.y+m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
 		GameServer()->Collision()->GetCollisionAt(m_Pos.x-m_ProximityRadius/3.f, m_Pos.y-m_ProximityRadius/3.f)&CCollision::COLFLAG_DEATH ||
@@ -672,7 +609,6 @@ void CCharacter::Tick()
 	// Previnput
 	m_PrevInput = m_Input;
 	
-	m_PrevPos = m_Core.m_Pos;
 	return;
 }
 
@@ -681,6 +617,9 @@ void CCharacter::TickDefered()
 	// advance the dummy
 	{
 		CWorldCore TempWorld;
+		TempWorld.m_Teleport = false;
+		TempWorld.m_Speedup = false;
+		TempWorld.m_StopTiles = false;
 		m_ReckoningCore.Init(&TempWorld, GameServer()->Collision());
 		m_ReckoningCore.Tick(false);
 		m_ReckoningCore.Move();

@@ -89,12 +89,15 @@ void CProjectile::Tick()
 		GameServer()->m_World.DestroyEntity(this);
 	}
 
-
-	int Tele = GameServer()->Collision()->CheckTeleport(PrevPos, CurPos);
-	if(Tele && m_Weapon == WEAPON_GRENADE && g_Config.m_SvTeleportGrenade)
+	if(m_Weapon == WEAPON_GRENADE && g_Config.m_SvTeleportGrenade)
 	{
-		m_Pos = GameServer()->Collision()->GetTeleportDestination(Tele);
-		m_StartTick = Server()->Tick();
+		int TilePos = GameServer()->Collision()->CheckRaceTile(PrevPos, CurPos, CCollision::RACECHECK_TELE);
+		int Tele = GameServer()->Collision()->CheckTeleport(TilePos);
+		if(Tele)
+		{
+			m_Pos = GameServer()->Collision()->GetTeleportDestination(Tele);
+			m_StartTick = Server()->Tick();
+		}
 	}
 }
 
