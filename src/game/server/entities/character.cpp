@@ -561,6 +561,8 @@ void CCharacter::Tick()
 
 		m_pPlayer->m_ForceBalanced = false;
 	}
+
+	vec2 PrevPos = m_Core.m_PrevPos;
 	
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
@@ -575,10 +577,10 @@ void CCharacter::Tick()
 	}
 	
 	// tile pos
-	int TilePos = GameServer()->Collision()->CheckRaceTile(m_Core.m_PrevPos, m_Pos, CCollision::RACECHECK_TILES_MAIN);
+	int TilePos = GameServer()->Collision()->CheckRaceTile(PrevPos, m_Pos, CCollision::RACECHECK_TILES_MAIN);
 
 	CGameControllerRACE *pRace = GameServer()->RaceController();
-	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, m_Core.m_PrevPos, m_Pos);
+	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, PrevPos, m_Pos);
 
 	if(m_Core.m_Teleported && g_Config.m_SvStrip)
 	{
