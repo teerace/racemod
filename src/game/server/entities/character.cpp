@@ -643,19 +643,13 @@ void CCharacter::Tick()
 	
 	m_LastSpeedup = SpeedupPos;
 
-	if(m_Core.m_Teleported)
+	if(m_Core.m_Teleported && g_Config.m_SvStrip)
 	{
-		// TODO: predict this (needs some kind of tuning param)
-		if(g_Config.m_SvTeleportVelReset)
-			m_Core.m_Vel = vec2(0,0);
-		if(g_Config.m_SvStrip)
-		{
-			m_ActiveWeapon = WEAPON_HAMMER;
-			m_LastWeapon = WEAPON_HAMMER;
-			m_aWeapons[0].m_Got = true;
-			for (int i = 1; i < NUM_WEAPONS; i++)
-				m_aWeapons[i].m_Got = false;
-		}
+		m_ActiveWeapon = WEAPON_HAMMER;
+		m_LastWeapon = WEAPON_HAMMER;
+		m_aWeapons[0].m_Got = true;
+		for (int i = 1; i < NUM_WEAPONS; i++)
+			m_aWeapons[i].m_Got = false;
 	}
 	
 	// set Position just in case it was changed
