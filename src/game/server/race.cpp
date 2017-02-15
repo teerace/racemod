@@ -429,6 +429,7 @@ void CGameContext::LoadMapSettings()
 			Console()->ExecuteLineFlag(pTmp, CFGFLAG_MAPSETTINGS);
 			pTmp += str_length(pTmp) + 1;
 		}
+		pMap->UnloadData(pItem->m_Settings);
 	}
 }
 
