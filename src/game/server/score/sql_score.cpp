@@ -1,7 +1,6 @@
 /* CSqlScore class by Sushi */
 #if defined(CONF_SQL)
 
-#include <string.h>
 #include <engine/shared/config.h>
 
 #include <game/teerace.h>
@@ -375,7 +374,7 @@ void CSqlScore::ShowRankThread(void *pUser)
 						RowCount, pData->m_pSqlData->m_pResults->getString("Name").c_str(), aTime);
 				
 				if(pData->m_Search)
-					strcat(aBuf, pData->m_aRequestingPlayer);
+					str_append(aBuf, pData->m_aRequestingPlayer, sizeof(aBuf));
 					
 				pData->m_pSqlData->GameServer()->SendChatTarget(-1, aBuf);
 			}

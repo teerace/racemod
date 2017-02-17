@@ -1,7 +1,5 @@
 /* copyright (c) 2008 rajh and gregwar. Score stuff */
 
-#include <string.h>
-
 #include <engine/shared/config.h>
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
@@ -127,13 +125,12 @@ void CFileScore::Init()
 			}
 			else if(Type == 3)
 			{
-				char aBuf[256];
-				str_copy(aBuf, pLine, sizeof(aBuf));
-				char *pTime = strtok(aBuf, " ");
-				for(int i = 0; pTime != NULL && i < NUM_CHECKPOINTS; i++)
+				const char *pTime = pLine;
+				for(int i = 0; pTime && i < NUM_CHECKPOINTS; i++)
 				{
 					Tmp.m_aCpTime[i] = str_toint(pTime);
-					pTime = strtok(NULL, " ");
+					pTime = str_find(pTime, " ");
+					if(pTime) pTime++;
 				}
 				m_Top.add(Tmp);
 			}
@@ -280,7 +277,7 @@ void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 		else
 			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", Pos, pScore->m_aName, aTime);
 		if(Search)
-			strcat(aBuf, aClientName);
+			str_append(aBuf, aClientName, sizeof(aBuf));
 		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 		return;
 	}
