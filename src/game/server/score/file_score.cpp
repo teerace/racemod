@@ -39,13 +39,36 @@ CFileScore::~CFileScore()
 	lock_unlock(gs_ScoreLock);
 }
 
-void CFileScore::WriteLine(IOHANDLE File, const char *pLine)
+void CFileScore::WriteEntry(IOHANDLE File, const CPlayerScore *pEntry) const
 {
-	io_write(File, pLine, str_length(pLine));
-	io_write_newline(File);
+#if defined(CONF_FAMILY_WINDOWS)
+	const char* pNewLine = "\r\n";
+#else
+	const char* pNewLine = "\n";
+#endif
+
+	char aBuf[1024] = { 0 };
+	char aBuf2[128];
+	str_append(aBuf, pEntry->m_aName, sizeof(aBuf));
+	str_append(aBuf, pNewLine, sizeof(aBuf));
+	str_format(aBuf2, sizeof(aBuf2), "%d", pEntry->m_Time);
+	str_append(aBuf, aBuf2, sizeof(aBuf));
+	str_append(aBuf, pNewLine, sizeof(aBuf));
+	str_append(aBuf, pEntry->m_aIP, sizeof(aBuf));
+	str_append(aBuf, pNewLine, sizeof(aBuf));
+	if(g_Config.m_SvCheckpointSave)
+	{
+		for(int c = 0; c < NUM_CHECKPOINTS; c++)
+		{
+			str_format(aBuf2, sizeof(aBuf2), "%d ", pEntry->m_aCpTime[c]);
+			str_append(aBuf, aBuf2, sizeof(aBuf));
+		}
+		str_append(aBuf, pNewLine, sizeof(aBuf));
+	}
+	io_write(File, aBuf, str_length(aBuf));
 }
 
-IOHANDLE CFileScore::OpenFile(int Flags)
+IOHANDLE CFileScore::OpenFile(int Flags) const
 {
 	char aFilename[256];
 	str_format(aFilename, sizeof(aFilename), "records/%s_record.dtb", m_pServer->GetMapName());
@@ -60,22 +83,9 @@ void CFileScore::SaveScoreThread(void *pUser)
 	if(File)
 	{
 		int t = 0;
-		char aBuf[128];
 		for(sorted_array<CPlayerScore>::range r = pSelf->m_Top.all(); !r.empty(); r.pop_front())
 		{
-			pSelf->WriteLine(File, r.front().m_aName);
-			str_format(aBuf, sizeof(aBuf), "%d", r.front().m_Time);
-			pSelf->WriteLine(File, aBuf);
-			pSelf->WriteLine(File, r.front().m_aIP);
-			if(g_Config.m_SvCheckpointSave)
-			{
-				for(int c = 0; c < NUM_CHECKPOINTS; c++)
-				{
-					str_format(aBuf, sizeof(aBuf), "%d ", r.front().m_aCpTime[c]);
-					io_write(File, aBuf, str_length(aBuf));
-				}
-				io_write_newline(File);
-			}
+			pSelf->WriteEntry(File, &r.front());
 			t++;
 			if(t%50 == 0)
 				thread_sleep(1);
@@ -144,44 +154,48 @@ void CFileScore::Init()
 		GetRecord()->Set(m_Top[0].m_Time, m_Top[0].m_aCpTime);
 }
 
-CFileScore::CPlayerScore *CFileScore::SearchScore(int ID, bool ScoreIP, int *pPosition)
+CFileScore::CPlayerScore *CFileScore::SearchScoreByID(int ID, int *pPosition)
 {
-	char aIP[16];
-	Server()->GetClientAddr(ID, aIP, sizeof(aIP));
-	
-	int Pos = 1;
-	for(sorted_array<CPlayerScore>::range r = m_Top.all(); !r.empty(); r.pop_front())
+	if(g_Config.m_SvScoreIP)
 	{
-		if(!str_comp(r.front().m_aIP, aIP) && g_Config.m_SvScoreIP && ScoreIP)
+		char aIP[16];
+		Server()->GetClientAddr(ID, aIP, sizeof(aIP));
+	
+		int Pos = 1;
+		for(sorted_array<CPlayerScore>::range r = m_Top.all(); !r.empty(); r.pop_front())
 		{
-			if(pPosition)
-				*pPosition = Pos;
-			return &r.front();
+			if(str_comp(r.front().m_aIP, aIP) == 0)
+			{
+				if(pPosition)
+					*pPosition = Pos;
+				return &r.front();
+			}
+			Pos++;
 		}
-		Pos++;
 	}
 	
-	return SearchName(Server()->ClientName(ID), pPosition, 0);
+	return SearchScoreByName(Server()->ClientName(ID), pPosition, true);
 }
 
-CFileScore::CPlayerScore *CFileScore::SearchName(const char *pName, int *pPosition, bool NoCase)
+CFileScore::CPlayerScore *CFileScore::SearchScoreByName(const char *pName, int *pPosition, bool ExactMatch)
 {
 	CPlayerScore *pPlayer = 0;
 	int Pos = 1;
 	int Found = 0;
 	for(sorted_array<CPlayerScore>::range r = m_Top.all(); !r.empty(); r.pop_front())
 	{
-		if(str_find_nocase(r.front().m_aName, pName))
+		if(str_comp(r.front().m_aName, pName) == 0)
 		{
 			if(pPosition)
 				*pPosition = Pos;
-			if(NoCase)
-			{
-				Found++;
-				pPlayer = &r.front();
-			}
-			if(!str_comp(r.front().m_aName, pName))
-				return &r.front();
+			return &r.front();
+		}
+		if(!ExactMatch && str_find_nocase(r.front().m_aName, pName))
+		{
+			if(pPosition)
+				*pPosition = Pos;
+			Found++;
+			pPlayer = &r.front();
 		}
 		Pos++;
 	}
@@ -198,7 +212,7 @@ void CFileScore::LoadScore(int ClientID, bool PrintRank)
 {
 	char aIP[16];
 	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));
-	CPlayerScore *pPlayer = SearchScore(ClientID, 0, 0);
+	CPlayerScore *pPlayer = SearchScoreByID(ClientID);
 	if(pPlayer && str_comp(pPlayer->m_aIP, aIP) != 0)
 	{
 		lock_wait(gs_ScoreLock);
@@ -209,7 +223,20 @@ void CFileScore::LoadScore(int ClientID, bool PrintRank)
 	
 	// set score
 	if(pPlayer)
+	{
 		PlayerData(ClientID)->Set(pPlayer->m_Time, pPlayer->m_aCpTime);
+		if(g_Config.m_SvShowBest)
+		{
+			CPlayer *pPl = GameServer()->m_apPlayers[ClientID];
+			PlayerData(ClientID)->m_CurTime = pPlayer->m_Time;
+			pPl->m_Score = max(-(pPlayer->m_Time / 1000), pPl->m_Score);
+
+			if(g_Config.m_SvShowTimes)
+				GameServer()->SendPlayerTime(-1, pPlayer->m_Time, ClientID);
+			else
+				GameServer()->SendPlayerTime(ClientID, pPlayer->m_Time, ClientID);
+		}
+	}
 }
 
 void CFileScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
@@ -222,7 +249,7 @@ void CFileScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 	Server()->GetClientAddr(ClientID, aIP, sizeof(aIP));
 
 	lock_wait(gs_ScoreLock);
-	CPlayerScore *pPlayer = SearchScore(ClientID, 1, 0);
+	CPlayerScore *pPlayer = SearchScoreByID(ClientID);
 
 	if(pPlayer)
 	{
@@ -246,7 +273,7 @@ void CFileScore::ShowTop5(int ClientID, int Debut)
 	GameServer()->SendChatTarget(ClientID, "----------- Top 5 -----------");
 	for(int i = 0; i < 5 && i + Debut - 1 < m_Top.size(); i++)
 	{
-		CPlayerScore *r = &m_Top[i+Debut-1];
+		const CPlayerScore *r = &m_Top[i+Debut-1];
 		IRace::FormatTimeLong(aTime, sizeof(aTime), r->m_Time);
 		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
 			i + Debut, r->m_aName, aTime);
@@ -257,34 +284,40 @@ void CFileScore::ShowTop5(int ClientID, int Debut)
 
 void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 {
-	CPlayerScore *pScore;
-	int Pos;
+	const CPlayerScore *pScore = 0;
+	int Pos = 0;
 	char aBuf[512];
-	
+
 	if(!Search)
-		pScore = SearchScore(ClientID, 1, &Pos);
+		pScore = SearchScoreByID(ClientID, &Pos);
 	else
-		pScore = SearchName(pName, &Pos, 1);
-	
+		pScore = SearchScoreByName(pName, &Pos, false);
+
+	bool Public = false;
+
 	if(pScore && Pos > -1)
 	{
-		char aClientName[128];
+		Public = g_Config.m_SvShowTimes;
 		char aTime[64];
 		IRace::FormatTimeLong(aTime, sizeof(aTime), pScore->m_Time);
-		str_format(aClientName, sizeof(aClientName), " (%s)", Server()->ClientName(ClientID));
-		if(!g_Config.m_SvShowTimes)
+		if(!Public)
 			str_format(aBuf, sizeof(aBuf), "Your time: %s", aTime);
 		else
 			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", Pos, pScore->m_aName, aTime);
 		if(Search)
+		{
+			char aClientName[128];
+			str_format(aClientName, sizeof(aClientName), " (%s)", Server()->ClientName(ClientID));
 			str_append(aBuf, aClientName, sizeof(aBuf));
-		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-		return;
+		}
 	}
 	else if(Pos == -1)
 		str_format(aBuf, sizeof(aBuf), "Several players were found.");
 	else
-		str_format(aBuf, sizeof(aBuf), "%s is not ranked", Search?pName:Server()->ClientName(ClientID));
-	
-	GameServer()->SendChatTarget(ClientID, aBuf);
+		str_format(aBuf, sizeof(aBuf), "%s is not ranked", pName);
+
+	if(Public)
+		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	else
+		GameServer()->SendChatTarget(ClientID, aBuf);
 }

@@ -22,7 +22,7 @@ class CFileScore : public IScore
 		CPlayerScore() {};
 		CPlayerScore(const char *pName, int Time, const char *pIP, int *apCpTime);
 		
-		bool operator<(const CPlayerScore& other) { return (this->m_Time < other.m_Time); }
+		bool operator<(const CPlayerScore& other) const { return (this->m_Time < other.m_Time); }
 	};
 	
 	sorted_array<CPlayerScore> m_Top;
@@ -30,15 +30,15 @@ class CFileScore : public IScore
 	CGameContext *GameServer() { return m_pGameServer; }
 	IServer *Server() { return m_pServer; }
 	
-	CPlayerScore *SearchScore(int ID, bool ScoreIP, int *pPosition);
-	CPlayerScore *SearchName(const char *pName, int *pPosition, bool MatchCase);
+	CPlayerScore *SearchScoreByID(int ID, int *pPosition=0);
+	CPlayerScore *SearchScoreByName(const char *pName, int *pPosition, bool ExactMatch);
 	
 	void Init();
 	void Save();
 	static void SaveScoreThread(void *pUser);
 
-	void WriteLine(IOHANDLE File, const char *pLine);
-	IOHANDLE OpenFile(int Flags);
+	void WriteEntry(IOHANDLE File, const CPlayerScore *pEntry) const;
+	IOHANDLE OpenFile(int Flags) const;
 	
 public:
 	CFileScore(CGameContext *pGameServer);

@@ -1018,7 +1018,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				pPlayer->m_DDNetClient = 0;
 
 			if(!g_Config.m_SvShowTimes)
+			{
+				SendPlayerTime(ClientID, Score()->PlayerData(ClientID)->m_CurTime, ClientID);
 				return;
+			}
 
 			SendRecord(ClientID);
 

@@ -46,7 +46,7 @@ void CPlayer::Tick()
 	if(!Server()->ClientIngame(m_ClientID))
 		return;
 
-	Server()->SetClientScore(m_ClientID, m_Score);
+	Server()->SetClientScore(m_ClientID, g_Config.m_SvShowTimes ? m_Score : 0);
 
 #if defined(CONF_TEERACE)
 	// higher playticks
