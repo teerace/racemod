@@ -69,8 +69,8 @@ void CGameControllerRACE::Tick()
 		
 #if defined(CONF_TEERACE)
 		// stop recording at the finish
-		CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
-		bool NewBest = !pBest->m_Time || GetTime(i) < pBest->m_Time;
+		const CPlayerData *pBest = GameServer()->Score()->PlayerData(i);
+		bool NewBest = pBest->CheckTime(GetTime(i));
 
 		if(Server()->RaceRecorder_IsRecording(i) && 
 			(Server()->Tick() == m_aStopRecordTick[i] || (m_aRace[i].m_RaceState == RACE_STARTED && !NewBest) || !PureTuning))
@@ -104,7 +104,7 @@ void CGameControllerRACE::Snap(int SnappingClient)
 bool CGameControllerRACE::OnCheckpoint(int ID, int z)
 {
 	CRaceData *p = &m_aRace[ID];
-	CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
+	const CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
 	if(p->m_RaceState != RACE_STARTED)
 		return false;
 
@@ -164,8 +164,6 @@ void CGameControllerRACE::OnRaceStart(int ID, int StartAddTime)
 void CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 {
 	CRaceData *p = &m_aRace[ID];
-	CPlayerData *pBest = GameServer()->Score()->PlayerData(ID);
-
 	p->m_RaceState = RACE_FINISHED;
 
 	if(!FinishTime)
@@ -188,18 +186,10 @@ void CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 
 	// add the time from the start
 	FinishTime += p->m_StartAddTime;
-	
-	GameServer()->m_apPlayers[ID]->m_Score = max(-(FinishTime / 1000), GameServer()->m_apPlayers[ID]->m_Score);
-
-	int Improved = FinishTime - pBest->m_Time;
-	bool NewPersonalRecord = pBest->Check(FinishTime, p->m_aCpCurrent);
+	int Improved = FinishTime - GameServer()->Score()->PlayerData(ID)->m_Time;
 
 	// save the score
-	GameServer()->Score()->SaveScore(ID, FinishTime, p->m_aCpCurrent, NewPersonalRecord);
-
-	// check for map record
-	if(NewPersonalRecord && GameServer()->Score()->CheckRecord(ID) && g_Config.m_SvShowTimes)
-		GameServer()->SendRecord(-1);
+	GameServer()->Score()->OnPlayerFinish(ID, FinishTime, p->m_aCpCurrent);
 
 	char aBuf[128];
 	char aTime[64];

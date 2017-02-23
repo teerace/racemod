@@ -21,23 +21,30 @@ public:
 		mem_zero(m_aCpTime, sizeof(m_aCpTime));
 	}
 	
-	void Set(int Time, int *pCpTime)
+	void SetTime(int Time, int *pCpTime)
 	{
 		m_Time = Time;
 		mem_copy(m_aCpTime, pCpTime, sizeof(m_aCpTime));
 	}
-	
-	bool Check(int Time, int *pCpTime)
+
+	void UpdateCurTime(int Time)
 	{
 		if(!m_CurTime || Time < m_CurTime)
 			m_CurTime = Time;
+	}
+	
+	bool CheckTime(int Time) const
+	{
+		return !m_Time || Time < m_Time;
+	}
 
-		if(!m_Time || Time < m_Time)
-		{
-			Set(Time, pCpTime);
-			return true;
-		}
-		return false;
+	bool UpdateTime(int Time, int *pCpTime)
+	{
+		UpdateCurTime(Time);
+		bool Check = CheckTime(Time);
+		if(Check)
+			SetTime(Time, pCpTime);
+		return Check;
 	}
 
 	int m_Time;
@@ -47,26 +54,36 @@ public:
 
 class IScore
 {
+protected:
 	CPlayerData m_aPlayerData[MAX_CLIENTS];
-	CPlayerData m_CurrentRecord;
+	int m_CurrentRecord;
 	
 public:
-	IScore() { m_CurrentRecord.Reset(); }
-	virtual ~IScore() {}
+	IScore() { m_CurrentRecord = 0; }
+	virtual ~IScore() { }
 	
-	CPlayerData *PlayerData(int ID) { return &m_aPlayerData[ID]; }
-	CPlayerData *GetRecord() { return &m_CurrentRecord; }
+	const CPlayerData *PlayerData(int ID) const { return &m_aPlayerData[ID]; }
+	int GetRecord() const { return m_CurrentRecord; }
 
-	bool CheckRecord(int ClientID)
+	bool UpdateRecord(int Time)
 	{
-		bool NewRecord = (!m_CurrentRecord.m_Time || m_aPlayerData[ClientID].m_Time < m_CurrentRecord.m_Time);
-		if(NewRecord)
-			m_CurrentRecord = m_aPlayerData[ClientID];
-		return NewRecord;
+		bool Check = !m_CurrentRecord || Time < m_CurrentRecord;
+		if(Check)
+			m_CurrentRecord = Time;
+		return Check;
 	}
+
+	virtual void OnMapLoad()
+	{
+		m_CurrentRecord = 0;
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			m_aPlayerData[i].Reset();
+	}
+
+	virtual void Tick() { }
 	
-	virtual void LoadScore(int ClientID, bool PrintRank=false) = 0;
-	virtual void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord) = 0;
+	virtual void OnPlayerInit(int ClientID, bool PrintRank=false) = 0;
+	virtual void OnPlayerFinish(int ClientID, int Time, int *pCpTime) = 0;
 	
 	virtual void ShowTop5(int ClientID, int Debut=1) = 0;
 	virtual void ShowRank(int ClientID, const char *pName, bool Search=false) = 0;

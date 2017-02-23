@@ -3,6 +3,7 @@
 #include <new>
 #include <engine/shared/config.h>
 #include "player.h"
+#include "score.h"
 
 
 MACRO_ALLOC_POOL_ID_IMPL(CPlayer, MAX_CLIENTS)
@@ -46,7 +47,9 @@ void CPlayer::Tick()
 	if(!Server()->ClientIngame(m_ClientID))
 		return;
 
-	Server()->SetClientScore(m_ClientID, g_Config.m_SvShowTimes ? m_Score : 0);
+	int CurTime = GameServer()->Score()->PlayerData(m_ClientID)->m_CurTime;
+	int TimeScore = CurTime ? max(-(CurTime / 1000), m_Score) : m_Score;
+	Server()->SetClientScore(m_ClientID, g_Config.m_SvShowTimes ? TimeScore : 0);
 
 #if defined(CONF_TEERACE)
 	// higher playticks
@@ -157,8 +160,10 @@ void CPlayer::Snap(int SnappingClient)
 	pPlayerInfo->m_ClientID = m_ClientID;
 	
 	// send 0 if times of otheres are not shown
+	int CurTime = GameServer()->Score()->PlayerData(m_ClientID)->m_CurTime;
+	int TimeScore = CurTime ? max(-(CurTime / 1000), m_Score) : m_Score;
 	int ShowTimes = (!g_Config.m_SvShowTimes && SnappingClient != m_ClientID);
-	pPlayerInfo->m_Score = ShowTimes ? 0 : m_Score;
+	pPlayerInfo->m_Score = ShowTimes ? 0 : TimeScore;
 
 	pPlayerInfo->m_Team = m_Team;
 

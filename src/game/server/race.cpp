@@ -18,7 +18,7 @@ void CGameContext::SendRecord(int ClientID)
 {
 	// no support for DDNet
 	CNetMsg_Sv_Record Msg;
-	Msg.m_Time = Score()->GetRecord()->m_Time;
+	Msg.m_Time = Score()->GetRecord();
 
 	if(ClientID == -1)
 	{

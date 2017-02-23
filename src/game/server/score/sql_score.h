@@ -12,7 +12,6 @@
 struct CSqlConfig
 {
 	char m_aDatabase[16];
-	char m_aPrefix[16];
 	char m_aUser[32];
 	char m_aPass[32];
 	char m_aIp[32];
@@ -29,8 +28,10 @@ class CSqlScore : public IScore
 	sql::Statement *m_pStatement;
 	sql::ResultSet *m_pResults;
 	
-	// copy of config vars
-	const CSqlConfig *m_pSqlConfig;
+	// config vars
+	CSqlConfig m_SqlConfig;
+	char m_aPrefix[16];
+
 	char m_aMap[64];
 	
 	CGameContext *GameServer() { return m_pGameServer; }
@@ -41,8 +42,6 @@ class CSqlScore : public IScore
 	static void ShowRankThread(void *pUser);
 	static void ShowTop5Thread(void *pUser);
 	
-	void Init();
-	
 	bool Connect();
 	void Disconnect();
 	
@@ -51,11 +50,14 @@ class CSqlScore : public IScore
 	
 public:
 	
-	CSqlScore(CGameContext *pGameServer, const CSqlConfig *pSqlConfig);
+	CSqlScore(CGameContext *pGameServer);
 	~CSqlScore();
+
+	void OnMapLoad();
 	
-	void LoadScore(int ClientID, bool PrintRank);
-	void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord);
+	void OnPlayerInit(int ClientID, bool PrintRank);
+	void OnPlayerFinish(int ClientID, int Time, int *pCpTime);
+
 	void ShowRank(int ClientID, const char *pName, bool Search=false);
 	void ShowTop5(int ClientID, int Debut=1);
 };

@@ -60,9 +60,6 @@ void CGameContext::Construct(int Resetting)
 #if defined(CONF_TEERACE)
 	m_pWebapp = 0;
 #endif
-#if defined(CONF_SQL)
-	m_pSqlConfig = 0;
-#endif
 }
 
 CGameContext::CGameContext(int Resetting)
@@ -80,7 +77,15 @@ CGameContext::~CGameContext()
 	for(int i = 0; i < MAX_CLIENTS; i++)
 		delete m_apPlayers[i];
 	if(!m_Resetting)
+	{
 		delete m_pVoteOptionHeap;
+		if(m_pScore)
+			delete m_pScore;
+#if defined(CONF_TEERACE)
+		if(m_pWebapp)
+			delete m_pWebapp;
+#endif
+	}
 	delete m_pChatConsole;
 	m_pChatConsole = 0;
 }
@@ -92,11 +97,9 @@ void CGameContext::Clear()
 	CVoteOptionServer *pVoteOptionLast = m_pVoteOptionLast;
 	int NumVoteOptions = m_NumVoteOptions;
 	CTuningParams Tuning = m_Tuning;
+	IScore *pScore = m_pScore;
 #if defined(CONF_TEERACE)
 	CServerWebapp *pWebapp = m_pWebapp;
-#endif
-#if defined(CONF_SQL)
-	CSqlConfig *pSqlConfig = m_pSqlConfig;
 #endif
 
 	m_Resetting = true;
@@ -109,11 +112,9 @@ void CGameContext::Clear()
 	m_pVoteOptionLast = pVoteOptionLast;
 	m_NumVoteOptions = NumVoteOptions;
 	m_Tuning = Tuning;
+	m_pScore = pScore;
 #if defined(CONF_TEERACE)
 	m_pWebapp = pWebapp;
-#endif
-#if defined(CONF_SQL)
-	m_pSqlConfig = pSqlConfig;
 #endif
 }
 
@@ -457,6 +458,7 @@ void CGameContext::OnTick()
 	// check tuning
 	CheckPureTuning();
 	
+	Score()->Tick();
 #if defined(CONF_TEERACE)
 	if(m_pWebapp)
 		m_pWebapp->Tick();
@@ -593,8 +595,7 @@ void CGameContext::OnClientEnter(int ClientID)
 	m_apPlayers[ClientID]->m_Score = -9999;
 	
 	// init the player
-	Score()->PlayerData(ClientID)->Reset();
-	Score()->LoadScore(ClientID);
+	Score()->OnPlayerInit(ClientID);
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "'%s' entered and joined the %s", Server()->ClientName(ClientID), m_pController->GetTeamName(m_apPlayers[ClientID]->GetTeam()));
@@ -1650,17 +1651,27 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	else
 		m_pController = new CGameControllerRACE(this);
 
-	// TODO: score should not be changed during runtime!!!
-#if defined(CONF_TEERACE)
-	// create webapp object
-	if(str_comp(g_Config.m_SvScore, "web") == 0 && !m_pWebapp)
-		m_pWebapp = new CServerWebapp(this);
-	else if(str_comp(g_Config.m_SvScore, "web") != 0 && m_pWebapp)
+	// create score object
+	if(!m_pScore)
 	{
-		delete m_pWebapp;
-		m_pWebapp = 0;
+		if(str_comp(g_Config.m_SvScore, "file") == 0)
+			m_pScore = new CFileScore(this);
+#if defined(CONF_SQL)
+		else if(str_comp(g_Config.m_SvScore, "mysql") == 0)
+			m_pScore = new CSqlScore(this);
+#endif
+#if defined(CONF_TEERACE)
+		else if(str_comp(g_Config.m_SvScore, "web") == 0)
+		{
+			m_pWebapp = new CServerWebapp(this);
+			m_pScore = new CWebappScore(this);
+		}
+#endif
+		else
+			m_pScore = new CFileScore(this);
 	}
 
+#if defined(CONF_TEERACE)
 	char aCurGametype[32];
 	if(str_find_nocase(g_Config.m_SvGametype, "cap"))
 	{
@@ -1692,41 +1703,11 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 		if(m_pWebapp->UpdateMapList())
 			m_pWebapp->LoadMapList();
 		else
-			m_pWebapp->OnInit();
+			m_pWebapp->OnInitMap();
 	}
 #endif
 
-	// TODO: remove when the upper TODO is fixed
-#if defined(CONF_SQL)
-	if(!m_pSqlConfig)
-	{
-		m_pSqlConfig = new CSqlConfig();
-		str_copy(m_pSqlConfig->m_aDatabase, g_Config.m_SvSqlDatabase, sizeof(m_pSqlConfig->m_aDatabase));
-		str_copy(m_pSqlConfig->m_aPrefix, g_Config.m_SvSqlPrefix, sizeof(m_pSqlConfig->m_aPrefix));
-		str_copy(m_pSqlConfig->m_aUser, g_Config.m_SvSqlUser, sizeof(m_pSqlConfig->m_aUser));
-		str_copy(m_pSqlConfig->m_aPass, g_Config.m_SvSqlPw, sizeof(m_pSqlConfig->m_aPass));
-		str_copy(m_pSqlConfig->m_aIp, g_Config.m_SvSqlIp, sizeof(m_pSqlConfig->m_aIp));
-		m_pSqlConfig->m_Port = g_Config.m_SvSqlPort;
-	}
-#endif
-
-	// delete old score object
-	if(m_pScore)
-		delete m_pScore;
-
-	// create score object
-	if(str_comp(g_Config.m_SvScore, "file") == 0)
-		m_pScore = new CFileScore(this);
-#if defined(CONF_SQL)
-	else if(str_comp(g_Config.m_SvScore, "mysql") == 0)
-		m_pScore = new CSqlScore(this, m_pSqlConfig);
-#endif
-#if defined(CONF_TEERACE)
-	else if(str_comp(g_Config.m_SvScore, "web") == 0)
-		m_pScore = new CWebappScore(this);
-#endif
-	else
-		m_pScore = new CFileScore(this);
+	m_pScore->OnMapLoad();
 
 	m_Tuning.m_PlayerCollision = 0;
 	m_Tuning.m_PlayerHooking = 0;

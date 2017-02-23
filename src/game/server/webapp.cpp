@@ -297,7 +297,7 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 			if((bool)(*pJsonData)["is_staff"])
 				pWebapp->Server()->StaffAuth(ClientID, SendRconCmds);
 
-			pWebapp->Score()->LoadScore(ClientID, true);
+			pWebapp->Score()->OnPlayerInit(ClientID, true);
 		}
 		else
 		{
@@ -377,7 +377,7 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 			const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
 			bool Res = pWebapp->m_aCachedMapLists[i].Update(pWebapp, pBody, pResponse->Size());
 			if(Res && pWebapp->m_CurrentMap.m_ID == -1)
-				pWebapp->OnInit();
+				pWebapp->OnInitMap();
 			break;
 		}
 
@@ -449,12 +449,13 @@ int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int Storag
 	return 0;
 }
 
-void CServerWebapp::OnInit()
+void CServerWebapp::OnInitMap()
 {
 	const CMapInfo *pMap = m_pCurrentMapList->FindMap(g_Config.m_SvMap);
 	if(pMap)
 	{
 		m_CurrentMap = *pMap;
+		Score()->ShowTop5(-1);
 		dbg_msg("webapp", "current map: '%s' (%d)", m_CurrentMap.m_aName, m_CurrentMap.m_ID);
 	}
 }
@@ -505,7 +506,7 @@ void CServerWebapp::Tick()
 	if(g_Config.m_SvRegister && (m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now))
 		SendPing();
 
-	// only one vote update every 5 seconds
+	// only one vote update every 3 seconds
 	// TODO: check resend buffer size
 	if(g_Config.m_WaAutoAddMaps && m_pCurrentMapList->m_Changed && (m_LastMapVoteUpdate < 0 || m_LastMapVoteUpdate + time_freq() * 3 < Now))
 		UpdateMapVotes();

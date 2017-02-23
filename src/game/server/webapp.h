@@ -71,7 +71,7 @@ public:
 	void SendPing();
 	void UpdateMapVotes();
 
-	void OnInit();
+	void OnInitMap();
 	void OnAuth(int ClientID, const char *pToken, int SendRconCmds);
 	void Tick();
 

@@ -24,17 +24,33 @@ class CFileScore : public IScore
 		
 		bool operator<(const CPlayerScore& other) const { return (this->m_Time < other.m_Time); }
 	};
+
+	enum MyEnum
+	{
+		JOBTYPE_ADD_NEW=0,
+		JOBTYPE_UPDATE_SCORE,
+		JOBTYPE_UPDATE_IP
+	};
+
+	struct CScoreJob
+	{
+		int m_Type;
+		CPlayerScore *m_pEntry;
+		CPlayerScore m_NewData;
+	};
 	
-	sorted_array<CPlayerScore> m_Top;
+	sorted_array<CPlayerScore> m_lTop;
+	array<CScoreJob> m_lJobQueue;
+
+	char m_aMap[64];
 	
 	CGameContext *GameServer() { return m_pGameServer; }
 	IServer *Server() { return m_pServer; }
 	
 	CPlayerScore *SearchScoreByID(int ID, int *pPosition=0);
 	CPlayerScore *SearchScoreByName(const char *pName, int *pPosition, bool ExactMatch);
-	
-	void Init();
-	void Save();
+
+	void ProcessJobs(bool Block);
 	static void SaveScoreThread(void *pUser);
 
 	void WriteEntry(IOHANDLE File, const CPlayerScore *pEntry) const;
@@ -43,9 +59,12 @@ class CFileScore : public IScore
 public:
 	CFileScore(CGameContext *pGameServer);
 	~CFileScore();
+
+	void OnMapLoad();
+	void Tick() { ProcessJobs(false); }
 	
-	void LoadScore(int ClientID, bool PrintRank);
-	void SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord);
+	void OnPlayerInit(int ClientID, bool PrintRank);
+	void OnPlayerFinish(int ClientID, int Time, int *pCpTime);
 	
 	void ShowTop5(int ClientID, int Debut=1);
 	void ShowRank(int ClientID, const char *pName, bool Search=false);
