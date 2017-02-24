@@ -1,6 +1,8 @@
 /* CSqlScore class by Sushi */
 #if defined(CONF_SQL)
 
+#include <base/tl/pointer.h>
+
 #include <engine/server/mysql.h>
 #include <engine/shared/config.h>
 
@@ -76,17 +78,16 @@ void CSqlScore::OnMapLoad()
 	dbg_msg("SQL", "Tables were created successfully");
 
 	str_format(aBuf, sizeof(aBuf), "SELECT Time FROM %s_%s_race ORDER BY `Time` ASC LIMIT 0, 1;", m_aPrefix, aMap);
-	CSqlResultSet *pResult = Con.QueryWithResult(aBuf);
-	if(!pResult)
+	smart_ptr<CSqlResultSet> Result(Con.QueryWithResult(aBuf));
+	if(!Result.get())
 		return;
 
-	if(pResult->Next())
+	if(Result->Next())
 	{
-		UpdateRecord(pResult->GetInteger("Time"));
+		UpdateRecord(Result->GetInteger("Time"));
 		dbg_msg("SQL", "Getting best time on server done");
 	}
 
-	delete pResult;
 	lock_unlock(gs_SqlLock);
 }
 
@@ -94,31 +95,27 @@ void CSqlScore::ExecSqlFunc(void *pUser)
 {
 	lock_wait(gs_SqlLock);
 
-	CSqlExecData *pData = (CSqlExecData *)pUser;
-	CSqlScore *pScore = pData->m_pScore;
+	smart_ptr<CSqlExecData> Data((CSqlExecData *)pUser);
+	CSqlScore *pScore = Data->m_pScore;
 
 	CSqlConnection Con;
 
 	// Connect to database
 	if(Con.Connect(pScore->m_pSqlConfig))
-		pData->m_pFunc(&Con, false, pData->m_pUserData);
+		Data->m_pFunc(&Con, false, Data->m_pUserData);
 	else
-		pData->m_pFunc(&Con, true, pData->m_pUserData);
+		Data->m_pFunc(&Con, true, Data->m_pUserData);
 
-	delete pData;
 	lock_unlock(gs_SqlLock);
 }
 
 void CSqlScore::LoadScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
 {
-	CScoreData *pData = (CScoreData *)pUser;
-	CSqlScore *pScore = pData->m_pScore;
+	smart_ptr<CScoreData> Data((CScoreData *)pUser);
+	CSqlScore *pScore = Data->m_pScore;
 
 	if(Error)
-	{
-		delete pData;
 		return;
-	}
 
 	bool Found = false;
 
@@ -127,28 +124,25 @@ void CSqlScore::LoadScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "SELECT * FROM %s_%s_race WHERE IP='%s' OR Name='%s';",
-		pScore->m_aPrefix, pData->m_aMap, pData->m_aIP, pData->m_aName);
-	CSqlResultSet *pResult = pCon->QueryWithResult(aBuf);
-	if(pResult == NULL)
-	{
-		delete pData;
+		pScore->m_aPrefix, Data->m_aMap, Data->m_aIP, Data->m_aName);
+	smart_ptr<CSqlResultSet> Result(pCon->QueryWithResult(aBuf));
+	if(!Result.get())
 		return;
-	}
 
 	// if ip found...
 	if(g_Config.m_SvScoreIP)
 	{
-		while(pResult->Next())
+		while(Result->Next())
 		{
-			if(str_comp(pResult->GetString("IP"), pData->m_aIP) == 0)
+			if(str_comp(Result->GetString("IP"), Data->m_aIP) == 0)
 			{
 				Found = true;
-				Time = pResult->GetInteger("Time");
+				Time = Result->GetInteger("Time");
 				if(g_Config.m_SvCheckpointSave)
 				{
-					int Start = pResult->GetColumnIndex("cp1");
+					int Start = Result->GetColumnIndex("cp1");
 					for(int i = 0; i < NUM_CHECKPOINTS; i++)
-						aCpTime[i] = pResult->GetInteger(Start + i);
+						aCpTime[i] = Result->GetInteger(Start + i);
 				}
 				break;
 			}
@@ -157,24 +151,25 @@ void CSqlScore::LoadScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
 
 	if(!Found)
 	{
-		pResult->SetRowIndex(0);
-		while(pResult->Next())
+		Result->SetRowIndex(0);
+		while(Result->Next())
 		{
-			if(str_comp(pResult->GetString("Name"), pData->m_aName) == 0)
+			if(str_comp(Result->GetString("Name"), Data->m_aName) == 0)
 			{
 				Found = true;
-				Time = pResult->GetInteger("Time");
+				Time = Result->GetInteger("Time");
 				if(g_Config.m_SvCheckpointSave)
 				{
-					int Start = pResult->GetColumnIndex("cp1");
+					int Start = Result->GetColumnIndex("cp1");
 					for(int i = 0; i < NUM_CHECKPOINTS; i++)
-						aCpTime[i] = pResult->GetInteger(Start + i);
+						aCpTime[i] = Result->GetInteger(Start + i);
 				}
 
-				if(str_comp(pResult->GetString("IP"), pData->m_aIP) != 0)
+				if(str_comp(Result->GetString("IP"), Data->m_aIP) != 0)
 				{
 					// set the new ip
-					str_format(aBuf, sizeof(aBuf), "UPDATE %s_%s_race SET IP='%s' WHERE Name='%s';", pScore->m_aPrefix, pData->m_aMap, pData->m_aIP, pData->m_aName);
+					str_format(aBuf, sizeof(aBuf), "UPDATE %s_%s_race SET IP='%s' WHERE Name='%s';",
+						pScore->m_aPrefix, Data->m_aMap, Data->m_aIP, Data->m_aName);
 					pCon->Query(aBuf);
 				}
 				break;
@@ -182,22 +177,18 @@ void CSqlScore::LoadScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
 		}
 	}
 
-	delete pResult;
-
 	if(Found)
 	{
-		pScore->m_aPlayerData[pData->m_ClientID].SetTime(Time, aCpTime);
+		pScore->m_aPlayerData[Data->m_ClientID].SetTime(Time, aCpTime);
 		if(g_Config.m_SvShowBest)
 		{
-			pScore->m_aPlayerData[pData->m_ClientID].UpdateCurTime(Time);
-			int SendTo = g_Config.m_SvShowTimes ? -1 : pData->m_ClientID;
-			pScore->GameServer()->SendPlayerTime(SendTo, Time, pData->m_ClientID);
+			pScore->m_aPlayerData[Data->m_ClientID].UpdateCurTime(Time);
+			int SendTo = g_Config.m_SvShowTimes ? -1 : Data->m_ClientID;
+			pScore->GameServer()->SendPlayerTime(SendTo, Time, Data->m_ClientID);
 		}
 	}
 			
 	dbg_msg("SQL", "Getting best time done");
-
-	delete pData;
 }
 
 void CSqlScore::OnPlayerInit(int ClientID, bool PrintRank)
@@ -221,36 +212,30 @@ void CSqlScore::OnPlayerInit(int ClientID, bool PrintRank)
 
 void CSqlScore::SaveScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
 {
-	CScoreData *pData = (CScoreData *)pUser;
-	CSqlScore *pScore = pData->m_pScore;
+	smart_ptr<CScoreData> Data((CScoreData *)pUser);
+	CSqlScore *pScore = Data->m_pScore;
 	
 	if(Error)
-	{
-		delete pData;
 		return;
-	}
 
 	bool Found = false;
 	char aName[32] = { 0 };
 
 	char aBuf[768];
 	str_format(aBuf, sizeof(aBuf), "SELECT * FROM %s_%s_race WHERE IP='%s' OR Name='%s';",
-		pScore->m_aPrefix, pData->m_aMap, pData->m_aIP, pData->m_aName);
-	CSqlResultSet *pResult = pCon->QueryWithResult(aBuf);
-	if(pResult == NULL)
-	{
-		delete pData;
+		pScore->m_aPrefix, Data->m_aMap, Data->m_aIP, Data->m_aName);
+	smart_ptr<CSqlResultSet> Result(pCon->QueryWithResult(aBuf));
+	if(!Result.get())
 		return;
-	}
 
 	if(g_Config.m_SvScoreIP)
 	{
-		while(pResult->Next())
+		while(Result->Next())
 		{
-			if(str_comp(pResult->GetString("IP"), pData->m_aIP) == 0)
+			if(str_comp(Result->GetString("IP"), Data->m_aIP) == 0)
 			{
 				Found = true;
-				str_copy(aName, pResult->GetString("Name"), sizeof(aName));
+				str_copy(aName, Result->GetString("Name"), sizeof(aName));
 				break;
 			}
 		}
@@ -258,40 +243,36 @@ void CSqlScore::SaveScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
 
 	if(!Found)
 	{
-		pResult->SetRowIndex(0);
-		while(pResult->Next())
+		Result->SetRowIndex(0);
+		while(Result->Next())
 		{
-			if(str_comp(pResult->GetString("Name"), pData->m_aName) == 0)
+			if(str_comp(Result->GetString("Name"), Data->m_aName) == 0)
 			{
 				Found = true;
-				str_copy(aName, pResult->GetString("Name"), sizeof(aName));
+				str_copy(aName, Result->GetString("Name"), sizeof(aName));
 				break;
 			}
 		}
 	}
 
-	delete pResult;
-
 	if(Found)
 	{
 		if(g_Config.m_SvCheckpointSave)
-			str_format(aBuf, sizeof(aBuf), "UPDATE %s_%s_race SET Name='%s', Time='%d', cp1='%d', cp2='%d', cp3='%d', cp4='%d', cp5='%d', cp6='%d', cp7='%d', cp8='%d', cp9='%d', cp10='%d', cp11='%d', cp12='%d', cp13='%d', cp14='%d', cp15='%d', cp16='%d', cp17='%d', cp18='%d', cp19='%d', cp20='%d', cp21='%d', cp22='%d', cp23='%d', cp24='%d', cp25='%d' WHERE IP='%s';", pScore->m_aPrefix, pData->m_aMap, pData->m_aName, pData->m_Time, pData->m_aCpCurrent[0], pData->m_aCpCurrent[1], pData->m_aCpCurrent[2], pData->m_aCpCurrent[3], pData->m_aCpCurrent[4], pData->m_aCpCurrent[5], pData->m_aCpCurrent[6], pData->m_aCpCurrent[7], pData->m_aCpCurrent[8], pData->m_aCpCurrent[9], pData->m_aCpCurrent[10], pData->m_aCpCurrent[11], pData->m_aCpCurrent[12], pData->m_aCpCurrent[13], pData->m_aCpCurrent[14], pData->m_aCpCurrent[15], pData->m_aCpCurrent[16], pData->m_aCpCurrent[17], pData->m_aCpCurrent[18], pData->m_aCpCurrent[19], pData->m_aCpCurrent[20], pData->m_aCpCurrent[21], pData->m_aCpCurrent[22], pData->m_aCpCurrent[23], pData->m_aCpCurrent[24], pData->m_aIP);
+			str_format(aBuf, sizeof(aBuf), "UPDATE %s_%s_race SET Name='%s', Time='%d', cp1='%d', cp2='%d', cp3='%d', cp4='%d', cp5='%d', cp6='%d', cp7='%d', cp8='%d', cp9='%d', cp10='%d', cp11='%d', cp12='%d', cp13='%d', cp14='%d', cp15='%d', cp16='%d', cp17='%d', cp18='%d', cp19='%d', cp20='%d', cp21='%d', cp22='%d', cp23='%d', cp24='%d', cp25='%d' WHERE IP='%s';", pScore->m_aPrefix, Data->m_aMap, Data->m_aName, Data->m_Time, Data->m_aCpCurrent[0], Data->m_aCpCurrent[1], Data->m_aCpCurrent[2], Data->m_aCpCurrent[3], Data->m_aCpCurrent[4], Data->m_aCpCurrent[5], Data->m_aCpCurrent[6], Data->m_aCpCurrent[7], Data->m_aCpCurrent[8], Data->m_aCpCurrent[9], Data->m_aCpCurrent[10], Data->m_aCpCurrent[11], Data->m_aCpCurrent[12], Data->m_aCpCurrent[13], Data->m_aCpCurrent[14], Data->m_aCpCurrent[15], Data->m_aCpCurrent[16], Data->m_aCpCurrent[17], Data->m_aCpCurrent[18], Data->m_aCpCurrent[19], Data->m_aCpCurrent[20], Data->m_aCpCurrent[21], Data->m_aCpCurrent[22], Data->m_aCpCurrent[23], Data->m_aCpCurrent[24], Data->m_aIP);
 		else
-			str_format(aBuf, sizeof(aBuf), "UPDATE %s_%s_race SET Name='%s', Time='%d' WHERE Name='%s';", pScore->m_aPrefix, pData->m_aMap, pData->m_aName, pData->m_Time, aName);
+			str_format(aBuf, sizeof(aBuf), "UPDATE %s_%s_race SET Name='%s', Time='%d' WHERE Name='%s';", pScore->m_aPrefix, Data->m_aMap, Data->m_aName, Data->m_Time, aName);
 		pCon->Query(aBuf);
 	}
 	else
 	{
 		if(g_Config.m_SvCheckpointSave)
-			str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_%s_race(Name, IP, Time, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, cp11, cp12, cp13, cp14, cp15, cp16, cp17, cp18, cp19, cp20, cp21, cp22, cp23, cp24, cp25) VALUES ('%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d');", pScore->m_aPrefix, pData->m_aMap, pData->m_aName, pData->m_aIP, pData->m_Time, pData->m_aCpCurrent[0], pData->m_aCpCurrent[1], pData->m_aCpCurrent[2], pData->m_aCpCurrent[3], pData->m_aCpCurrent[4], pData->m_aCpCurrent[5], pData->m_aCpCurrent[6], pData->m_aCpCurrent[7], pData->m_aCpCurrent[8], pData->m_aCpCurrent[9], pData->m_aCpCurrent[10], pData->m_aCpCurrent[11], pData->m_aCpCurrent[12], pData->m_aCpCurrent[13], pData->m_aCpCurrent[14], pData->m_aCpCurrent[15], pData->m_aCpCurrent[16], pData->m_aCpCurrent[17], pData->m_aCpCurrent[18], pData->m_aCpCurrent[19], pData->m_aCpCurrent[20], pData->m_aCpCurrent[21], pData->m_aCpCurrent[22], pData->m_aCpCurrent[23], pData->m_aCpCurrent[24]);
+			str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_%s_race(Name, IP, Time, cp1, cp2, cp3, cp4, cp5, cp6, cp7, cp8, cp9, cp10, cp11, cp12, cp13, cp14, cp15, cp16, cp17, cp18, cp19, cp20, cp21, cp22, cp23, cp24, cp25) VALUES ('%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d');", pScore->m_aPrefix, Data->m_aMap, Data->m_aName, Data->m_aIP, Data->m_Time, Data->m_aCpCurrent[0], Data->m_aCpCurrent[1], Data->m_aCpCurrent[2], Data->m_aCpCurrent[3], Data->m_aCpCurrent[4], Data->m_aCpCurrent[5], Data->m_aCpCurrent[6], Data->m_aCpCurrent[7], Data->m_aCpCurrent[8], Data->m_aCpCurrent[9], Data->m_aCpCurrent[10], Data->m_aCpCurrent[11], Data->m_aCpCurrent[12], Data->m_aCpCurrent[13], Data->m_aCpCurrent[14], Data->m_aCpCurrent[15], Data->m_aCpCurrent[16], Data->m_aCpCurrent[17], Data->m_aCpCurrent[18], Data->m_aCpCurrent[19], Data->m_aCpCurrent[20], Data->m_aCpCurrent[21], Data->m_aCpCurrent[22], Data->m_aCpCurrent[23], Data->m_aCpCurrent[24]);
 		else
-			str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_%s_race(Name, IP, Time) VALUES ('%s', '%s', '%d');", pScore->m_aPrefix, pData->m_aMap, pData->m_aName, pData->m_aIP, pData->m_Time);
+			str_format(aBuf, sizeof(aBuf), "INSERT IGNORE INTO %s_%s_race(Name, IP, Time) VALUES ('%s', '%s', '%d');", pScore->m_aPrefix, Data->m_aMap, Data->m_aName, Data->m_aIP, Data->m_Time);
 		pCon->Query(aBuf);
 	}
 			
 	dbg_msg("SQL", "Updating time done");
-
-	delete pData;
 }
 
 void CSqlScore::OnPlayerFinish(int ClientID, int Time, int *pCpTime)
@@ -319,35 +300,29 @@ void CSqlScore::OnPlayerFinish(int ClientID, int Time, int *pCpTime)
 
 void CSqlScore::ShowRankThread(CSqlConnection *pCon, bool Error, void *pUser)
 {
-	CScoreData *pData = (CScoreData *)pUser;
-	CSqlScore *pScore = pData->m_pScore;
+	smart_ptr<CScoreData> Data((CScoreData *)pUser);
+	CSqlScore *pScore = Data->m_pScore;
 	
 	if(Error)
-	{
-		delete pData;
 		return;
-	}
 
 	// TODO: search function is incomplete
 
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "SELECT Name, IP, Time FROM %s_%s_race ORDER BY `Time` ASC;", pScore->m_aPrefix, pData->m_aMap);
-	CSqlResultSet *pResult = pCon->QueryWithResult(aBuf);
-	if(pResult == NULL)
-	{
-		delete pData;
+	str_format(aBuf, sizeof(aBuf), "SELECT Name, IP, Time FROM %s_%s_race ORDER BY `Time` ASC;", pScore->m_aPrefix, Data->m_aMap);
+	smart_ptr<CSqlResultSet> Result(pCon->QueryWithResult(aBuf));
+	if(!Result.get())
 		return;
-	}
 
 	int RowCount = 0;
 	bool Found = false;
 
-	if(!pData->m_Search && g_Config.m_SvScoreIP)
+	if(!Data->m_Search && g_Config.m_SvScoreIP)
 	{
-		while(pResult->Next())
+		while(Result->Next())
 		{
 			RowCount++;
-			if(str_comp(pResult->GetString("IP"), pData->m_aIP) == 0)
+			if(str_comp(Result->GetString("IP"), Data->m_aIP) == 0)
 			{
 				Found = true;
 				break;
@@ -357,12 +332,12 @@ void CSqlScore::ShowRankThread(CSqlConnection *pCon, bool Error, void *pUser)
 
 	if(!Found)
 	{
-		pResult->SetRowIndex(0);
-		while(pResult->Next())
+		Result->SetRowIndex(0);
+		while(Result->Next())
 		{
 			RowCount++;
-			//if(str_find_nocase(ppRow[0], pData->m_aName))
-			if(str_comp(pResult->GetString("Name"), pData->m_aName) == 0)
+			//if(str_find_nocase(ppRow[0], Data->m_aName))
+			if(str_comp(Result->GetString("Name"), Data->m_aName) == 0)
 			{
 				Found = true;
 				break;
@@ -376,26 +351,23 @@ void CSqlScore::ShowRankThread(CSqlConnection *pCon, bool Error, void *pUser)
 	{
 		Public = g_Config.m_SvShowTimes;
 		char aTime[64];
-		IRace::FormatTimeLong(aTime, sizeof(aTime), pResult->GetInteger("Time"));
+		IRace::FormatTimeLong(aTime, sizeof(aTime), Result->GetInteger("Time"));
 		if(!Public)
 			str_format(aBuf, sizeof(aBuf), "Your time: %s", aTime);
 		else
-			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", RowCount, pResult->GetString("Name"), aTime);
-		if(pData->m_Search)
-			str_append(aBuf, pData->m_aRequestingPlayer, sizeof(aBuf));
+			str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", RowCount, Result->GetString("Name"), aTime);
+		if(Data->m_Search)
+			str_append(aBuf, Data->m_aRequestingPlayer, sizeof(aBuf));
 	}
 	else
-		str_format(aBuf, sizeof(aBuf), "%s is not ranked", pData->m_aName);
+		str_format(aBuf, sizeof(aBuf), "%s is not ranked", Data->m_aName);
 
 	if(Public)
 		pScore->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 	else
-		pScore->GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+		pScore->GameServer()->SendChatTarget(Data->m_ClientID, aBuf);
 			
 	dbg_msg("SQL", "Showing rank done");
-	
-	delete pResult;
-	delete pData;
 }
 
 void CSqlScore::ShowRank(int ClientID, const char *pName, bool Search)
@@ -419,41 +391,32 @@ void CSqlScore::ShowRank(int ClientID, const char *pName, bool Search)
 
 void CSqlScore::ShowTop5Thread(CSqlConnection *pCon, bool Error, void *pUser)
 {
-	CScoreData *pData = (CScoreData *)pUser;
-	CSqlScore *pScore = pData->m_pScore;
+	smart_ptr<CScoreData> Data((CScoreData *)pUser);
+	CSqlScore *pScore = Data->m_pScore;
 	
 	if(Error)
-	{
-		delete pData;
 		return;
-	}
 
 	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "SELECT Name, Time FROM %s_%s_race ORDER BY `Time` ASC LIMIT %d, 5;", pScore->m_aPrefix, pData->m_aMap, pData->m_Num - 1);
-	CSqlResultSet *pResult = pCon->QueryWithResult(aBuf);
-	if(pResult == NULL)
-	{
-		delete pData;
+	str_format(aBuf, sizeof(aBuf), "SELECT Name, Time FROM %s_%s_race ORDER BY `Time` ASC LIMIT %d, 5;", pScore->m_aPrefix, Data->m_aMap, Data->m_Num - 1);
+	smart_ptr<CSqlResultSet> Result(pCon->QueryWithResult(aBuf));
+	if(!Result.get())
 		return;
-	}
 
-	int Rank = pData->m_Num;
+	int Rank = Data->m_Num;
 
-	pScore->GameServer()->SendChatTarget(pData->m_ClientID, "----------- Top 5 -----------");
-	while(pResult->Next())
+	pScore->GameServer()->SendChatTarget(Data->m_ClientID, "----------- Top 5 -----------");
+	while(Result->Next())
 	{
 		char aTime[64];
-		IRace::FormatTimeLong(aTime, sizeof(aTime), pResult->GetInteger("Time"));
-		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", Rank, pResult->GetString("Name"), aTime);
-		pScore->GameServer()->SendChatTarget(pData->m_ClientID, aBuf);
+		IRace::FormatTimeLong(aTime, sizeof(aTime), Result->GetInteger("Time"));
+		str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s", Rank, Result->GetString("Name"), aTime);
+		pScore->GameServer()->SendChatTarget(Data->m_ClientID, aBuf);
 		Rank++;
 	}
-	pScore->GameServer()->SendChatTarget(pData->m_ClientID, "------------------------------");
+	pScore->GameServer()->SendChatTarget(Data->m_ClientID, "------------------------------");
 
 	dbg_msg("SQL", "Showing top5 done");
-
-	delete pResult;
-	delete pData;
 }
 
 void CSqlScore::ShowTop5(int ClientID, int Debut)

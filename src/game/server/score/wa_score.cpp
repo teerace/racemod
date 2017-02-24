@@ -1,5 +1,7 @@
 #if defined(CONF_TEERACE)
 
+#include <base/tl/pointer.h>
+
 #include <engine/external/json-parser/json-builder.h>
 #include <engine/shared/config.h>
 #include <engine/shared/http.h>
@@ -208,12 +210,12 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 
 void CWebappScore::OnUserFind(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CUserRankData *pUser = (CUserRankData*)pUserData;
-	CWebappScore *pScore = pUser->m_pScore;
+	smart_ptr<CUserRankData> User((CUserRankData*)pUserData);
+	CWebappScore *pScore = User->m_pScore;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CServerWebapp::CheckStatusCode(pScore->GameServer()->Console(), pResponse);
 
-	pUser->m_UserID = 0;
+	User->m_UserID = 0;
 
 	if(!Error)
 	{
@@ -225,35 +227,33 @@ void CWebappScore::OnUserFind(IResponse *pResponse, bool ConnError, void *pUserD
 		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
 		if(pJsonData)
 		{
-			pUser->m_UserID = (*pJsonData)["id"].u.integer;
-			if(pUser->m_UserID > 0)
-				str_copy(pUser->m_aName, (*pJsonData)["username"], sizeof(pUser->m_aName));
+			User->m_UserID = (*pJsonData)["id"].u.integer;
+			if(User->m_UserID > 0)
+				str_copy(User->m_aName, (*pJsonData)["username"], sizeof(User->m_aName));
 		}
 		else
 			dbg_msg("json", aError);
 		json_value_free(pJsonData);
 	}
 
-	if(pUser->m_UserID > 0)
+	if(User->m_UserID > 0)
 	{
 		char aURI[128];
-		str_format(aURI, sizeof(aURI), "/users/rank/%d/", pUser->m_UserID);
+		str_format(aURI, sizeof(aURI), "/users/rank/%d/", User->m_UserID);
 		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-		pInfo->SetCallback(OnUserRankGlobal, pUser);
+		pInfo->SetCallback(OnUserRankGlobal, User.release());
 		pScore->Server()->SendHttp(pInfo, pRequest);
-		return; // do not delete userdata here
 	}
-	else if(pUser->m_PrintRank)
+	else if(User->m_PrintRank)
 	{
-		if(pScore->GameServer()->m_apPlayers[pUser->m_ClientID])
+		if(pScore->GameServer()->m_apPlayers[User->m_ClientID])
 		{
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", pUser->m_aName);
-			pScore->GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
+			str_format(aBuf, sizeof(aBuf), "No match found for \"%s\".", User->m_aName);
+			pScore->GameServer()->SendChatTarget(User->m_ClientID, aBuf);
 		}
 	}
-	delete pUser;
 }
 
 void CWebappScore::OnUserRankGlobal(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -277,23 +277,20 @@ void CWebappScore::OnUserRankGlobal(IResponse *pResponse, bool ConnError, void *
 
 void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CUserRankData *pUser = (CUserRankData*)pUserData;
-	CWebappScore *pScore = pUser->m_pScore;
+	smart_ptr<CUserRankData> User((CUserRankData*)pUserData);
+	CWebappScore *pScore = User->m_pScore;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CServerWebapp::CheckStatusCode(pScore->GameServer()->Console(), pResponse);
 
-	CPlayer *pPl = pScore->GameServer()->m_apPlayers[pUser->m_ClientID];
-	int GlobalRank = pUser->m_GlobalRank;
+	CPlayer *pPl = pScore->GameServer()->m_apPlayers[User->m_ClientID];
+	int GlobalRank = User->m_GlobalRank;
 	int MapRank = 0;
 
 	int Time = 0;
 	int aCpTime[NUM_CHECKPOINTS] = { 0 };
 
 	if(!pPl)
-	{
-		delete pUser;
 		return;
-	}
 
 	if(!Error)
 	{
@@ -321,19 +318,19 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 		json_value_free(pJsonData);
 	}
 
-	bool Own = pUser->m_UserID == pScore->Server()->GetUserID(pUser->m_ClientID);
+	bool Own = User->m_UserID == pScore->Server()->GetUserID(User->m_ClientID);
 	if(Own && MapRank && Time > 0)
 	{
-		pScore->m_aPlayerData[pUser->m_ClientID].SetTime(Time, aCpTime);
+		pScore->m_aPlayerData[User->m_ClientID].SetTime(Time, aCpTime);
 		if(g_Config.m_SvShowBest)
 		{
-			pScore->m_aPlayerData[pUser->m_ClientID].UpdateCurTime(Time);
-			int SendTo = g_Config.m_SvShowTimes ? -1 : pUser->m_ClientID;
-			pScore->GameServer()->SendPlayerTime(SendTo, Time, pUser->m_ClientID);
+			pScore->m_aPlayerData[User->m_ClientID].UpdateCurTime(Time);
+			int SendTo = g_Config.m_SvShowTimes ? -1 : User->m_ClientID;
+			pScore->GameServer()->SendPlayerTime(SendTo, Time, User->m_ClientID);
 		}
 	}
 
-	if(pUser->m_PrintRank)
+	if(User->m_PrintRank)
 	{
 		char aBuf[256];
 		bool Public = g_Config.m_SvShowTimes;
@@ -344,40 +341,39 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			if(Own)
 				str_copy(aBuf, "You are neither globally ranked nor on this map yet.", sizeof(aBuf));
 			else
-				str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", pUser->m_aName);
+				str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", User->m_aName);
 		}
 		else if(!MapRank)
 		{
 			str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
-				pUser->m_aName, GlobalRank, pScore->Server()->ClientName(pUser->m_ClientID));
+				User->m_aName, GlobalRank, pScore->Server()->ClientName(User->m_ClientID));
 		}
 		else if(!GlobalRank)
 		{
 			char aTime[64];
 			IRace::FormatTimeShort(aTime, sizeof(aTime), Time);
 			str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %s (%s)",
-				pUser->m_aName, MapRank, aTime, pScore->Server()->ClientName(pUser->m_ClientID));
+				User->m_aName, MapRank, aTime, pScore->Server()->ClientName(User->m_ClientID));
 		}
 		else
 		{
 			char aTime[64];
 			IRace::FormatTimeShort(aTime, sizeof(aTime), Time);
 			str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %s (%s)",
-				pUser->m_aName, GlobalRank, MapRank, aTime, pScore->Server()->ClientName(pUser->m_ClientID));
+				User->m_aName, GlobalRank, MapRank, aTime, pScore->Server()->ClientName(User->m_ClientID));
 		}
 
 		if(Public)
 			pScore->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
 		else
-			pScore->GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
+			pScore->GameServer()->SendChatTarget(User->m_ClientID, aBuf);
 	}
-	delete pUser;
 }
 
 void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CUserTopData *pUser = (CUserTopData*)pUserData;
-	CWebappScore *pScore = pUser->m_pScore;
+	smart_ptr<CUserTopData> User((CUserTopData*)pUserData);
+	CWebappScore *pScore = User->m_pScore;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CServerWebapp::CheckStatusCode(pScore->GameServer()->Console(), pResponse);
 
@@ -391,8 +387,8 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
 		if(pJsonData)
 		{
-			int ClientID = pUser->m_ClientID;
-			if(pUser->m_StartRank == 1)
+			int ClientID = User->m_ClientID;
+			if(User->m_StartRank == 1)
 			{
 				pScore->m_GotRecord = true;
 				if(pJsonData->u.array.length > 0)
@@ -420,7 +416,7 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 					char aTime[64];
 					IRace::FormatTimeLong(aTime, sizeof(aTime), Time);
 					str_format(aBuf, sizeof(aBuf), "%d. %s Time: %s",
-						i + pUser->m_StartRank - SameTimeCount, (const char*)Run["run"]["user"]["username"], aTime);
+						i + User->m_StartRank - SameTimeCount, (const char*)Run["run"]["user"]["username"], aTime);
 					pScore->GameServer()->SendChatTarget(ClientID, aBuf);
 
 					LastTime = Time;
@@ -432,30 +428,28 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 			dbg_msg("json", aError);
 		json_value_free(pJsonData);
 	}
-	delete pUser;
 }
 
 void CWebappScore::OnRunPost(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CRunData *pUser = (CRunData*)pUserData;
-	CWebappScore *pScore = pUser->m_pScore;
+	smart_ptr<CRunData> User((CRunData*)pUserData);
+	CWebappScore *pScore = User->m_pScore;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CServerWebapp::CheckStatusCode(pScore->GameServer()->Console(), pResponse);
 
-	if(!Error && pUser->m_Tick > -1)
+	if(!Error && User->m_Tick > -1)
 	{
 		char aFilename[256];
 		char aURL[128];
 
-		pScore->Server()->Race_GetPath(aFilename, sizeof(aFilename), pUser->m_ClientID, false, pUser->m_Tick);
-		str_format(aURL, sizeof(aURL), "/files/demo/%d/%d/", pUser->m_UserID, pUser->m_MapID);
+		pScore->Server()->Race_GetPath(aFilename, sizeof(aFilename), User->m_ClientID, false, User->m_Tick);
+		str_format(aURL, sizeof(aURL), "/files/demo/%d/%d/", User->m_UserID, User->m_MapID);
 		pScore->Webapp()->AddUpload(aFilename, aURL, "demo_file", time_get() + time_freq() * 2);
 
-		pScore->Server()->Ghost_GetPath(aFilename, sizeof(aFilename), pUser->m_ClientID, false, pUser->m_Tick);
-		str_format(aURL, sizeof(aURL), "/files/ghost/%d/%d/", pUser->m_UserID, pUser->m_MapID);
+		pScore->Server()->Ghost_GetPath(aFilename, sizeof(aFilename), User->m_ClientID, false, User->m_Tick);
+		str_format(aURL, sizeof(aURL), "/files/ghost/%d/%d/", User->m_UserID, User->m_MapID);
 		pScore->Webapp()->AddUpload(aFilename, aURL, "ghost_file");
 	}
-	delete pUser;
 }
 
 #endif

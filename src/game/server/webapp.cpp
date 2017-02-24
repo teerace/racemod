@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 #include <base/tl/algorithm.h>
+#include <base/tl/pointer.h>
+
 #include <engine/external/json-parser/json-builder.h>
 #include <engine/external/json-parser/json.h>
 #include <engine/shared/config.h>
@@ -255,57 +257,55 @@ CServerWebapp::CServerWebapp(CGameContext *pGameServer)
 
 void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CUserAuthData *pUser = (CUserAuthData*)pUserData;
-	CServerWebapp *pWebapp = pUser->m_pWebapp;
+	smart_ptr<CUserAuthData> User((CUserAuthData*)pUserData);
+	CServerWebapp *pWebapp = User->m_pWebapp;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pWebapp->GameServer()->Console(), pResponse);
 
-	int ClientID = pUser->m_ClientID;
-	if(pWebapp->GameServer()->m_apPlayers[ClientID])
+	int ClientID = User->m_ClientID;
+	if(!pWebapp->GameServer()->m_apPlayers[ClientID])
+		return;
+
+	if(Error)
 	{
-		if(Error)
-		{
-			pWebapp->GameServer()->SendChatTarget(ClientID, "unknown error");
-			delete pUser;
-			return;
-		}
-
-		int SendRconCmds = pUser->m_SendRconCmds;
-		int UserID = 0;
-
-		json_settings JsonSettings;
-		mem_zero(&JsonSettings, sizeof(JsonSettings));
-		char aError[256];
-
-		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
-		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
-		if(!pJsonData)
-			dbg_msg("json", aError);
-
-		if(str_comp(pBody, "false") != 0 && pJsonData)
-			UserID = (*pJsonData)["id"].u.integer;
-
-		if(UserID > 0)
-		{
-			char aBuf[512];
-			str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pWebapp->Server()->ClientName(ClientID), (const char*)(*pJsonData)["username"]);
-			pWebapp->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-			pWebapp->Server()->SetUserID(ClientID, UserID);
-			pWebapp->Server()->SetUserName(ClientID, (*pJsonData)["username"]);
-
-			// auth staff members
-			if((bool)(*pJsonData)["is_staff"])
-				pWebapp->Server()->StaffAuth(ClientID, SendRconCmds);
-
-			pWebapp->Score()->OnPlayerInit(ClientID, true);
-		}
-		else
-		{
-			pWebapp->GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
-		}
-		json_value_free(pJsonData);
+		pWebapp->GameServer()->SendChatTarget(ClientID, "unknown error");
+		return;
 	}
-	delete pUser;
+
+	int SendRconCmds = User->m_SendRconCmds;
+	int UserID = 0;
+
+	json_settings JsonSettings;
+	mem_zero(&JsonSettings, sizeof(JsonSettings));
+	char aError[256];
+
+	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
+	json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
+	if(!pJsonData)
+		dbg_msg("json", aError);
+
+	if(str_comp(pBody, "false") != 0 && pJsonData)
+		UserID = (*pJsonData)["id"].u.integer;
+
+	if(UserID > 0)
+	{
+		char aBuf[512];
+		str_format(aBuf, sizeof(aBuf), "%s has logged in as %s", pWebapp->Server()->ClientName(ClientID), (const char*)(*pJsonData)["username"]);
+		pWebapp->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+		pWebapp->Server()->SetUserID(ClientID, UserID);
+		pWebapp->Server()->SetUserName(ClientID, (*pJsonData)["username"]);
+
+		// auth staff members
+		if((bool)(*pJsonData)["is_staff"])
+			pWebapp->Server()->StaffAuth(ClientID, SendRconCmds);
+
+		pWebapp->Score()->OnPlayerInit(ClientID, true);
+	}
+	else
+	{
+		pWebapp->GameServer()->SendChatTarget(ClientID, "wrong username and/or password");
+	}
+	json_value_free(pJsonData);
 }
 
 void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -360,19 +360,16 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 
 void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CMapListData *pUser = (CMapListData*)pUserData;
-	CServerWebapp *pWebapp = pUser->m_pWebapp;
+	smart_ptr<CMapListData> User((CMapListData*)pUserData);
+	CServerWebapp *pWebapp = User->m_pWebapp;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pWebapp->GameServer()->Console(), pResponse);
 
 	if(Error)
-	{
-		delete pUser;
 		return;
-	}
 
 	for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
-		if(str_comp(pWebapp->m_aCachedMapLists[i].GetMapTypes(), pUser->m_aMapTypes) == 0)
+		if(str_comp(pWebapp->m_aCachedMapLists[i].GetMapTypes(), User->m_aMapTypes) == 0)
 		{
 			const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
 			bool Res = pWebapp->m_aCachedMapLists[i].Update(pWebapp, pBody, pResponse->Size());
@@ -380,8 +377,6 @@ void CServerWebapp::OnMapList(IResponse *pResponse, bool ConnError, void *pUserD
 				pWebapp->OnInitMap();
 			break;
 		}
-
-	delete pUser;
 }
 
 void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -418,17 +413,16 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 
 void CServerWebapp::OnUploadFile(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	CUploadData *pUser = (CUploadData*)pUserData;
-	CServerWebapp *pWebapp = pUser->m_pWebapp;
+	smart_ptr<CUploadData> User((CUploadData*)pUserData);
+	CServerWebapp *pWebapp = User->m_pWebapp;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CheckStatusCode(pWebapp->GameServer()->Console(), pResponse);
 
 	if(!Error)
-		dbg_msg("webapp", "uploaded file: '%s'", pUser->m_aFilename);
+		dbg_msg("webapp", "uploaded file: '%s'", User->m_aFilename);
 	else
-		dbg_msg("webapp", "could not upload file: '%s'", pUser->m_aFilename);
-	pWebapp->Storage()->RemoveFile(pUser->m_aFilename, IStorage::TYPE_SAVE);
-	delete pUser;
+		dbg_msg("webapp", "could not upload file: '%s'", User->m_aFilename);
+	pWebapp->Storage()->RemoveFile(User->m_aFilename, IStorage::TYPE_SAVE);
 }
 
 int CServerWebapp::MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser)

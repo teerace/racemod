@@ -1,5 +1,7 @@
 #if defined(CONF_SQL)
 
+#include <base/system.h>
+
 #include "mysql.h"
 
 bool CSqlConnection::Connect(const CSqlConfig *pConfig, bool SetDatabase)
