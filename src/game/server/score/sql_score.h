@@ -2,48 +2,61 @@
 #ifndef GAME_SERVER_SQLSCORE_H
 #define GAME_SERVER_SQLSCORE_H
 
-#include <cppconn/driver.h>
-#include <cppconn/exception.h>
-#include <cppconn/resultset.h>
-#include <cppconn/statement.h>
-
 #include "../score.h"
 
-struct CSqlConfig
+class CSqlConnection;
+class CSqlConfig;
+
+struct CSqlExecData
 {
-	char m_aDatabase[16];
-	char m_aUser[32];
-	char m_aPass[32];
-	char m_aIp[32];
-	int m_Port;
+	typedef void(*FQueryFunc)(CSqlConnection *pCon, bool Error, void *pUserData);
+
+	CSqlExecData(class CSqlScore *pScore, FQueryFunc pFunc, void *pUserData = 0)
+		: m_pScore(pScore), m_pFunc(pFunc), m_pUserData(pUserData) { }
+
+	CSqlScore *m_pScore;
+	FQueryFunc m_pFunc;
+	void *m_pUserData;
 };
 
 class CSqlScore : public IScore
 {
+	class CScoreData
+	{
+	public:
+		CScoreData(CSqlScore *pScore) : m_pScore(pScore) { }
+		CSqlScore *m_pScore;
+		int m_ClientID;
+		char m_aMap[64];
+		char m_aName[32];
+		char m_aIP[16];
+		int m_Time;
+		int m_aCpCurrent[NUM_CHECKPOINTS];
+		int m_Num;
+		bool m_Search;
+		char m_aRequestingPlayer[MAX_NAME_LENGTH];
+	};
+
 	class CGameContext *m_pGameServer;
 	class IServer *m_pServer;
 	
-	sql::Driver *m_pDriver;
-	sql::Connection *m_pConnection;
-	sql::Statement *m_pStatement;
-	sql::ResultSet *m_pResults;
+	bool m_DbExists;
 	
 	// config vars
-	CSqlConfig m_SqlConfig;
+	CSqlConfig *m_pSqlConfig;
 	char m_aPrefix[16];
-
-	char m_aMap[64];
 	
 	CGameContext *GameServer() { return m_pGameServer; }
 	IServer *Server() { return m_pServer; }
+
+	static void ExecSqlFunc(void *pUser);
 	
-	static void LoadScoreThread(void *pUser);
-	static void SaveScoreThread(void *pUser);
-	static void ShowRankThread(void *pUser);
-	static void ShowTop5Thread(void *pUser);
+	static void LoadScoreThread(CSqlConnection *pCon, bool Error, void *pUser);
+	static void SaveScoreThread(CSqlConnection *pCon, bool Error, void *pUser);
+	static void ShowRankThread(CSqlConnection *pCon, bool Error, void *pUser);
+	static void ShowTop5Thread(CSqlConnection *pCon, bool Error, void *pUser);
 	
-	bool Connect();
-	void Disconnect();
+	void Init();
 	
 	// anti SQL injection
 	void ClearString(char *pString, int Size);
@@ -60,19 +73,6 @@ public:
 
 	void ShowRank(int ClientID, const char *pName, bool Search=false);
 	void ShowTop5(int ClientID, int Debut=1);
-};
-
-struct CSqlScoreData
-{
-	CSqlScore *m_pSqlData;
-	int m_ClientID;
-	char m_aName[16];
-	char m_aIP[16];
-	int m_Time;
-	int m_aCpCurrent[NUM_CHECKPOINTS];
-	int m_Num;
-	bool m_Search;
-	char m_aRequestingPlayer[MAX_NAME_LENGTH];
 };
 
 #endif
