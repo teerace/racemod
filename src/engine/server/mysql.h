@@ -18,6 +18,8 @@ struct CSqlConfig
 	int m_Port;
 };
 
+class CSqlResultSet;
+
 class CSqlConnection
 {
 	friend class CSqlResultSet;
