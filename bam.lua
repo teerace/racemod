@@ -121,11 +121,11 @@ if family == "windows" then
 	if platform == "win32" then
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib32\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\lib32\\SDL.dll"))
-		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib32\\mysqlcppconn.dll"))
+		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib32\\libmariadb.dll"))
 	else
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib64\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\lib64\\SDL.dll"))
-		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib64\\mysqlcppconn.dll"))
+		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib64\\libmariadb.dll"))
 	end
 
 	if config.compiler.driver == "cl" then
@@ -151,10 +151,7 @@ function build(settings)
 	if config.compiler.driver == "cl" then
 		settings.cc.flags:Add("/wd4244", "/wd4577")
 	else
-		settings.cc.flags:Add("-Wall")
-		if string.find(settings.config_name, "sql") == nil then
-			settings.cc.flags:Add("-fno-exceptions")
-		end
+		settings.cc.flags:Add("-Wall", "-fno-exceptions")
 		if family == "windows" then
 			-- disable visibility attribute support for gcc on windows
 			settings.cc.defines:Add("NO_VIZ")
