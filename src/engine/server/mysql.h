@@ -26,7 +26,7 @@ class CSqlConnection
 	bool m_Connected;
 
 	CSqlConnection(const CSqlConnection& other);
-	CSqlConnection &operator =(CSqlConnection const&);
+	CSqlConnection &operator =(const CSqlConnection& other);
 
 public:
 	CSqlConnection() : m_pCon(NULL), m_Connected(false) { }
@@ -53,8 +53,8 @@ class CSqlResultSet
 	array<CField> m_lFields;
 	int m_NumFields;
 
-	CSqlResultSet(const CSqlConnection& other);
-	CSqlResultSet &operator =(CSqlConnection const&);
+	CSqlResultSet(const CSqlResultSet& other);
+	CSqlResultSet &operator =(const CSqlResultSet& other);
 
 public:
 	CSqlResultSet(CSqlConnection *pCon);

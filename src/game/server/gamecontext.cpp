@@ -79,11 +79,9 @@ CGameContext::~CGameContext()
 	if(!m_Resetting)
 	{
 		delete m_pVoteOptionHeap;
-		if(m_pScore)
-			delete m_pScore;
+		delete m_pScore;
 #if defined(CONF_TEERACE)
-		if(m_pWebapp)
-			delete m_pWebapp;
+		delete m_pWebapp;
 #endif
 	}
 	delete m_pChatConsole;
