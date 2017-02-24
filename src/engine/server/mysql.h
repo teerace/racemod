@@ -31,7 +31,7 @@ class CSqlConnection
 	CSqlConnection &operator =(const CSqlConnection& other);
 
 public:
-	CSqlConnection() : m_pCon(NULL), m_Connected(false) { }
+	CSqlConnection() : m_pCon(0), m_Connected(false) { }
 	~CSqlConnection() { if(m_pCon) Disconnect(); }
 
 	bool Connect(const CSqlConfig *pConfig, bool SetDatabase = true);

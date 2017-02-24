@@ -5,7 +5,7 @@
 #include "../score.h"
 
 class CSqlConnection;
-class CSqlConfig;
+struct CSqlConfig;
 
 struct CSqlExecData
 {

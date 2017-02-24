@@ -6,22 +6,22 @@
 
 bool CSqlConnection::Connect(const CSqlConfig *pConfig, bool SetDatabase)
 {
-	if(m_pCon != NULL)
+	if(m_pCon)
 		return false;
 
-	m_pCon = mysql_init(NULL);
-	if(m_pCon == NULL)
+	m_pCon = mysql_init(0);
+	if(!m_pCon)
 	{
 		dbg_msg("SQL", mysql_error(m_pCon));
 		return false;
 	}
 
 	if(mysql_real_connect(m_pCon, pConfig->m_aIp, pConfig->m_aUser, pConfig->m_aPass,
-		SetDatabase ? pConfig->m_aDatabase : NULL, pConfig->m_Port, NULL, 0) == NULL)
+		SetDatabase ? pConfig->m_aDatabase : 0, pConfig->m_Port, 0, 0) == 0)
 	{
 		dbg_msg("SQL", mysql_error(m_pCon));
 		mysql_close(m_pCon);
-		m_pCon = NULL;
+		m_pCon = 0;
 		return false;
 	}
 
@@ -31,14 +31,14 @@ bool CSqlConnection::Connect(const CSqlConfig *pConfig, bool SetDatabase)
 
 void CSqlConnection::Disconnect()
 {
-	if(m_pCon == NULL)
+	if(!m_pCon)
 	{
 		dbg_msg("SQL", "ERROR: No SQL connection");
 		return;
 	}
 
 	mysql_close(m_pCon);
-	m_pCon = NULL;
+	m_pCon = 0;
 	m_Connected = false;
 }
 
@@ -56,7 +56,7 @@ bool CSqlConnection::Query(const char *pStr)
 
 CSqlResultSet *CSqlConnection::StoreResult()
 {
-	if(m_pCon == NULL)
+	if(!m_pCon)
 		return 0;
 	return new CSqlResultSet(this);
 }
@@ -68,10 +68,10 @@ CSqlResultSet *CSqlConnection::QueryWithResult(const char *pStr)
 	return StoreResult();
 }
 
-CSqlResultSet::CSqlResultSet(CSqlConnection *pCon) : m_ppRow(NULL), m_NumFields(0)
+CSqlResultSet::CSqlResultSet(CSqlConnection *pCon) : m_ppRow(0), m_NumFields(0)
 {
 	m_pResult = mysql_store_result(pCon->m_pCon);
-	if(m_pResult != NULL)
+	if(m_pResult)
 	{
 		m_NumFields = mysql_num_fields(m_pResult);
 		MYSQL_FIELD *pFields = mysql_fetch_fields(m_pResult);
@@ -88,21 +88,21 @@ CSqlResultSet::CSqlResultSet(CSqlConnection *pCon) : m_ppRow(NULL), m_NumFields(
 
 CSqlResultSet::~CSqlResultSet()
 {
-	if(m_pResult != NULL)
+	if(m_pResult)
 		mysql_free_result(m_pResult);
 }
 
 bool CSqlResultSet::Next()
 {
-	if(m_pResult == NULL)
+	if(!m_pResult)
 		return false;
 	m_ppRow = mysql_fetch_row(m_pResult);
-	return m_ppRow != NULL;
+	return m_ppRow != 0;
 }
 
 void CSqlResultSet::SetRowIndex(unsigned Index)
 {
-	if(m_pResult == NULL)
+	if(m_pResult)
 		mysql_data_seek(m_pResult, Index);
 }
 
@@ -118,7 +118,7 @@ const char *CSqlResultSet::GetString(int Index) const
 {
 	if(m_ppRow && Index >= 0 && Index < m_NumFields)
 		return m_ppRow[Index];
-	return NULL;
+	return 0;
 }
 
 int CSqlResultSet::GetInteger(int Index) const
