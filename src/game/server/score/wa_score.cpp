@@ -389,14 +389,17 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 
 		const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
 		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
-		if(pJsonData && pJsonData->u.array.length > 0)
+		if(pJsonData)
 		{
 			int ClientID = pUser->m_ClientID;
 			if(pUser->m_StartRank == 1)
 			{
-				const json_value &Run = (*pJsonData)[0];
-				pScore->UpdateRecord(IRace::TimeFromSecondsStr(Run["run"]["time"]));
 				pScore->m_GotRecord = true;
+				if(pJsonData->u.array.length > 0)
+				{
+					const json_value &Run = (*pJsonData)[0];
+					pScore->UpdateRecord(IRace::TimeFromSecondsStr(Run["run"]["time"]));
+				}
 			}
 			if(ClientID >= 0 && pScore->GameServer()->m_apPlayers[ClientID])
 			{
