@@ -23,6 +23,9 @@ class CWebappScore : public IScore
 		int m_MapID;
 		bool m_PrintRank;
 		int m_GlobalRank;
+		int m_MapRank;
+		int m_Time;
+		int m_RefCount;
 		char m_aName[32];
 	};
 
@@ -31,6 +34,7 @@ class CWebappScore : public IScore
 	public:
 		CUserTopData(CWebappScore *pScore) : CScoreData(pScore) { }
 		int m_StartRank;
+		int m_MapID;
 	};
 
 	class CRunData : public CScoreData
@@ -49,6 +53,8 @@ class CWebappScore : public IScore
 	CGameContext *GameServer() { return m_pGameServer; }
 	IServer *Server();
 	CServerWebapp *Webapp();
+
+	void PrintRank(const CUserRankData *pUser);
 
 	static void OnUserFind(class IResponse *pResponse, bool ConnError, void *pUserData);
 	static void OnUserRankGlobal(class IResponse *pResponse, bool ConnError, void *pUserData);

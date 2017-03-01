@@ -42,12 +42,19 @@ void CWebappScore::OnPlayerInit(int ClientID, bool PrintRank)
 		pUserData->m_UserID = UserID;
 		pUserData->m_MapID = MapID;
 		pUserData->m_PrintRank = PrintRank;
+		pUserData->m_RefCount = 2;
 
 		char aURI[128];
 		str_format(aURI, sizeof(aURI), "/users/rank/%d/", UserID);
 		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 		pInfo->SetCallback(OnUserRankGlobal, pUserData);
+		Server()->SendHttp(pInfo, pRequest);
+
+		str_format(aURI, sizeof(aURI), "/users/map_rank/%d/%d/", UserID, MapID);
+		pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+		pInfo = new CRequestInfo(ITeerace::Host());
+		pInfo->SetCallback(OnUserRankMap, pUserData);
 		Server()->SendHttp(pInfo, pRequest);
 	}
 }
@@ -120,17 +127,19 @@ void CWebappScore::ShowTop5(int ClientID, int Debut)
 	if(!Webapp())
 		return;
 
-	if(Webapp()->CurrentMap()->m_ID > -1)
+	int MapID = Webapp()->CurrentMap()->m_ID;
+	if(MapID > -1)
 	{
-		CUserTopData *aNameData = new CUserTopData(this);
-		aNameData->m_StartRank = Debut;
-		aNameData->m_ClientID = ClientID;
+		CUserTopData *aUserData = new CUserTopData(this);
+		aUserData->m_StartRank = Debut;
+		aUserData->m_ClientID = ClientID;
+		aUserData->m_MapID = MapID;
 
 		char aURI[128];
-		str_format(aURI, sizeof(aURI), "/maps/rank/%d/%d/", Webapp()->CurrentMap()->m_ID, Debut);
+		str_format(aURI, sizeof(aURI), "/maps/rank/%d/%d/", MapID, Debut);
 		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-		pInfo->SetCallback(OnUserTop, aNameData);
+		pInfo->SetCallback(OnUserTop, aUserData);
 		Server()->SendHttp(pInfo, pRequest);
 	}
 	else if(ClientID >= 0)
@@ -177,11 +186,19 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 			str_copy(aNameData->m_aName, Server()->GetUserName(SearchID), sizeof(aNameData->m_aName));
 			aNameData->m_UserID = Server()->GetUserID(SearchID);
 			aNameData->m_MapID = Webapp()->CurrentMap()->m_ID;
+			aNameData->m_RefCount = 2;
+
 			char aURI[128];
 			str_format(aURI, sizeof(aURI), "/users/rank/%d/", aNameData->m_UserID);
 			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
 			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
 			pInfo->SetCallback(OnUserRankGlobal, aNameData);
+			Server()->SendHttp(pInfo, pRequest);
+
+			str_format(aURI, sizeof(aURI), "/users/map_rank/%d/%d/", aNameData->m_UserID, aNameData->m_MapID);
+			pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+			pInfo = new CRequestInfo(ITeerace::Host());
+			pInfo->SetCallback(OnUserRankMap, aNameData);
 			Server()->SendHttp(pInfo, pRequest);
 		}
 		else if(Search)
@@ -238,11 +255,20 @@ void CWebappScore::OnUserFind(IResponse *pResponse, bool ConnError, void *pUserD
 
 	if(User->m_UserID > 0)
 	{
+		CUserRankData *pUserData = User.release();
+		pUserData->m_RefCount = 2;
+
 		char aURI[128];
-		str_format(aURI, sizeof(aURI), "/users/rank/%d/", User->m_UserID);
+		str_format(aURI, sizeof(aURI), "/users/rank/%d/", pUserData->m_UserID);
 		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
 		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-		pInfo->SetCallback(OnUserRankGlobal, User.release());
+		pInfo->SetCallback(OnUserRankGlobal, pUserData);
+		pScore->Server()->SendHttp(pInfo, pRequest);
+
+		str_format(aURI, sizeof(aURI), "/users/map_rank/%d/%d/", pUserData->m_UserID, pUserData->m_MapID);
+		pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
+		pInfo = new CRequestInfo(ITeerace::Host());
+		pInfo->SetCallback(OnUserRankMap, pUserData);
 		pScore->Server()->SendHttp(pInfo, pRequest);
 	}
 	else if(User->m_PrintRank)
@@ -267,30 +293,25 @@ void CWebappScore::OnUserRankGlobal(IResponse *pResponse, bool ConnError, void *
 	if(!Error)
 		pUser->m_GlobalRank = str_toint(((CBufferResponse*)pResponse)->GetBody());
 
-	char aURI[128];
-	str_format(aURI, sizeof(aURI), "/users/map_rank/%d/%d/", pUser->m_UserID, pUser->m_MapID);
-	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
-	pInfo->SetCallback(OnUserRankMap, pUser); // do not delete userdata here
-	pScore->Server()->SendHttp(pInfo, pRequest);
+	pUser->m_RefCount--;
+	if(pUser->m_RefCount == 0)
+	{
+		if(pUser->m_PrintRank && pScore->GameServer()->m_apPlayers[pUser->m_ClientID])
+			pScore->PrintRank(pUser);
+		delete pUser;
+	}
 }
 
 void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUserData)
 {
-	smart_ptr<CUserRankData> User((CUserRankData*)pUserData);
-	CWebappScore *pScore = User->m_pScore;
+	CUserRankData *pUser = (CUserRankData*)pUserData;
+	CWebappScore *pScore = pUser->m_pScore;
 	bool Error = ConnError || pResponse->StatusCode() != 200;
 	CServerWebapp::CheckStatusCode(pScore->GameServer()->Console(), pResponse);
 
-	CPlayer *pPl = pScore->GameServer()->m_apPlayers[User->m_ClientID];
-	int GlobalRank = User->m_GlobalRank;
-	int MapRank = 0;
-
-	int Time = 0;
+	pUser->m_MapRank = 0;
+	pUser->m_Time = 0;
 	int aCpTime[NUM_CHECKPOINTS] = { 0 };
-
-	if(!pPl)
-		return;
 
 	if(!Error)
 	{
@@ -302,11 +323,11 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 		json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
 		if(pJsonData)
 		{
-			MapRank = (*pJsonData)["position"].u.integer;
+			pUser->m_MapRank = (*pJsonData)["position"].u.integer;
 			const json_value &BestRun = (*pJsonData)["bestrun"];
 			if(BestRun.type == json_object)
 			{
-				Time = IRace::TimeFromSecondsStr(BestRun["time"]);
+				pUser->m_Time = IRace::TimeFromSecondsStr(BestRun["time"]);
 				const json_value &CheckpointList = BestRun["checkpoints_list"];
 				unsigned int CpNum = min(CheckpointList.u.array.length, (unsigned int)NUM_CHECKPOINTS);
 				for(unsigned int i = 0; i < CpNum; i++)
@@ -318,56 +339,67 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 		json_value_free(pJsonData);
 	}
 
-	bool Own = User->m_UserID == pScore->Server()->GetUserID(User->m_ClientID);
-	if(Own && MapRank && Time > 0)
+	bool Own = pUser->m_UserID == pScore->Server()->GetUserID(pUser->m_ClientID);
+	bool ThisMap = pUser->m_MapID == pScore->Webapp()->CurrentMap()->m_ID;
+	if(Own && ThisMap && pUser->m_MapRank && pUser->m_Time > 0)
 	{
-		pScore->m_aPlayerData[User->m_ClientID].SetTime(Time, aCpTime);
+		pScore->m_aPlayerData[pUser->m_ClientID].SetTime(pUser->m_Time, aCpTime);
 		if(g_Config.m_SvShowBest)
 		{
-			pScore->m_aPlayerData[User->m_ClientID].UpdateCurTime(Time);
-			int SendTo = g_Config.m_SvShowTimes ? -1 : User->m_ClientID;
-			pScore->GameServer()->SendPlayerTime(SendTo, Time, User->m_ClientID);
+			pScore->m_aPlayerData[pUser->m_ClientID].UpdateCurTime(pUser->m_Time);
+			int SendTo = g_Config.m_SvShowTimes ? -1 : pUser->m_ClientID;
+			pScore->GameServer()->SendPlayerTime(SendTo, pUser->m_Time, pUser->m_ClientID);
 		}
 	}
 
-	if(User->m_PrintRank)
+	pUser->m_RefCount--;
+	if(pUser->m_RefCount == 0)
 	{
-		char aBuf[256];
-		bool Public = g_Config.m_SvShowTimes;
-		if(!MapRank && !GlobalRank)
-		{
-			// do not send the rank to everyone if the player is not ranked at all
-			Public = false;
-			if(Own)
-				str_copy(aBuf, "You are neither globally ranked nor on this map yet.", sizeof(aBuf));
-			else
-				str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", User->m_aName);
-		}
-		else if(!MapRank)
-		{
-			str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
-				User->m_aName, GlobalRank, pScore->Server()->ClientName(User->m_ClientID));
-		}
-		else if(!GlobalRank)
-		{
-			char aTime[64];
-			IRace::FormatTimeShort(aTime, sizeof(aTime), Time);
-			str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %s (%s)",
-				User->m_aName, MapRank, aTime, pScore->Server()->ClientName(User->m_ClientID));
-		}
-		else
-		{
-			char aTime[64];
-			IRace::FormatTimeShort(aTime, sizeof(aTime), Time);
-			str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %s (%s)",
-				User->m_aName, GlobalRank, MapRank, aTime, pScore->Server()->ClientName(User->m_ClientID));
-		}
-
-		if(Public)
-			pScore->GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
-		else
-			pScore->GameServer()->SendChatTarget(User->m_ClientID, aBuf);
+		if(pUser->m_PrintRank && pScore->GameServer()->m_apPlayers[pUser->m_ClientID])
+			pScore->PrintRank(pUser);
+		delete pUser;
 	}
+}
+
+void CWebappScore::PrintRank(const CUserRankData *pUser)
+{
+	bool Own = pUser->m_UserID == Server()->GetUserID(pUser->m_ClientID);
+
+	char aBuf[256];
+	bool Public = g_Config.m_SvShowTimes;
+	if(!pUser->m_MapRank && !pUser->m_GlobalRank)
+	{
+		// do not send the rank to everyone if the player is not ranked at all
+		Public = false;
+		if(Own)
+			str_copy(aBuf, "You are neither globally ranked nor on this map yet.", sizeof(aBuf));
+		else
+			str_format(aBuf, sizeof(aBuf), "%s is neither globally ranked nor on this map yet.", pUser->m_aName);
+	}
+	else if(!pUser->m_MapRank)
+	{
+		str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: Not ranked yet (%s)",
+			pUser->m_aName, pUser->m_GlobalRank, Server()->ClientName(pUser->m_ClientID));
+	}
+	else if(!pUser->m_GlobalRank)
+	{
+		char aTime[64];
+		IRace::FormatTimeShort(aTime, sizeof(aTime), pUser->m_Time);
+		str_format(aBuf, sizeof(aBuf), "%s: Not globally ranked yet | Map Rank: %d | Time: %s (%s)",
+			pUser->m_aName, pUser->m_MapRank, aTime, Server()->ClientName(pUser->m_ClientID));
+	}
+	else
+	{
+		char aTime[64];
+		IRace::FormatTimeShort(aTime, sizeof(aTime), pUser->m_Time);
+		str_format(aBuf, sizeof(aBuf), "%s: Global Rank: %d | Map Rank: %d | Time: %s (%s)",
+			pUser->m_aName, pUser->m_GlobalRank, pUser->m_MapRank, aTime, Server()->ClientName(pUser->m_ClientID));
+	}
+
+	if(Public)
+		GameServer()->SendChat(-1, CGameContext::CHAT_ALL, aBuf);
+	else
+		GameServer()->SendChatTarget(pUser->m_ClientID, aBuf);
 }
 
 void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserData)
@@ -388,7 +420,7 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 		if(pJsonData)
 		{
 			int ClientID = User->m_ClientID;
-			if(User->m_StartRank == 1)
+			if(User->m_StartRank == 1 && pScore->Webapp()->CurrentMap()->m_ID == User->m_MapID)
 			{
 				pScore->m_GotRecord = true;
 				if(pJsonData->u.array.length > 0)
