@@ -6,7 +6,7 @@
 #define GAME_VERSION "0.6.4, Race " RACE_VERSION
 //#define GAME_NETVERSION "0.6 " GAME_NETVERSION_HASH
 #define GAME_NETVERSION "0.6 626fce9a778df4d4"
-#define RACE_VERSION "3.4"
+#define RACE_VERSION "3.5"
 #define TEERACE_GAMESERVER_VERSION "1"
 static const char GAME_RELEASE_VERSION[8] = {'0', '.', '6', '.', '4', 0};
 #endif
