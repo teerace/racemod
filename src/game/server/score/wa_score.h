@@ -55,6 +55,7 @@ class CWebappScore : public IScore
 	CServerWebapp *Webapp();
 
 	void PrintRank(const CUserRankData *pUser);
+	void RequestRank(CUserRankData *pUserData);
 
 	static void OnUserFind(class IResponse *pResponse, bool ConnError, void *pUserData);
 	static void OnUserRankGlobal(class IResponse *pResponse, bool ConnError, void *pUserData);
