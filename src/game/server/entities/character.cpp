@@ -562,8 +562,6 @@ void CCharacter::Tick()
 		m_pPlayer->m_ForceBalanced = false;
 	}
 
-	vec2 PrevPos = m_Core.m_PrevPos;
-	
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
 
@@ -574,21 +572,6 @@ void CCharacter::Tick()
 			m_Health++;
 		else if(m_Armor < 10)
 			m_Armor++;
-	}
-	
-	// tile pos
-	int TilePos = GameServer()->Collision()->CheckRaceTile(PrevPos, m_Pos, CCollision::RACECHECK_TILES_MAIN);
-
-	CGameControllerRACE *pRace = GameServer()->RaceController();
-	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, PrevPos, m_Pos);
-
-	if(m_Core.m_Teleported && g_Config.m_SvStrip)
-	{
-		m_ActiveWeapon = WEAPON_HAMMER;
-		m_LastWeapon = WEAPON_HAMMER;
-		m_aWeapons[0].m_Got = true;
-		for(int i = 1; i < NUM_WEAPONS; i++)
-			m_aWeapons[i].m_Got = false;
 	}
 	
 	// set Position just in case it was changed
@@ -638,6 +621,20 @@ void CCharacter::TickDefered()
 	m_Core.Quantize();
 	bool StuckAfterQuant = GameServer()->Collision()->TestBox(m_Core.m_Pos, vec2(28.0f, 28.0f));
 	m_Pos = m_Core.m_Pos;
+
+	int TilePos = GameServer()->Collision()->CheckRaceTile(StartPos, m_Pos, CCollision::RACECHECK_TILES_MAIN);
+
+	CGameControllerRACE *pRace = GameServer()->RaceController();
+	pRace->ProcessRaceTile(m_pPlayer->GetCID(), TilePos, m_Core.m_PrevPos, m_Pos);
+
+	if(m_Core.m_Teleported && g_Config.m_SvStrip)
+	{
+		m_ActiveWeapon = WEAPON_HAMMER;
+		m_LastWeapon = WEAPON_HAMMER;
+		m_aWeapons[0].m_Got = true;
+		for(int i = 1; i < NUM_WEAPONS; i++)
+			m_aWeapons[i].m_Got = false;
+	}
 
 	if(!StuckBefore && (StuckAfterMove || StuckAfterQuant))
 	{
