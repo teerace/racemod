@@ -10,6 +10,7 @@
 #include <game/generated/protocol.h>
 
 #include <game/localization.h>
+#include <game/teerace.h>
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
@@ -258,7 +259,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			int Time = m_pClient->m_aClients[pInfo->m_ClientID].m_RaceTime;
 			if(Time > 0)
 			{
-				str_format(aBuf, sizeof(aBuf), "%02d:%02d.%03d", Time / (60 * 1000), (Time / 1000) % 60, Time % 1000);
+				IRace::FormatTimeShort(aBuf, sizeof(aBuf), Time, true);
 				tw = TextRender()->TextWidth(0, FontSize, aBuf, -1);
 				TextRender()->SetCursor(&Cursor, ScoreOffset+ScoreLength/2-tw/2, y+Spacing, FontSize, TEXTFLAG_RENDER|TEXTFLAG_STOP_AT_END);
 				Cursor.m_LineWidth = ScoreLength;
