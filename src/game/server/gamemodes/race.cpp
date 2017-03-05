@@ -59,7 +59,7 @@ void CGameControllerRACE::Tick()
 		if(p->m_RaceState == RACE_STARTED && !PureTuning)
 			StopRace(i);
 
-		if(p->m_RaceState == RACE_STARTED && GameServer()->m_apPlayers[i]->m_RaceClient == 1 &&
+		if(p->m_RaceState == RACE_STARTED && !GameServer()->m_apPlayers[i]->m_RaceCfg.m_TimerWarmup &&
 			Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed())
 		{
 			bool Checkpoint = p->m_CpTick != -1 && p->m_CpTick > Server()->Tick();
@@ -88,17 +88,33 @@ void CGameControllerRACE::Tick()
 
 void CGameControllerRACE::Snap(int SnappingClient)
 {
-	int TmpRoundStartTick = m_RoundStartTick;
-	int TmpTimeLimit = g_Config.m_SvTimelimit;
-	if(SnappingClient >= 0 && m_aRace[SnappingClient].m_RaceState == RACE_STARTED)
-	{
-		m_RoundStartTick = m_aRace[SnappingClient].m_StartTick;
-		g_Config.m_SvTimelimit = 0;
-	}
+	CNetObj_GameInfo *pGameInfoObj = (CNetObj_GameInfo *)Server()->SnapNewItem(NETOBJTYPE_GAMEINFO, 0, sizeof(CNetObj_GameInfo));
+	if(!pGameInfoObj)
+		return;
 
-	IGameController::Snap(SnappingClient);
-	m_RoundStartTick = TmpRoundStartTick;
-	g_Config.m_SvTimelimit = TmpTimeLimit;
+	pGameInfoObj->m_GameFlags = m_GameFlags;
+	pGameInfoObj->m_GameStateFlags = 0;
+	if(m_GameOverTick != -1)
+		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_GAMEOVER;
+	if(m_SuddenDeath)
+		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_SUDDENDEATH;
+	if(GameServer()->m_World.m_Paused)
+		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_PAUSED;
+	pGameInfoObj->m_RoundStartTick = m_RoundStartTick;
+	pGameInfoObj->m_WarmupTimer = GameServer()->m_World.m_Paused ? m_UnpauseTimer : m_Warmup;
+
+	pGameInfoObj->m_ScoreLimit = g_Config.m_SvScorelimit;
+	pGameInfoObj->m_TimeLimit = g_Config.m_SvTimelimit;
+
+	pGameInfoObj->m_RoundNum = (str_length(g_Config.m_SvMaprotation) && g_Config.m_SvRoundsPerMap) ? g_Config.m_SvRoundsPerMap : 0;
+	pGameInfoObj->m_RoundCurrent = m_RoundCount+1;
+
+	CPlayer *pPlayer = SnappingClient >= 0 ? GameServer()->m_apPlayers[SnappingClient] : 0;
+	if(pPlayer && pPlayer->m_RaceCfg.m_TimerWarmup && m_aRace[SnappingClient].m_RaceState == RACE_STARTED)
+	{
+		pGameInfoObj->m_WarmupTimer = -m_aRace[SnappingClient].m_StartTick;
+		pGameInfoObj->m_GameStateFlags |= GAMESTATEFLAG_RACETIME;
+	}
 }
 
 bool CGameControllerRACE::OnCheckpoint(int ID, int z)
@@ -113,15 +129,17 @@ bool CGameControllerRACE::OnCheckpoint(int ID, int z)
 	if(pBest->m_Time && pBest->m_aCpTime[z] != 0)
 	{
 		int Diff = p->m_aCpCurrent[z] - pBest->m_aCpTime[z];
-		if(GameServer()->m_apPlayers[ID]->m_RaceClient == 1)
+		const CPlayer::CRaceCfg *pConfig = &GameServer()->m_apPlayers[ID]->m_RaceCfg;
+		bool TimeBroadcast = !pConfig->m_TimerWarmup && !pConfig->m_TimerNetMsg;
+		if(pConfig->m_TimerNetMsg || (!pConfig->m_CheckpointNetMsg && TimeBroadcast))
 		{
 			p->m_CpDiff = Diff;
 			p->m_CpTick = Server()->Tick() + Server()->TickSpeed() * 2;
 		}
 		else if(Server()->Tick() - p->m_RefreshTick >= Server()->TickSpeed() / 2)
 		{
-			int Time = GameServer()->m_apPlayers[ID]->m_DDNetClient ? GetTime(ID) : 0;
-			GameServer()->SendRaceTime(ID, Time, Diff);
+			int Time = GameServer()->m_apPlayers[ID]->CheckClient(CCustomClient::CLIENT_DDNET) ? GetTime(ID) : 0;
+			GameServer()->SendCheckpoint(ID, Time, Diff);
 			p->m_RefreshTick = Server()->Tick();
 		}
 	}

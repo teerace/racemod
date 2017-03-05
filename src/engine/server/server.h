@@ -124,6 +124,8 @@ public:
 
 		const IConsole::CCommandInfo *m_pRconCmdToSend;
 
+		CCustomClient m_Custom;
+
 #if defined(CONF_TEERACE)
 		int m_UserID;
 		char m_aUsername[64];

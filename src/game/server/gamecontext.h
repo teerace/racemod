@@ -188,9 +188,11 @@ public:
 	void SendWeaponPickup(int ClientID, int Weapon);
 	void SendBroadcast(const char *pText, int ClientID);
 	
+	void SendRaceStartData(int ClientID);
 	void SendRecord(int ClientID);
 	void SendPlayerTime(int ClientID, int Time, int ID);
 	void SendRaceTime(int ClientID, int Time, int CpDiff);
+	void SendCheckpoint(int ClientID, int Time, int CpDiff);
 
 	//
 	bool IsPureTuning() const;

@@ -14,6 +14,22 @@
 #include "score.h"
 #include "webapp.h"
 
+void CGameContext::SendRaceStartData(int ClientID)
+{
+	if(!g_Config.m_SvShowTimes)
+	{
+		SendPlayerTime(ClientID, Score()->PlayerData(ClientID)->m_CurTime, ClientID);
+		return;
+	}
+
+	SendRecord(ClientID);
+
+	// send time of all players
+	for(int i = 0; i < MAX_CLIENTS; i++)
+		if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
+			SendPlayerTime(ClientID, Score()->PlayerData(i)->m_CurTime, i);
+}
+
 void CGameContext::SendRecord(int ClientID)
 {
 	// no support for DDNet
@@ -24,13 +40,13 @@ void CGameContext::SendRecord(int ClientID)
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(m_apPlayers[i] && m_apPlayers[i]->m_RaceClient)
+			if(m_apPlayers[i] && m_apPlayers[i]->CheckClient(CCustomClient::CLIENT_RACE))
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
 		}
 	}
 	else
 	{
-		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_RaceClient)
+		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->CheckClient(CCustomClient::CLIENT_RACE))
 			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
 	}
 }
@@ -49,24 +65,63 @@ void CGameContext::SendPlayerTime(int ClientID, int Time, int ID)
 	{
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(m_apPlayers[i] && m_apPlayers[i]->m_RaceClient)
+			if(m_apPlayers[i] && m_apPlayers[i]->CheckClient(CCustomClient::CLIENT_RACE))
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, i);
-			else if(m_apPlayers[i] && m_apPlayers[i]->m_DDNetClient)
+			else if(m_apPlayers[i] && m_apPlayers[i]->CheckClient(CCustomClient::CLIENT_DDNET))
 				Server()->SendMsg(&MsgDDNet, MSGFLAG_VITAL, i);
 		}
 	}
 	else
 	{
-		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_RaceClient)
+		if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->CheckClient(CCustomClient::CLIENT_RACE))
 			Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
-		else if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->m_DDNetClient)
+		else if(m_apPlayers[ClientID] && m_apPlayers[ClientID]->CheckClient(CCustomClient::CLIENT_DDNET))
 			Server()->SendMsg(&MsgDDNet, MSGFLAG_VITAL, ClientID);
 	}
 }
 
 void CGameContext::SendRaceTime(int ClientID, int Time, int CpDiff)
 {
-	if(m_apPlayers[ClientID]->m_RaceClient || m_apPlayers[ClientID]->m_DDNetClient)
+	const CPlayer::CRaceCfg *pConfig = &m_apPlayers[ClientID]->m_RaceCfg;
+	if(pConfig->m_TimerNetMsg)
+	{
+		CNetMsg_Sv_RaceTime Msg;
+		Msg.m_Time = Time / 1000;
+		Msg.m_Check = CpDiff / 10;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientID);
+		return;
+	}
+
+	char aTimeBuf[128];
+	char aCpBuf[64];
+
+	bool TimeBroadcast = !pConfig->m_TimerWarmup && !pConfig->m_TimerNetMsg;
+	if(TimeBroadcast)
+		str_format(aTimeBuf, sizeof(aTimeBuf), "Current Time: %d min %d sec", Time / (60 * 1000), (Time / 1000) % 60);
+
+	if(CpDiff)
+	{
+		char aDiff[128];
+		IRace::FormatTimeDiff(aDiff, sizeof(aDiff), CpDiff, false);
+		str_format(aCpBuf, sizeof(aCpBuf), "Checkpoint | Diff : %s", aDiff);
+	}
+
+	if(TimeBroadcast)
+	{
+		if(CpDiff)
+		{
+			str_append(aTimeBuf, "\n", sizeof(aTimeBuf));
+			str_append(aTimeBuf, aCpBuf, sizeof(aTimeBuf));
+		}
+		SendBroadcast(aTimeBuf, ClientID);
+	}
+	else if(CpDiff)
+		SendBroadcast(aTimeBuf, ClientID);
+}
+
+void CGameContext::SendCheckpoint(int ClientID, int Time, int CpDiff)
+{
+	if(m_apPlayers[ClientID]->m_RaceCfg.m_CheckpointNetMsg)
 	{
 		CNetMsg_Sv_RaceTime Msg;
 		Msg.m_Time = Time / 1000;
@@ -326,7 +381,8 @@ void CGameContext::ChatConShowOthers(IConsole::IResult *pResult, void *pUser)
 		return;
 	}
 
-	if(pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_RaceClient || pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_DDNetClient)
+	if(pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->CheckClient(CCustomClient::CLIENT_RACE)
+		|| pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->CheckClient(CCustomClient::CLIENT_DDNET))
 		pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", "Please use the settings to switch this option.");
 	else
 		pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_ShowOthers = !pSelf->m_apPlayers[pSelf->m_ChatConsoleClientID]->m_ShowOthers;

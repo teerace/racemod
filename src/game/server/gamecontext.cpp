@@ -587,6 +587,7 @@ void CGameContext::OnClientPredictedInput(int ClientID, void *pInput)
 void CGameContext::OnClientEnter(int ClientID)
 {
 	//world.insert_entity(&players[client_id]);
+	m_apPlayers[ClientID]->InitRace();
 	m_apPlayers[ClientID]->Respawn();
 
 
@@ -594,6 +595,7 @@ void CGameContext::OnClientEnter(int ClientID)
 	
 	// init the player
 	Score()->OnPlayerInit(ClientID);
+	SendRaceStartData(ClientID);
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "'%s' entered and joined the %s", Server()->ClientName(ClientID), m_pController->GetTeamName(m_apPlayers[ClientID]->GetTeam()));
@@ -659,7 +661,7 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 {
 	CPlayer *pPlayer = m_apPlayers[ClientID];
-	if(pPlayer->m_DDNetClient)
+	if(pPlayer->CheckClient(CCustomClient::CLIENT_DDNET))
 	{
 		if(MsgID == 31)
 			MsgID = NETMSGTYPE_CL_RACESHOWOTHERS;
@@ -1008,26 +1010,33 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 		}
 		else if(MsgID == NETMSGTYPE_CL_ISRACE)
 		{
-			pPlayer->m_DDNetClient = pUnpacker->GetInt();
-			pPlayer->m_RaceClient = pUnpacker->GetInt();
+			IServer::CClientInfo Info;
+			Server()->GetClientInfo(ClientID, &Info);
+			CCustomClient *pCustom = Info.m_pCustom;
 
-			if(pUnpacker->Error() && !pPlayer->m_DDNetClient)
-				pPlayer->m_RaceClient = 1;
-			if(pPlayer->m_RaceClient)
-				pPlayer->m_DDNetClient = 0;
+			int DDNetClient = pUnpacker->GetInt();
+			int RaceClient = pUnpacker->GetInt();
 
-			if(!g_Config.m_SvShowTimes)
-			{
-				SendPlayerTime(ClientID, Score()->PlayerData(ClientID)->m_CurTime, ClientID);
+			// check if we already have the info
+			if(pCustom->m_Type != CCustomClient::CLIENT_VANILLA)
 				return;
+
+			if(pUnpacker->Error() && !DDNetClient)
+				RaceClient = 1;
+			
+			if(RaceClient)
+			{
+				pCustom->m_Type = CCustomClient::CLIENT_RACE;
+				pCustom->m_Version = RaceClient;
+			}
+			else
+			{
+				pCustom->m_Type = CCustomClient::CLIENT_DDNET;
+				pCustom->m_Version = DDNetClient;
 			}
 
-			SendRecord(ClientID);
-
-			// send time of all players
-			for(int i = 0; i < MAX_CLIENTS; i++)
-				if(m_apPlayers[i] && Score()->PlayerData(i)->m_CurTime > 0)
-					SendPlayerTime(ClientID, Score()->PlayerData(i)->m_CurTime, i);
+			pPlayer->InitRace();
+			SendRaceStartData(ClientID);
 		}
 		else if(MsgID == NETMSGTYPE_CL_RACESHOWOTHERS)
 		{

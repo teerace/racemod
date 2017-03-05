@@ -18,6 +18,10 @@ public:
 
 	void Init(int CID);
 
+	void InitRace();
+	bool CheckClient(int Type, int Version = 0) const;
+	bool CheckClientMin(int Type, int Version) const;
+
 	void TryRespawn();
 	void Respawn();
 	void SetTeam(int Team, bool DoChatMsg=true);
@@ -101,8 +105,12 @@ public:
 	bool m_ResetPickups;
 	bool m_ShowOthers;
 	
-	int m_DDNetClient;
-	int m_RaceClient;
+	struct CRaceCfg
+	{
+		bool m_TimerWarmup;
+		bool m_TimerNetMsg;
+		bool m_CheckpointNetMsg;
+	} m_RaceCfg;
 	
 private:
 	CCharacter *m_pCharacter;

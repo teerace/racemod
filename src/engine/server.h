@@ -5,6 +5,19 @@
 #include "kernel.h"
 #include "message.h"
 
+struct CCustomClient
+{
+	enum
+	{
+		CLIENT_VANILLA = 0,
+		CLIENT_RACE,
+		CLIENT_DDNET
+	};
+
+	int m_Type;
+	int m_Version;
+};
+
 class IServer : public IInterface
 {
 	MACRO_INTERFACE("server", 0)
@@ -20,6 +33,7 @@ public:
 	{
 		const char *m_pName;
 		int m_Latency;
+		CCustomClient *m_pCustom;
 	};
 
 	int Tick() const { return m_CurrentGameTick; }

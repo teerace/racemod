@@ -435,6 +435,8 @@ int CServer::Init()
 		m_aClients[i].m_aClan[0] = 0;
 		m_aClients[i].m_Country = -1;
 		m_aClients[i].m_Snapshots.Init();
+		m_aClients[i].m_Custom.m_Type = CCustomClient::CLIENT_VANILLA;
+		m_aClients[i].m_Custom.m_Version = 0;
 	}
 
 #if defined(CONF_TEERACE)
@@ -465,6 +467,7 @@ int CServer::GetClientInfo(int ClientID, CClientInfo *pInfo)
 	{
 		pInfo->m_pName = m_aClients[ClientID].m_aName;
 		pInfo->m_Latency = m_aClients[ClientID].m_Latency;
+		pInfo->m_pCustom = &m_aClients[ClientID].m_Custom;
 		return 1;
 	}
 	return 0;
@@ -736,6 +739,8 @@ int CServer::NewClientNoAuthCallback(int ClientID, void *pUser)
 	pThis->m_aClients[ClientID].m_Authed = AUTHED_NO;
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
+	pThis->m_aClients[ClientID].m_Custom.m_Type = CCustomClient::CLIENT_VANILLA;
+	pThis->m_aClients[ClientID].m_Custom.m_Version = 0;
 	pThis->m_aClients[ClientID].Reset();
 
 	pThis->SendMap(ClientID);
@@ -760,6 +765,8 @@ int CServer::NewClientCallback(int ClientID, void *pUser)
 #endif
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
+	pThis->m_aClients[ClientID].m_Custom.m_Type = CCustomClient::CLIENT_VANILLA;
+	pThis->m_aClients[ClientID].m_Custom.m_Version = 0;
 	pThis->m_aClients[ClientID].Reset();
 	return 0;
 }
@@ -793,6 +800,8 @@ int CServer::DelClientCallback(int ClientID, const char *pReason, void *pUser)
 	pThis->m_aClients[ClientID].m_AuthTries = 0;
 	pThis->m_aClients[ClientID].m_pRconCmdToSend = 0;
 	pThis->m_aClients[ClientID].m_Snapshots.PurgeAll();
+	pThis->m_aClients[ClientID].m_Custom.m_Type = CCustomClient::CLIENT_VANILLA;
+	pThis->m_aClients[ClientID].m_Custom.m_Version = 0;
 	return 0;
 }
 
@@ -1712,10 +1721,17 @@ void CServer::ConStatus(IConsole::IResult *pResult, void *pUser)
 			net_addr_str(pThis->m_NetServer.ClientAddr(i), aAddrStr, sizeof(aAddrStr), true);
 			if(pThis->m_aClients[i].m_State == CClient::STATE_INGAME)
 			{
+				const char *pClientName = "vanilla";
+				if(pThis->m_aClients[i].m_Custom.m_Type == CCustomClient::CLIENT_RACE)
+					pClientName = "race";
+				else if(pThis->m_aClients[i].m_Custom.m_Type == CCustomClient::CLIENT_DDNET)
+					pClientName = "ddnet";
+
 				const char *pAuthStr = pThis->m_aClients[i].m_Authed == CServer::AUTHED_ADMIN ? "(Admin)" :
 										pThis->m_aClients[i].m_Authed == CServer::AUTHED_MOD ? "(Mod)" : "";
-				str_format(aBuf, sizeof(aBuf), "id=%d addr=%s name='%s' score=%d secure=%s %s", i, aAddrStr,
-					pThis->m_aClients[i].m_aName, pThis->m_aClients[i].m_Score, pThis->m_NetServer.HasSecurityToken(i) ? "yes":"no", pAuthStr);
+				str_format(aBuf, sizeof(aBuf), "id=%d addr=%s name='%s' score=%d secure=%s client=%s:%d %s", i, aAddrStr,
+					pThis->m_aClients[i].m_aName, pThis->m_aClients[i].m_Score, pThis->m_NetServer.HasSecurityToken(i) ? "yes" : "no",
+					pClientName, pThis->m_aClients[i].m_Custom.m_Version, pAuthStr);
 			}
 			else
 				str_format(aBuf, sizeof(aBuf), "id=%d addr=%s connecting", i, aAddrStr);

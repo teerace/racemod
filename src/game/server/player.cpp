@@ -29,14 +29,43 @@ CPlayer::CPlayer(CGameContext *pGameServer, int ClientID, int Team)
 		m_ShowOthers = true;
 		
 	m_ResetPickups = true;
-	m_DDNetClient = 0;
-	m_RaceClient = 0;
+
+	m_RaceCfg.m_TimerWarmup = false;
+	m_RaceCfg.m_TimerNetMsg = false;
+	m_RaceCfg.m_CheckpointNetMsg = false;
 }
 
 CPlayer::~CPlayer()
 {
 	delete m_pCharacter;
 	m_pCharacter = 0;
+}
+
+void CPlayer::InitRace()
+{
+	// using warmup timer
+	m_RaceCfg.m_TimerWarmup = CheckClientMin(CCustomClient::CLIENT_RACE, 3) || CheckClientMin(CCustomClient::CLIENT_DDNET, 10042);
+	// custom net message, bundled with checkpoint (broken in ddnet), sent once a second
+	m_RaceCfg.m_TimerNetMsg = CheckClient(CCustomClient::CLIENT_RACE, 1) || CheckClient(CCustomClient::CLIENT_RACE, 2);
+	// custom net message
+	m_RaceCfg.m_CheckpointNetMsg = CheckClient(CCustomClient::CLIENT_RACE) || CheckClient(CCustomClient::CLIENT_DDNET);
+	dbg_msg("", "native: %d", m_RaceCfg.m_TimerWarmup);
+}
+
+bool CPlayer::CheckClient(int Type, int Version) const
+{
+	IServer::CClientInfo Info;
+	if(Server()->GetClientInfo(m_ClientID, &Info))
+		return Info.m_pCustom->m_Type == Type && (!Version || Info.m_pCustom->m_Version == Version);
+	return false;
+}
+
+bool CPlayer::CheckClientMin(int Type, int Version) const 
+{
+	IServer::CClientInfo Info;
+	if(Server()->GetClientInfo(m_ClientID, &Info))
+		return Info.m_pCustom->m_Type == Type && Info.m_pCustom->m_Version >= Version;
+	return false;
 }
 
 void CPlayer::Tick()
