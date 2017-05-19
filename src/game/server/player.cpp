@@ -49,7 +49,6 @@ void CPlayer::InitRace()
 	m_RaceCfg.m_TimerNetMsg = CheckClient(CCustomClient::CLIENT_RACE, 1) || CheckClient(CCustomClient::CLIENT_RACE, 2);
 	// custom net message
 	m_RaceCfg.m_CheckpointNetMsg = CheckClient(CCustomClient::CLIENT_RACE) || CheckClient(CCustomClient::CLIENT_DDNET);
-	dbg_msg("", "native: %d", m_RaceCfg.m_TimerWarmup);
 }
 
 bool CPlayer::CheckClient(int Type, int Version) const
