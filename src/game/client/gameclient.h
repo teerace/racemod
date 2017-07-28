@@ -117,7 +117,7 @@ public:
 	// Race
 	bool m_RaceMsgSent;
 	int m_ShowOthers;
-	vec2 m_aFlagPos[2];
+	int m_aFlagIndex[2];
 
 	// TODO: move this
 	CTuningParams m_Tuning;

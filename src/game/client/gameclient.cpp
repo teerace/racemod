@@ -345,8 +345,8 @@ void CGameClient::OnInit()
 	
 	m_RaceMsgSent = false;
 	m_ShowOthers = -1;
-	for(int i = 0; i < 2; i++)
-		m_aFlagPos[i] = vec2(-1, -1);
+	m_aFlagIndex[0] = -1;
+	m_aFlagIndex[1] = -1;
 
 	// init webapp
 	m_pWebapp = new CClientWebapp();
@@ -409,6 +409,18 @@ void CGameClient::OnConnected()
 		pConfig->Reset(CFGFLAG_MAPSETTINGS);
 	LoadMapSettings();
 
+	m_aFlagIndex[0] = -1;
+	m_aFlagIndex[1] = -1;
+
+	// get flag positions
+	for(int i = 0; i < m_Collision.GetWidth()*m_Collision.GetHeight(); i++)
+	{
+		if(m_Collision.GetIndex(i) - ENTITY_OFFSET == ENTITY_FLAGSTAND_RED)
+			m_aFlagIndex[TEAM_RED] = i;
+		else if(m_Collision.GetIndex(i)-ENTITY_OFFSET == ENTITY_FLAGSTAND_BLUE)
+			m_aFlagIndex[TEAM_BLUE] = i;
+	}
+
 	for(int i = 0; i < m_All.m_Num; i++)
 	{
 		m_All.m_paComponents[i]->OnMapLoad();
@@ -423,18 +435,6 @@ void CGameClient::OnConnected()
 
 	// send the inital info
 	SendInfo(true);
-	
-	for(int i = 0; i < 2; i++)
-		m_aFlagPos[i] = vec2(-1, -1);
-
-	// get flag positions
-	for(int i = 0; i < m_Collision.GetWidth()*m_Collision.GetHeight(); i++)
-	{
-		if(m_Collision.GetIndex(i)-ENTITY_OFFSET == ENTITY_FLAGSTAND_RED)
-			m_aFlagPos[TEAM_RED] = vec2((i%m_Collision.GetWidth())*32+16, (i/m_Collision.GetWidth())*32+16);
-		else if(m_Collision.GetIndex(i)-ENTITY_OFFSET == ENTITY_FLAGSTAND_BLUE)
-			m_aFlagPos[TEAM_BLUE] = vec2((i%m_Collision.GetWidth())*32+16, (i/m_Collision.GetWidth())*32+16);
-	}
 }
 
 void CGameClient::LoadMapSettings()
@@ -856,6 +856,8 @@ void CGameClient::OnNewSnapshot()
 		}
 	}
 
+	int TeamJoined = TEAM_SPECTATORS;
+
 	// go trough all the items in the snapshot and gather the info we want
 	{
 		m_Snap.m_aTeamSize[TEAM_RED] = m_Snap.m_aTeamSize[TEAM_BLUE] = 0;
@@ -911,6 +913,9 @@ void CGameClient::OnNewSnapshot()
 			else if(Item.m_Type == NETOBJTYPE_PLAYERINFO)
 			{
 				const CNetObj_PlayerInfo *pInfo = (const CNetObj_PlayerInfo *)pData;
+
+				if(pInfo->m_Local && (m_aClients[pInfo->m_ClientID].m_Team != pInfo->m_Team || !m_aClients[pInfo->m_ClientID].m_Active))
+					TeamJoined = pInfo->m_Team;
 
 				m_aClients[pInfo->m_ClientID].m_Team = pInfo->m_Team;
 				m_aClients[pInfo->m_ClientID].m_Active = true;
@@ -989,6 +994,9 @@ void CGameClient::OnNewSnapshot()
 				m_Snap.m_paFlags[Item.m_ID%2] = (const CNetObj_Flag *)pData;
 		}
 	}
+
+	if(TeamJoined != TEAM_SPECTATORS && m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_TEAMS)
+		m_pGhost->OnGameJoin(TeamJoined);
 
 	// setup local pointers
 	if(m_Snap.m_LocalClientID >= 0)
