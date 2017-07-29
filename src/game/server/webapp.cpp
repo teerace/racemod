@@ -496,8 +496,8 @@ void CServerWebapp::Tick()
 		LoadMapList();
 	}
 
-	// ping every minute
-	if(g_Config.m_SvRegister && (m_LastPing < 0 || m_LastPing + time_freq() * 60 < Now))
+	// ping regularly
+	if(g_Config.m_SvRegister && (m_LastPing < 0 || m_LastPing + time_freq() * 60 * g_Config.m_WaPingInterval < Now))
 		SendPing();
 
 	// only one vote update every 3 seconds
