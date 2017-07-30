@@ -1654,7 +1654,7 @@ int CServer::Run()
 			if(!NonActive)
 				PumpNetwork();
 
-			NonActive = true;
+			NonActive = !m_HttpClient.HasActiveConnection();
 
 			for (int c = 0; c < MAX_CLIENTS; c++)
 				if (m_aClients[c].m_State != CClient::STATE_EMPTY)
@@ -1663,7 +1663,7 @@ int CServer::Run()
 			// wait for incoming data
 			if(NonActive)
 			{
-					net_socket_read_wait(m_NetServer.Socket(), 1000000);
+				net_socket_read_wait(m_NetServer.Socket(), 1000000);
 			}
 			else
 			{
