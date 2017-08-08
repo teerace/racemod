@@ -1654,7 +1654,11 @@ int CServer::Run()
 			if(!NonActive)
 				PumpNetwork();
 
+			NonActive = true;
+
+#if defined(CONF_TEERACE)
 			NonActive = !m_HttpClient.HasActiveConnection();
+#endif
 
 			for (int c = 0; c < MAX_CLIENTS; c++)
 				if (m_aClients[c].m_State != CClient::STATE_EMPTY)
