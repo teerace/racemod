@@ -33,10 +33,7 @@ void CMapList::Reset(const char *pMapTypes)
 		if(pMapInfo->m_State == CMapInfo::MAPSTATE_COMPLETE)
 			pMapInfo->m_State = CMapInfo::MAPSTATE_INFO_MISSING;
 		else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
-		{
-			m_lMaps.remove_index(i);
-			i--;
-		}
+			m_lMaps.remove_index(i--);
 	}
 }
 
@@ -135,8 +132,7 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 			else if(pMapInfo->m_State == CMapInfo::MAPSTATE_FILE_MISSING || pMapInfo->m_State == CMapInfo::MAPSTATE_DOWNLOADING)
 			{
 				// info was removed from list; file missing
-				m_lMaps.remove_index(i);
-				i--;
+				m_lMaps.remove_index(i--);
 			}
 			else
 				continue;
@@ -484,8 +480,7 @@ void CServerWebapp::Tick()
 		if(m_lUploads[i].m_StartTime <= Now)
 		{
 			Upload(m_lUploads[i].m_aFilename, m_lUploads[i].m_aURL, m_lUploads[i].m_aUploadname, m_lUploads[i].m_pfnCallback);
-			m_lUploads.remove_index_fast(i);
-			i--; // since one item was removed
+			m_lUploads.remove_index_fast(i--);
 		}
 	}
 

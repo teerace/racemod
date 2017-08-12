@@ -613,9 +613,9 @@ void CHud::RenderCheckpoint()
 }
 
 void CHud::RenderRecord()
-{	
+{
 	// TODO: fix this
-	if(m_ServerRecord && g_Config.m_ClShowServerRecord && g_Config.m_ClShowRecords)
+	if(m_ServerRecord && g_Config.m_ClShowServerRecord)
 	{
 		char aBuf[64];
 		char aTime[32];
@@ -624,7 +624,7 @@ void CHud::RenderRecord()
 		TextRender()->Text(0, 5, 40, 6, aBuf, -1);
 	}
 }
-	
+
 void CHud::OnRender()
 {
 	if(!m_pClient->m_Snap.m_pGameInfoObj)
