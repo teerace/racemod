@@ -126,6 +126,14 @@ class CMenus : public CComponent
 		PAGE_SYSTEM,
 	};
 
+	enum
+	{
+		TOKEN_NONE=0,
+		TOKEN_REQUESTED,
+		TOKEN_FAILED,
+		TOKEN_ERROR
+	};
+
 	int m_GamePage;
 	int m_Popup;
 	int m_ActivePage;
@@ -161,6 +169,8 @@ class CMenus : public CComponent
 	bool m_NeedRestartSound;
 	bool m_NeedSendinfo;
 	int m_SettingPlayerPage;
+
+	int m_TeeraceTokenState;
 
 	//
 	bool m_EscapePressed;
@@ -293,6 +303,8 @@ class CMenus : public CComponent
 	void RenderSettingsSound(CUIRect MainView);
 	void RenderSettingsRace(CUIRect MainView);
 	void RenderSettings(CUIRect MainView);
+
+	static void OnApiToken(class IResponse *pResponse, bool Error, void *pUserData);
 
 	void SetActive(bool Active);
 public:

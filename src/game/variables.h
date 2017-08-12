@@ -76,7 +76,6 @@ MACRO_CONFIG_INT(ClPredictStopTiles, cl_predict_stop_tiles, 1, 0, 1, CFGFLAG_CLI
 
 /* Webapp */
 MACRO_CONFIG_STR(WaUsername, wa_username, 32, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Teerace username")
-MACRO_CONFIG_STR(WaPassword, wa_password, 32, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Teerace password")
 MACRO_CONFIG_STR(WaApiToken, wa_api_token, 25, "", CFGFLAG_CLIENT|CFGFLAG_SAVE, "Api token for webapp")
 
 // server

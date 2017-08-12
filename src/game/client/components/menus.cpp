@@ -75,8 +75,9 @@ CMenus::CMenus()
 	m_aCallvoteReason[0] = 0;
 
 	m_FriendlistSelectedIndex = -1;
-
 	m_CallvoteSelectedOption = -1;
+
+	m_TeeraceTokenState = TOKEN_NONE;
 }
 
 vec4 CMenus::ButtonColorMul(const void *pID)
