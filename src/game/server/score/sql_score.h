@@ -57,6 +57,7 @@ class CSqlScore : public IScore
 	static void ShowTop5Thread(CSqlConnection *pCon, bool Error, void *pUser);
 	
 	void Init();
+	void StartSqlThread(CSqlExecData::FQueryFunc pFunc, void *pUserData = 0);
 	
 	// anti SQL injection
 	void ClearString(char *pString, int Size);

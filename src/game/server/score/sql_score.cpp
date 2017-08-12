@@ -37,6 +37,7 @@ CSqlScore::~CSqlScore()
 {
 	lock_wait(gs_SqlLock);
 	lock_unlock(gs_SqlLock);
+	lock_destroy(gs_SqlLock);
 
 	delete m_pSqlConfig;
 }
@@ -51,6 +52,12 @@ void CSqlScore::Init()
 	str_format(aBuf, sizeof(aBuf), "CREATE DATABASE IF NOT EXISTS %s", m_pSqlConfig->m_aDatabase);
 	if(Con.Query(aBuf))
 		m_DbExists = true;
+}
+
+void CSqlScore::StartSqlThread(CSqlExecData::FQueryFunc pFunc, void *pUserData)
+{
+	void *Thread = thread_init(ExecSqlFunc, new CSqlExecData(this, pFunc, pUserData));
+	thread_detach(Thread);
 }
 
 void CSqlScore::OnMapLoad()
@@ -206,8 +213,7 @@ void CSqlScore::OnPlayerInit(int ClientID, bool PrintRank)
 	ClearString(Tmp->m_aName, sizeof(Tmp->m_aName));
 	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	
-	void *LoadThread = thread_init(ExecSqlFunc, new CSqlExecData(this, LoadScoreThread, Tmp));
-	thread_detach(LoadThread);
+	StartSqlThread(LoadScoreThread, Tmp);
 }
 
 void CSqlScore::SaveScoreThread(CSqlConnection *pCon, bool Error, void *pUser)
@@ -294,8 +300,7 @@ void CSqlScore::OnPlayerFinish(int ClientID, int Time, int *pCpTime)
 	ClearString(Tmp->m_aName, sizeof(Tmp->m_aName));
 	Server()->GetClientAddr(ClientID, Tmp->m_aIP, sizeof(Tmp->m_aIP));
 	
-	void *SaveThread = thread_init(ExecSqlFunc, new CSqlExecData(this, SaveScoreThread, Tmp));
-	thread_detach(SaveThread);
+	StartSqlThread(SaveScoreThread, Tmp);
 }
 
 void CSqlScore::ShowRankThread(CSqlConnection *pCon, bool Error, void *pUser)
@@ -385,8 +390,7 @@ void CSqlScore::ShowRank(int ClientID, const char *pName, bool Search)
 	Tmp->m_Search = Search;
 	str_format(Tmp->m_aRequestingPlayer, sizeof(Tmp->m_aRequestingPlayer), " (%s)", Server()->ClientName(ClientID));
 	
-	void *RankThread = thread_init(ExecSqlFunc, new CSqlExecData(this, ShowRankThread, Tmp));
-	thread_detach(RankThread);
+	StartSqlThread(ShowRankThread, Tmp);
 }
 
 void CSqlScore::ShowTop5Thread(CSqlConnection *pCon, bool Error, void *pUser)
@@ -430,8 +434,7 @@ void CSqlScore::ShowTop5(int ClientID, int Debut)
 	Tmp->m_Num = Debut;
 	Tmp->m_ClientID = ClientID;
 	
-	void *Top5Thread = thread_init(ExecSqlFunc, new CSqlExecData(this, ShowTop5Thread, Tmp));
-	thread_detach(Top5Thread);
+	StartSqlThread(ShowTop5Thread, Tmp);
 }
 
 // anti SQL injection

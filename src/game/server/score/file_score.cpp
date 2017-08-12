@@ -33,6 +33,7 @@ CFileScore::~CFileScore()
 {
 	lock_wait(gs_ScoreLock);
 	lock_unlock(gs_ScoreLock);
+	lock_destroy(gs_ScoreLock);
 }
 
 void CFileScore::WriteEntry(IOHANDLE File, const CPlayerScore *pEntry) const
