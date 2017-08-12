@@ -348,9 +348,6 @@ void CGameClient::OnInit()
 	m_aFlagIndex[0] = -1;
 	m_aFlagIndex[1] = -1;
 
-	// init webapp
-	m_pWebapp = new CClientWebapp();
-
 	// get Teerace server list
 	CBufferRequest *pRequest = ITeerace::CreateApiRequest(IRequest::HTTP_GET, "/anonclient/servers/");
 	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());

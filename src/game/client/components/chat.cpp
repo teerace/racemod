@@ -22,6 +22,7 @@
 
 CChat::CChat()
 {
+	mem_zero(m_aaLastMsg, sizeof(m_aaLastMsg));
 	OnReset();
 }
 
@@ -34,6 +35,7 @@ void CChat::OnReset()
 		m_aLines[i].m_aName[0] = 0;
 	}
 
+	m_CurrentLine = 0;
 	m_Mode = MODE_NONE;
 	m_Show = false;
 	m_InputUpdate = false;
