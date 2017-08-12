@@ -22,7 +22,6 @@
 
 CScoreboard::CScoreboard()
 {
-	m_ScoreboardPosition = vec4(0, 0, 0, 0);	
 	OnReset();
 }
 

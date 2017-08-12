@@ -22,7 +22,6 @@
 
 CChat::CChat()
 {
-	mem_zero(m_aaLastMsg, sizeof(m_aaLastMsg));
 	OnReset();
 }
 

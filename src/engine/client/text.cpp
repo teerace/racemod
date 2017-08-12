@@ -455,8 +455,8 @@ public:
 
 	~CTextRender()
 	{
-		if(m_pFont)
-			DestroyFont(m_pFont);
+		if(m_pDefaultFont)
+			DestroyFont(m_pDefaultFont);
 		FT_Done_FreeType(m_FTLibrary);
 	}
 
@@ -489,8 +489,6 @@ public:
 
 	virtual void DestroyFont(CFont *pFont)
 	{
-		for(unsigned i = 0; i < NUM_FONT_SIZES; i++)
-			m_FontMemoryUsage -= 2 * pFont->m_aSizes[i].m_TextureWidth * pFont->m_aSizes[i].m_TextureHeight;
 		FT_Done_Face(pFont->m_FtFace);
 		mem_free(pFont);
 	}
