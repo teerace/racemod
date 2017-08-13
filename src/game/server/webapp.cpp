@@ -46,13 +46,10 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 	json_value *pJsonData = json_parse_ex(&JsonSettings, pData, Size, aError);
 	if(!pJsonData)
 	{
-		dbg_msg("json", aError);
+		dbg_msg("json", "error: %s", aError);
 		json_value_free(pJsonData);
 		return false;
 	}
-
-	char aFilename[256];
-	const char *pPath = "/maps/teerace/%s.map";
 
 	// mark all entries as missing
 	for(int i = 0; i < m_lMaps.size(); i++)
@@ -72,6 +69,9 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 		str_copy(Info.m_aURL, Map["get_download_url"], sizeof(Info.m_aURL));
 		str_copy(Info.m_aAuthor, Map["author"], sizeof(Info.m_aAuthor));
 
+		char aFilename[256];
+		str_format(aFilename, sizeof(aFilename), "/maps/teerace/%s.map", Info.m_aName);
+
 		array<CMapInfo>::range r = find_linear(m_lMaps.all(), Info);
 		if(r.empty()) // new entry
 		{
@@ -80,7 +80,6 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 			if(g_Config.m_Debug)
 				dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
 
-			str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
 			pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
 		}
 		else
@@ -88,7 +87,6 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 			if(r.front().m_Crc != Info.m_Crc) // we have a wrong version
 			{
 				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
-				str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
 				dbg_msg("webapp", "updating map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 				pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
 			}
@@ -104,7 +102,6 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 				else if(r.front().m_State == CMapInfo::MAPSTATE_FILE_MISSING)
 				{
 					Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
-					str_format(aFilename, sizeof(aFilename), pPath, Info.m_aName);
 					dbg_msg("webapp", "downloading missing map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
 					pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
 				}
@@ -278,7 +275,7 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 	const char *pBody = ((CBufferResponse*)pResponse)->GetBody();
 	json_value *pJsonData = json_parse_ex(&JsonSettings, pBody, pResponse->Size(), aError);
 	if(!pJsonData)
-		dbg_msg("json", aError);
+		dbg_msg("json", "error: %s", aError);
 
 	if(str_comp(pBody, "false") != 0 && pJsonData)
 		UserID = (*pJsonData)["id"].u.integer;
@@ -350,7 +347,7 @@ void CServerWebapp::OnPingPing(IResponse *pResponse, bool ConnError, void *pUser
 		}
 	}
 	else
-		dbg_msg("json", aError);
+		dbg_msg("json", "error: %s", aError);
 	json_value_free(pJsonData);
 }
 

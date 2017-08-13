@@ -223,7 +223,7 @@ void CWebappScore::OnUserFind(IResponse *pResponse, bool ConnError, void *pUserD
 				str_copy(User->m_aName, (*pJsonData)["username"], sizeof(User->m_aName));
 		}
 		else
-			dbg_msg("json", aError);
+			dbg_msg("json", "error: %s", aError);
 		json_value_free(pJsonData);
 	}
 
@@ -293,7 +293,7 @@ void CWebappScore::OnUserRankMap(IResponse *pResponse, bool ConnError, void *pUs
 			}
 		}
 		else
-			dbg_msg("json", aError);
+			dbg_msg("json", "error: %s", aError);
 		json_value_free(pJsonData);
 	}
 
@@ -433,7 +433,7 @@ void CWebappScore::OnUserTop(IResponse *pResponse, bool ConnError, void *pUserDa
 			}
 		}
 		else
-			dbg_msg("json", aError);
+			dbg_msg("json", "error: %s", aError);
 		json_value_free(pJsonData);
 	}
 }

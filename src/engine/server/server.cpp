@@ -611,14 +611,16 @@ void CServer::DoSnapshot()
 		// client must be ingame to recive snapshots
 		if(m_aClients[i].m_State != CClient::STATE_INGAME)
 			OnlyRecord = true;
+		else
+		{
+			// this client is trying to recover, don't spam snapshots
+			if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER && (Tick()%50) != 0)
+				OnlyRecord = true;
 
-		// this client is trying to recover, don't spam snapshots
-		if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER && (Tick()%50) != 0)
-			OnlyRecord = true;
-
-		// this client is trying to recover, don't spam snapshots
-		if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_INIT && (Tick()%10) != 0)
-			OnlyRecord = true;
+			// this client is trying to recover, don't spam snapshots
+			if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_INIT && (Tick()%10) != 0)
+				OnlyRecord = true;
+		}
 
 		if(OnlyRecord && !Recording)
 			continue;
