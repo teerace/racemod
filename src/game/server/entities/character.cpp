@@ -697,9 +697,11 @@ void CCharacter::TickDefered()
 		
 #if defined(CONF_TEERACE)
 		// ghost record
-		if(Server()->GhostRecorder_IsRecording(m_pPlayer->GetCID()))
+		if((g_Config.m_SvHighBandwidth || (Server()->Tick()%2) == 0) && Server()->GhostRecorder_IsRecording(m_pPlayer->GetCID()))
 		{
-			CGhostCharacter Player = CGhostTools::GetGhostCharacter(Current);
+			CGhostCharacter Player;
+			CGhostTools::GetGhostCharacter(&Player, &Current);
+			Player.m_Tick = Server()->Tick();
 			Server()->GhostRecorder_WriteData(m_pPlayer->GetCID(), GHOSTDATA_TYPE_CHARACTER, (const char*)&Player, sizeof(Player));
 			Server()->GhostRecorder_AddTick(m_pPlayer->GetCID());
 		}
