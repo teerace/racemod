@@ -342,8 +342,6 @@ void CGameClient::OnInit()
 	
 	m_RaceMsgSent = false;
 	m_ShowOthers = -1;
-	m_aFlagIndex[0] = -1;
-	m_aFlagIndex[1] = -1;
 
 	// get Teerace server list
 	CBufferRequest *pRequest = ITeerace::CreateApiRequest(IRequest::HTTP_GET, "/anonclient/servers/");
@@ -406,13 +404,16 @@ void CGameClient::OnConnected()
 	m_aFlagIndex[0] = -1;
 	m_aFlagIndex[1] = -1;
 
+	CTile *pGameTiles = static_cast<CTile *>(Layers()->Map()->GetData(Layers()->GameLayer()->m_Data));
+
 	// get flag positions
 	for(int i = 0; i < m_Collision.GetWidth()*m_Collision.GetHeight(); i++)
 	{
-		if(m_Collision.GetIndex(i) - ENTITY_OFFSET == ENTITY_FLAGSTAND_RED)
+		if(pGameTiles[i].m_Index - ENTITY_OFFSET == ENTITY_FLAGSTAND_RED)
 			m_aFlagIndex[TEAM_RED] = i;
-		else if(m_Collision.GetIndex(i)-ENTITY_OFFSET == ENTITY_FLAGSTAND_BLUE)
+		else if(pGameTiles[i].m_Index - ENTITY_OFFSET == ENTITY_FLAGSTAND_BLUE)
 			m_aFlagIndex[TEAM_BLUE] = i;
+		i += pGameTiles[i].m_Skip;
 	}
 
 	for(int i = 0; i < m_All.m_Num; i++)
@@ -701,7 +702,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 			// store the name
 			char aPlayername[MAX_NAME_LENGTH];
 			int MsgTime = IRace::TimeFromFinishMessage(pMsg->m_pMessage, aPlayername, sizeof(aPlayername));
-			if (MsgTime)
+			if (MsgTime > 0)
 			{
 				int PlayerID = -1;
 				for(int i = 0; i < MAX_CLIENTS; i++)

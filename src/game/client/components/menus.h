@@ -332,29 +332,30 @@ public:
 	void DemolistPopulate();
 
 	const char *GetCurrentDemoFolder() const { return m_aCurrentDemoFolder; }
-	
-	// ghost
+
+	// Ghost
 	struct CGhostItem
 	{
 		char m_aFilename[256];
 		char m_aPlayer[MAX_NAME_LENGTH];
-		
+
 		int m_Time;
 		int m_Slot;
 		bool m_Own;
-		
+
+		CGhostItem() : m_Slot(-1), m_Own(false) { m_aFilename[0] = 0; }
+
 		bool operator<(const CGhostItem &Other) { return m_Time < Other.m_Time; }
 
 		bool Active() const { return m_Slot != -1; }
 		bool HasFile() const { return m_aFilename[0]; }
-
-	public:
-		CGhostItem() : m_Slot(-1), m_Own(false) { }
 	};
-	
+
 	sorted_array<CGhostItem> m_lGhosts;
 	
 	void GhostlistPopulate();
 	CGhostItem *GetOwnGhost();
+	void UpdateOwnGhost(CGhostItem Item);
+	void DeleteGhostItem(int Index);
 };
 #endif
