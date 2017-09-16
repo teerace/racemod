@@ -168,13 +168,13 @@ void CGameControllerRACE::OnRaceStart(int ID, int StartAddTime)
 	if(g_Config.m_WaAutoRecord && GameServer()->Webapp() && Server()->GetUserID(ID) > 0 && GameServer()->Webapp()->CurrentMap()->m_ID > -1 && !Server()->GhostRecorder_IsRecording(ID))
 	{
 		Server()->GhostRecorder_Start(ID);
-		
+		CPlayer *pPl = pChr->GetPlayer();
+
 		CGhostSkin Skin;
-		StrToInts(&Skin.m_Skin0, 6, pChr->GetPlayer()->m_TeeInfos.m_SkinName);
-		Skin.m_UseCustomColor = pChr->GetPlayer()->m_TeeInfos.m_UseCustomColor;
-		Skin.m_ColorBody = pChr->GetPlayer()->m_TeeInfos.m_ColorBody;
-		Skin.m_ColorFeet = pChr->GetPlayer()->m_TeeInfos.m_ColorFeet;
-		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_SKIN, (const char*)&Skin, sizeof(Skin));
+		CGhostTools::GetGhostSkin(&Skin, pPl->m_TeeInfos.m_SkinName, pPl->m_TeeInfos.m_UseCustomColor, pPl->m_TeeInfos.m_ColorBody, pPl->m_TeeInfos.m_ColorFeet);
+
+		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_START_TICK, (const char*)&p->m_StartTick, sizeof(int));
+		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_SKIN, (const char*)&Skin, sizeof(CGhostSkin));
 	}
 #endif
 }
