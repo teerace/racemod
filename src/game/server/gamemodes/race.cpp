@@ -158,6 +158,12 @@ void CGameControllerRACE::OnRaceStart(int ID, int StartAddTime)
 		if(!pChr->HasWeapon(WEAPON_GRENADE))
 			GameServer()->m_apPlayers[ID]->m_ResetPickups = true;
 	}
+
+#if defined(CONF_TEERACE)
+	// restart the ghost
+	if(p->m_RaceState == RACE_STARTED && Server()->Tick() - p->m_StartTick > 1 && Server()->GhostRecorder_IsRecording(ID))
+		Server()->GhostRecorder_Stop(ID, 0);
+#endif
 	
 	p->m_RaceState = RACE_STARTED;
 	p->m_StartTick = Server()->Tick();
@@ -172,8 +178,6 @@ void CGameControllerRACE::OnRaceStart(int ID, int StartAddTime)
 
 		CGhostSkin Skin;
 		CGhostTools::GetGhostSkin(&Skin, pPl->m_TeeInfos.m_SkinName, pPl->m_TeeInfos.m_UseCustomColor, pPl->m_TeeInfos.m_ColorBody, pPl->m_TeeInfos.m_ColorFeet);
-
-		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_START_TICK, (const char*)&p->m_StartTick, sizeof(int));
 		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_SKIN, (const char*)&Skin, sizeof(CGhostSkin));
 	}
 #endif
@@ -231,7 +235,10 @@ void CGameControllerRACE::OnRaceEnd(int ID, int FinishTime)
 	if(Server()->RaceRecorder_IsRecording(ID))
 		m_aStopRecordTick[ID] = Server()->Tick() + Server()->TickSpeed();
 	if(Server()->GhostRecorder_IsRecording(ID))
+	{
+		Server()->GhostRecorder_WriteData(ID, GHOSTDATA_TYPE_START_TICK, (const char*)&p->m_StartTick, sizeof(int));
 		Server()->GhostRecorder_Stop(ID, FinishTime);
+	}
 #endif
 }
 
