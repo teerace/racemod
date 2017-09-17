@@ -130,7 +130,6 @@ class CMenus : public CComponent
 	{
 		TOKEN_NONE=0,
 		TOKEN_REQUESTED,
-		TOKEN_FAILED,
 		TOKEN_ERROR
 	};
 
@@ -171,6 +170,7 @@ class CMenus : public CComponent
 	int m_SettingPlayerPage;
 
 	int m_TeeraceTokenState;
+	char m_aTokenError[128];
 
 	//
 	bool m_EscapePressed;
