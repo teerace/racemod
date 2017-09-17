@@ -701,6 +701,7 @@ void CCharacter::TickDefered()
 		{
 			CGhostCharacter Player;
 			CGhostTools::GetGhostCharacter(&Player, &Current);
+			Player.m_Tick = Server()->Tick();
 			Server()->GhostRecorder_WriteData(m_pPlayer->GetCID(), GHOSTDATA_TYPE_CHARACTER, (const char*)&Player, sizeof(CGhostCharacter));
 			Server()->GhostRecorder_AddTick(m_pPlayer->GetCID());
 		}
