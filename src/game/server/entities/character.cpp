@@ -602,9 +602,6 @@ void CCharacter::TickDefered()
 	// advance the dummy
 	{
 		CWorldCore TempWorld;
-		TempWorld.m_Teleport = false;
-		TempWorld.m_Speedup = false;
-		TempWorld.m_StopTiles = false;
 		m_ReckoningCore.Init(&TempWorld, GameServer()->Collision());
 		m_ReckoningCore.Tick(false);
 		m_ReckoningCore.Move();
