@@ -639,14 +639,12 @@ int CMenus::GhostlistFetchCallback(const char *pName, int IsDir, int StorageType
 {
 	CMenus *pSelf = (CMenus *)pUser;
 	int Length = str_length(pName);
-	if((pName[0] == '.' && (pName[1] == 0 ||
-		(pName[1] == '.' && pName[2] == 0))) ||
-		(!IsDir && (Length < 4 || str_comp(pName+Length-4, ".gho"))))
+	if(IsDir || Length < 4 || str_comp(pName+Length-4, ".gho") != 0)
 		return 0;
 
 	char aFilename[256];
-	str_format(aFilename, sizeof(aFilename), "ghosts/%s", pName);
-	
+	str_format(aFilename, sizeof(aFilename), "%s/%s", pSelf->m_pClient->m_pGhost->GetGhostDir(), pName);
+
 	CGhostHeader Header;
 	if(!pSelf->Client()->GhostLoader_GetGhostInfo(aFilename, &Header))
 		return 0;
@@ -664,14 +662,14 @@ void CMenus::GhostlistPopulate()
 {
 	CGhostItem *pOwnGhost = 0;
 	m_lGhosts.clear();
-	Storage()->ListDirectory(IStorage::TYPE_ALL, "ghosts", GhostlistFetchCallback, this);
-	
+	Storage()->ListDirectory(IStorage::TYPE_ALL, m_pClient->m_pGhost->GetGhostDir(), GhostlistFetchCallback, this);
+
 	for(int i = 0; i < m_lGhosts.size(); i++)
 	{
 		if(str_comp(m_lGhosts[i].m_aPlayer, g_Config.m_PlayerName) == 0 && (!pOwnGhost || m_lGhosts[i] < *pOwnGhost))
 			pOwnGhost = &m_lGhosts[i];
 	}
-	
+
 	if(pOwnGhost)
 	{
 		pOwnGhost->m_Own = true;
@@ -717,12 +715,12 @@ void CMenus::RenderGhost(CUIRect MainView)
 {
 	// render background
 	RenderTools()->DrawUIRect(&MainView, ms_ColorTabbarActive, CUI::CORNER_B|CUI::CORNER_TL, 10.0f);
-	
+
 	MainView.HSplitTop(10.0f, 0, &MainView);
 	MainView.HSplitBottom(5.0f, &MainView, 0);
 	MainView.VSplitLeft(5.0f, 0, &MainView);
 	MainView.VSplitRight(5.0f, &MainView, 0);
-	
+
 	CUIRect Headers, Status;
 	CUIRect View = MainView;
 
@@ -732,7 +730,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 	// split of the scrollbar
 	RenderTools()->DrawUIRect(&Headers, vec4(1,1,1,0.25f), CUI::CORNER_T, 5.0f);
 	Headers.VSplitRight(20.0f, &Headers, 0);
-	
+
 	struct CColumn
 	{
 		int m_ID;
@@ -741,23 +739,23 @@ void CMenus::RenderGhost(CUIRect MainView)
 		CUIRect m_Rect;
 		CUIRect m_Spacer;
 	};
-	
+
 	enum
 	{
 		COL_ACTIVE=0,
 		COL_NAME,
 		COL_TIME,
 	};
-	
+
 	static CColumn s_aCols[] = {
 		{-1,			" ",		2.0f,		{0}, {0}},
 		{COL_ACTIVE,	" ",		30.0f,		{0}, {0}},
 		{COL_NAME,		"Name",		300.0f,		{0}, {0}},
 		{COL_TIME,		"Time",		200.0f,		{0}, {0}},
 	};
-	
+
 	int NumCols = sizeof(s_aCols)/sizeof(CColumn);
-	
+
 	// do layout
 	for(int i = 0; i < NumCols; i++)
 	{
@@ -766,18 +764,18 @@ void CMenus::RenderGhost(CUIRect MainView)
 		if(i+1 < NumCols)
 			Headers.VSplitLeft(2, &s_aCols[i].m_Spacer, &Headers);
 	}
-	
+
 	// do headers
 	for(int i = 0; i < NumCols; i++)
 		DoButton_GridHeader(s_aCols[i].m_Caption, s_aCols[i].m_Caption, 0, &s_aCols[i].m_Rect);
-	
+
 	RenderTools()->DrawUIRect(&View, vec4(0,0,0,0.15f), 0, 0);
 
 	CUIRect Scroll;
 	View.VSplitRight(15, &View, &Scroll);
-	
+
 	int NumGhosts = m_lGhosts.size();
-	
+
 	int Num = (int)(View.h/s_aCols[0].m_Rect.h) + 1;
 	static int s_ScrollBar = 0;
 	static float s_ScrollValue = 0;
@@ -795,7 +793,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 	}
 	else
 		ScrollNum = 0;
-	
+
 	static int s_SelectedIndex = 0;
 	for(int i = 0; i < m_NumInputEvents; i++)
 	{
@@ -827,16 +825,16 @@ void CMenus::RenderGhost(CUIRect MainView)
 			s_SelectedIndex = NewIndex;
 		}
 	}
-	
+
 	if(s_ScrollValue < 0) s_ScrollValue = 0;
 	if(s_ScrollValue > 1) s_ScrollValue = 1;
 
 	// set clipping
 	UI()->ClipEnable(&View);
-	
+
 	CUIRect OriginalView = View;
 	View.y -= s_ScrollValue*ScrollNum*s_aCols[0].m_Rect.h;
-	
+
 	int NewSelected = -1;
 
 	for (int i = 0; i < NumGhosts; i++)
@@ -844,7 +842,7 @@ void CMenus::RenderGhost(CUIRect MainView)
 		const CGhostItem *pItem = &m_lGhosts[i];
 		CUIRect Row;
 		CUIRect SelectHitBox;
-		
+
 		View.HSplitTop(17.0f, &Row, &View);
 		SelectHitBox = Row;
 
@@ -923,18 +921,18 @@ void CMenus::RenderGhost(CUIRect MainView)
 				TextRender()->TextEx(&Cursor, aTime, -1);
 			}
 		}
-		
+
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
-	
+
 	UI()->ClipDisable();
 
 	if(NewSelected != -1)
 		s_SelectedIndex = NewSelected;
-	
+
 	RenderTools()->DrawUIRect(&Status, vec4(1,1,1,0.25f), CUI::CORNER_B, 5.0f);
 	Status.Margin(5.0f, &Status);
-	
+
 	CUIRect Button;
 	Status.VSplitLeft(120.0f, &Button, &Status);
 

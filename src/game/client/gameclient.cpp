@@ -1133,6 +1133,9 @@ void CGameClient::OnNewSnapshot()
 			Msg.AddInt(pParams[i]);
 		Client()->SendMsg(&Msg, MSGFLAG_RECORD|MSGFLAG_NOSEND);
 	}
+
+	m_pGhost->OnNewSnapshot();
+	m_pRaceDemo->OnNewSnapshot();
 }
 
 void CGameClient::OnPredict()
@@ -1266,6 +1269,9 @@ void CGameClient::OnPredict()
 	}
 
 	m_PredictedTick = Client()->PredGameTick();
+
+	if(m_NewPredictedTick)
+		m_pGhost->OnNewSnapshot(true);
 }
 
 void CGameClient::OnActivateEditor()
