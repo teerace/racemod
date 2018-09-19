@@ -33,13 +33,12 @@
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
-#include <math.h>
 
 #ifdef _MSC_VER
     #define snprintf _snprintf
 #endif
 
-const static json_serialize_opts default_opts =
+static const json_serialize_opts default_opts =
 {
    json_serialize_mode_single_line,
    0,
@@ -99,7 +98,7 @@ const int f_spaces_after_commas    = (1 << 1);
 const int f_spaces_after_colons    = (1 << 2);
 const int f_tabs                   = (1 << 3);
 
-int get_serialize_flags (json_serialize_opts opts)
+static int get_serialize_flags (json_serialize_opts opts)
 {
    int flags = 0;
 
@@ -357,7 +356,7 @@ json_value * json_boolean_new (int b)
    return value;
 }
 
-json_value * json_null_new ()
+json_value * json_null_new (void)
 {
    json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
    
@@ -665,8 +664,11 @@ size_t json_measure_ex (json_value * value, json_serialize_opts opts)
 
             total += snprintf (NULL, 0, "%g", value->u.dbl);
 
-            if (value->u.dbl - floor (value->u.dbl) < 0.001)
-                total += 2;
+            /* Because sometimes we need to add ".0" if sprintf does not do it
+             * for us. Downside is that we allocate more bytes than strictly
+             * needed for serialization.
+             */
+            total += 2;
 
             break;
 
@@ -885,7 +887,7 @@ void json_serialize_ex (json_char * buf, json_value * value, json_serialize_opts
             {
                *dot = '.';
             }
-            else if (!strchr (ptr, '.'))
+            else if (!strchr (ptr, '.') && !strchr (ptr, 'e'))
             {
                *buf ++ = '.';
                *buf ++ = '0';
