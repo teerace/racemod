@@ -1,4 +1,8 @@
-CheckVersion("0.5")
+if _VERSION == "Lua 5.1" then
+	CheckVersion("0.4")
+else
+	CheckVersion("0.5")
+end
 
 Import("configure.lua")
 Import("other/sdl/sdl.lua")
@@ -119,12 +123,12 @@ server_sql_depends = {}
 
 if family == "windows" then
 	if platform == "win32" then
-		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib32\\freetype.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\lib32\\SDL.dll"))
+		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\windows\\lib32\\freetype.dll"))
+		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\windows\\lib32\\SDL.dll"))
 		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib32\\libmariadb.dll"))
 	else
-		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\lib64\\freetype.dll"))
-		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\lib64\\SDL.dll"))
+		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\windows\\lib64\\freetype.dll"))
+		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\windows\\lib64\\SDL.dll"))
 		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib64\\libmariadb.dll"))
 	end
 
@@ -167,11 +171,11 @@ function build(settings)
 		elseif platform == "macosx" then
 			settings.cc.flags:Add("-mmacosx-version-min=10.5")
 			settings.link.flags:Add("-mmacosx-version-min=10.5")
-			if config.minmacosxsdk.value == 1 then
+			if config.minmacosxsdk.value then
 				settings.cc.flags:Add("-isysroot /Developer/SDKs/MacOSX10.5.sdk")
 				settings.link.flags:Add("-isysroot /Developer/SDKs/MacOSX10.5.sdk")
 			end
-		elseif config.stackprotector.value == 1 then
+		elseif config.stackprotector.value then
 			settings.cc.flags:Add("-fstack-protector", "-fstack-protector-all")
 			settings.link.flags:Add("-fstack-protector", "-fstack-protector-all")
 		end
@@ -179,6 +183,7 @@ function build(settings)
 
 	-- set some platform specific settings
 	settings.cc.includes:Add("src")
+	settings.cc.includes:Add("src/engine/external/wavpack")
 
 	if family == "unix" then
 		if platform == "macosx" then
@@ -198,10 +203,11 @@ function build(settings)
 		settings.link.libs:Add("ws2_32")
 		settings.link.libs:Add("ole32")
 		settings.link.libs:Add("shell32")
+		settings.link.libs:Add("advapi32")
 	end
 
 	-- compile zlib if needed
-	if config.zlib.value == 1 then
+	if config.zlib.value then
 		settings.link.libs:Add("z")
 		if config.zlib.include_path then
 			settings.cc.includes:Add(config.zlib.include_path)
@@ -215,6 +221,7 @@ function build(settings)
 	-- build the small libraries
 	wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
+	md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
 	jsonparser = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	httpparser = Compile(settings, Collect("src/engine/external/http-parser/*.c"))
 
@@ -262,30 +269,28 @@ function build(settings)
 	-- build tools (TODO: fix this so we don't get double _d_d stuff)
 	tools_src = Collect("src/tools/*.cpp", "src/tools/*.c")
 
-	client_osxlaunch = {}
 	server_osxlaunch = {}
 	if platform == "macosx" then
-		client_osxlaunch = Compile(client_settings, "src/osxlaunch/client.m")
 		server_osxlaunch = Compile(launcher_settings, "src/osxlaunch/server.m")
 	end
 
 	tools = {}
 	for i,v in ipairs(tools_src) do
 		toolname = PathFilename(PathBase(v))
-		tools[i] = Link(settings, toolname, Compile(settings, v), engine, zlib, pnglite, httpparser)
+		tools[i] = Link(settings, toolname, Compile(settings, v), engine, md5, zlib, pnglite, httpparser)
 	end
 
 	-- build client, server, version server and master server
 	client_exe = Link(client_settings, "teeworlds", game_shared, game_client,
-		engine, client, game_editor, zlib, pnglite, wavpack,
-		client_link_other, client_osxlaunch, jsonparser, httpparser)
+		engine, client, game_editor, md5, zlib, pnglite, wavpack,
+		client_link_other, jsonparser, httpparser)
 
 	if string.find(settings.config_name, "teerace") then
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, server_link_other, jsonparser, httpparser)
+			game_shared, game_server, md5, zlib, server_link_other, jsonparser, httpparser)
 	else
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, server_link_other, httpparser)
+			game_shared, game_server, md5, zlib, server_link_other, httpparser)
 	end
 
 	serverlaunch = {}
@@ -294,10 +299,10 @@ function build(settings)
 	end
 
 	versionserver_exe = Link(server_settings, "versionsrv", versionserver,
-		engine, zlib)
+		engine, md5, zlib)
 
 	masterserver_exe = Link(server_settings, "mastersrv", masterserver,
-		engine, zlib)
+		engine, md5, zlib)
 
 	-- make targets
 	c = PseudoTarget("client".."_"..settings.config_name, client_exe, client_depends)
@@ -580,7 +585,7 @@ if platform == "macosx" then
 
 	DefaultTarget("game_debug_x86")
 	
-	if config.macosxppc.value == 1 then
+	if config.macosxppc.value then
 		if arch == "ia32" then
 			PseudoTarget("release", ppc_r, x86_r)
 			PseudoTarget("sql_release", sql_ppc_r, sql_x86_r)
