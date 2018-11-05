@@ -29,9 +29,9 @@ MySQL = {
 			elseif option.use_winlib > 0 then
 				settings.cc.includes:Add(MySQL.basepath .. "/include")
 				if option.use_winlib == 32 then
-					settings.link.libpath:Add(MySQL.basepath .. "/lib32")
+					settings.link.libpath:Add(MySQL.basepath .. "/windows/lib32")
 				else
-					settings.link.libpath:Add(MySQL.basepath .. "/lib64")
+					settings.link.libpath:Add(MySQL.basepath .. "/windows/lib64")
 				end
 				settings.link.libs:Add("libmariadb")
 			end

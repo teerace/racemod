@@ -125,11 +125,11 @@ if family == "windows" then
 	if platform == "win32" then
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\windows\\lib32\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\windows\\lib32\\SDL.dll"))
-		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib32\\libmariadb.dll"))
+		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\windows\\lib32\\libmariadb.dll"))
 	else
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\windows\\lib64\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\windows\\lib64\\SDL.dll"))
-		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\lib64\\libmariadb.dll"))
+		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\windows\\lib64\\libmariadb.dll"))
 	end
 
 	if config.compiler.driver == "cl" then
