@@ -198,7 +198,6 @@ function build(settings)
 		settings.link.libs:Add("ws2_32")
 		settings.link.libs:Add("ole32")
 		settings.link.libs:Add("shell32")
-		settings.link.libs:Add("advapi32")
 	end
 
 	-- compile zlib if needed
@@ -218,7 +217,6 @@ function build(settings)
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
 	jsonparser = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 	httpparser = Compile(settings, Collect("src/engine/external/http-parser/*.c"))
-	md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
 
 	-- build game components
 	engine_settings = settings:Copy()
@@ -279,15 +277,15 @@ function build(settings)
 
 	-- build client, server, version server and master server
 	client_exe = Link(client_settings, "teeworlds", game_shared, game_client,
-		engine, client, game_editor, zlib, pnglite, wavpack, md5,
+		engine, client, game_editor, zlib, pnglite, wavpack,
 		client_link_other, client_osxlaunch, jsonparser, httpparser)
 
 	if string.find(settings.config_name, "teerace") then
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, md5, server_link_other, jsonparser, httpparser)
+			game_shared, game_server, zlib, server_link_other, jsonparser, httpparser)
 	else
 		server_exe = Link(server_settings, "teeworlds_srv", engine, server,
-			game_shared, game_server, zlib, md5, server_link_other, httpparser)
+			game_shared, game_server, zlib, server_link_other, httpparser)
 	end
 
 	serverlaunch = {}

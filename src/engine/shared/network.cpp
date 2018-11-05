@@ -58,13 +58,10 @@ int CNetRecvUnpacker::FetchChunk(CNetChunk *pChunk)
 		// handle sequence stuff
 		if(m_pConnection && (Header.m_Flags&NET_CHUNKFLAG_VITAL))
 		{
-			// anti spoof: ignore unknown sequence
-			if(Header.m_Sequence == (m_pConnection->m_Ack+1)%NET_MAX_SEQUENCE || m_pConnection->m_UnknownSeq)
+			if(Header.m_Sequence == (m_pConnection->m_Ack+1)%NET_MAX_SEQUENCE)
 			{
-				m_pConnection->m_UnknownSeq = false;
-
 				// in sequence
-				m_pConnection->m_Ack = Header.m_Sequence;
+				m_pConnection->m_Ack = (m_pConnection->m_Ack+1)%NET_MAX_SEQUENCE;
 			}
 			else
 			{
@@ -104,7 +101,7 @@ void CNetBase::SendPacketConnless(NETSOCKET Socket, NETADDR *pAddr, const void *
 	net_udp_send(Socket, pAddr, aBuffer, 6+DataSize);
 }
 
-void CNetBase::SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket, SECURITY_TOKEN SecurityToken)
+void CNetBase::SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct *pPacket)
 {
 	unsigned char aBuffer[NET_MAX_PACKETSIZE];
 	int CompressedSize = -1;
@@ -118,15 +115,6 @@ void CNetBase::SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct 
 		io_write(ms_DataLogSent, &pPacket->m_DataSize, sizeof(pPacket->m_DataSize));
 		io_write(ms_DataLogSent, &pPacket->m_aChunkData, pPacket->m_DataSize);
 		io_flush(ms_DataLogSent);
-	}
-
-	if (SecurityToken != NET_SECURITY_TOKEN_UNSUPPORTED)
-	{
-		// append security token
-		// if SecurityToken is NET_SECURITY_TOKEN_UNKNOWN we will still append it hoping to negotiate it
-		//TODO: antispoof check size
-		mem_copy(&pPacket->m_aChunkData[pPacket->m_DataSize], &SecurityToken, sizeof(SecurityToken));
-		pPacket->m_DataSize += sizeof(SecurityToken);
 	}
 
 	// compress
@@ -238,7 +226,7 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 }
 
 
-void CNetBase::SendControlMsg(NETSOCKET Socket, NETADDR *pAddr, int Ack, int ControlMsg, const void *pExtra, int ExtraSize, SECURITY_TOKEN SecurityToken)
+void CNetBase::SendControlMsg(NETSOCKET Socket, NETADDR *pAddr, int Ack, int ControlMsg, const void *pExtra, int ExtraSize)
 {
 	CNetPacketConstruct Construct;
 	Construct.m_Flags = NET_PACKETFLAG_CONTROL;
@@ -249,7 +237,7 @@ void CNetBase::SendControlMsg(NETSOCKET Socket, NETADDR *pAddr, int Ack, int Con
 	mem_copy(&Construct.m_aChunkData[1], pExtra, ExtraSize);
 
 	// send the control message
-	CNetBase::SendPacket(Socket, pAddr, &Construct, SecurityToken);
+	CNetBase::SendPacket(Socket, pAddr, &Construct);
 }
 
 
