@@ -75,6 +75,7 @@ endif()
 option(CLIENT "Compile client" ON)
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
+option(TEERACE "Enable teerace support" OFF)
 
 # Set the default build type to Release
 if(NOT(CMAKE_BUILD_TYPE))
@@ -345,16 +346,25 @@ endif()
 # DEPENDENCY COMPILATION
 ########################################################################
 
+set_glob(DEP_JSON_SRC GLOB src/engine/external/json-parser json-builder.c json-builder.h json.c json.h)
+add_library(json EXCLUDE_FROM_ALL OBJECT ${DEP_JSON_SRC})
+
+set_glob(DEP_HTTP_SRC GLOB src/engine/external/http-parser http_parser.c http_parser.h)
+add_library(http EXCLUDE_FROM_ALL OBJECT ${DEP_HTTP_SRC})
+
 set_glob(DEP_MD5_SRC GLOB src/engine/external/md5 md5.c md5.h)
 add_library(md5 EXCLUDE_FROM_ALL OBJECT ${DEP_MD5_SRC})
 
-list(APPEND TARGETS_DEP md5)
+list(APPEND TARGETS_DEP json http md5)
+set(DEP_JSON $<TARGET_OBJECTS:json>)
+set(DEP_HTTP $<TARGET_OBJECTS:http>)
 set(DEP_MD5 $<TARGET_OBJECTS:md5>)
 
 ########################################################################
 # COPY DATA AND DLLS
 ########################################################################
 
+file(COPY race-data DESTINATION .)
 file(COPY data DESTINATION .)
 set(COPY_FILES
   ${FREETYPE_COPY_FILES}
@@ -432,6 +442,7 @@ generate_source("src/game/generated/server_data.h" "server_content_header")
 
 # Sources
 set_glob(BASE GLOB_RECURSE src/base
+  color.h
   detect.h
   math.h
   system.c
@@ -440,6 +451,7 @@ set_glob(BASE GLOB_RECURSE src/base
   tl/allocator.h
   tl/array.h
   tl/base.h
+  tl/pointer.h
   tl/range.h
   tl/sorted_array.h
   tl/string.h
@@ -454,6 +466,7 @@ set_glob(ENGINE_INTERFACE GLOB src/engine
   editor.h
   engine.h
   friends.h
+  ghost.h
   graphics.h
   input.h
   kernel.h
@@ -484,6 +497,13 @@ set_glob(ENGINE_SHARED GLOB src/engine/shared
   engine.cpp
   filecollection.cpp
   filecollection.h
+  ghost.cpp
+  ghost.h
+  http.cpp
+  http.h
+  http_conn.cpp
+  http_request.cpp
+  http_response.cpp
   huffman.cpp
   huffman.h
   jobs.cpp
@@ -523,11 +543,14 @@ set_glob(GAME_SHARED GLOB src/game
   collision.h
   gamecore.cpp
   gamecore.h
+  ghost.h
   layers.cpp
   layers.h
   localization.cpp
   localization.h
   mapitems.h
+  teerace.cpp
+  teerace.h
   tuning.h
   variables.h
   version.h
@@ -539,7 +562,7 @@ set(GAME_GENERATED_SHARED
   src/game/generated/protocol.h
 )
 
-set(DEPS ${DEP_MD5} ${ZLIB_DEP})
+set(DEPS ${DEP_MD5} ${ZLIB_DEP} ${DEP_JSON} ${DEP_HTTP})
 
 # Libraries
 set(LIBS ${CMAKE_THREAD_LIBS_INIT} ${ZLIB_LIBRARIES} ${PLATFORM_LIBS})
@@ -604,6 +627,8 @@ if(CLIENT)
     components/emoticon.h
     components/flow.cpp
     components/flow.h
+    components/ghost.cpp
+    components/ghost.h
     components/hud.cpp
     components/hud.h
     components/items.cpp
@@ -628,6 +653,8 @@ if(CLIENT)
     components/particles.h
     components/players.cpp
     components/players.h
+    components/race_demo.cpp
+    components/race_demo.h
     components/scoreboard.cpp
     components/scoreboard.h
     components/skins.cpp
@@ -636,6 +663,8 @@ if(CLIENT)
     components/sounds.h
     components/spectator.cpp
     components/spectator.h
+    components/timemessages.cpp
+    components/timemessages.h
     components/voting.cpp
     components/voting.h
     gameclient.cpp
@@ -729,6 +758,8 @@ endif()
 
 # Sources
 set_glob(ENGINE_SERVER GLOB src/engine/server
+  mysql.cpp
+  mysql.h
   register.cpp
   register.h
   server.cpp
@@ -757,14 +788,28 @@ set_glob(GAME_SERVER GLOB_RECURSE src/game/server
   gamemodes/ctf.h
   gamemodes/dm.cpp
   gamemodes/dm.h
+  gamemodes/fastcap.cpp
+  gamemodes/fastcap.h
   gamemodes/mod.cpp
   gamemodes/mod.h
+  gamemodes/race.cpp
+  gamemodes/race.h
   gamemodes/tdm.cpp
   gamemodes/tdm.h
   gameworld.cpp
   gameworld.h
   player.cpp
   player.h
+  race.cpp
+  score.h
+  score/file_score.cpp
+  score/file_score.h
+  score/sql_score.cpp
+  score/sql_score.h
+  score/wa_score.cpp
+  score/wa_score.h
+  webapp.cpp
+  webapp.h
 )
 set(GAME_GENERATED_SERVER
   "src/game/generated/server_data.cpp"
@@ -968,6 +1013,7 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION
 set(CPACK_SOURCE_FILES
   CMakeLists.txt
   bam.lua
+  race-data
   cmake/
   configure.lua
   data/
@@ -1002,7 +1048,7 @@ set(CPACK_TARGETS
   ${TARGET_CLIENT}
   ${TARGET_SERVER}
 )
-set(CPACK_DIRS data)
+set(CPACK_DIRS race-data data)
 set(CPACK_FILES
   license.txt
   storage.cfg
@@ -1013,6 +1059,7 @@ if(TARGET_OS STREQUAL "windows")
 endif()
 
 if(NOT DEV)
+  install(DIRECTORY race-data DESTINATION share/${PROJECT_NAME} COMPONENT race-data)
   install(DIRECTORY data DESTINATION share/${PROJECT_NAME} COMPONENT data)
   install(TARGETS ${TARGET_CLIENT} DESTINATION bin COMPONENT client)
   install(TARGETS ${TARGET_SERVER} DESTINATION bin COMPONENT server)
@@ -1053,6 +1100,7 @@ if(CLIENT AND (DMGTOOLS_FOUND OR HDIUTIL))
     ${TARGET_SERVER}.app/Contents
     ${TARGET_SERVER}.app/Contents/MacOS
     ${TARGET_SERVER}.app/Contents/Resources
+    ${TARGET_SERVER}.app/Contents/Resources/race-data
     ${TARGET_SERVER}.app/Contents/Resources/data
     ${TARGET_SERVER}.app/Contents/Resources/data/mapres
   )
@@ -1065,6 +1113,7 @@ if(CLIENT AND (DMGTOOLS_FOUND OR HDIUTIL))
     ${DMG_MKDIR_COMMANDS}
 
     # CLIENT
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/race-data ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Resources/race-data
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/data ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Resources/data
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/other/icons/${TARGET_CLIENT}.icns ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/Resources/
     COMMAND ${CMAKE_COMMAND} -E copy bundle/client/Info.plist ${PROJECT_SOURCE_DIR}/other/bundle/client/PkgInfo ${DMG_TMPDIR}/${TARGET_CLIENT}.app/Contents/
@@ -1089,6 +1138,7 @@ if(CLIENT AND (DMGTOOLS_FOUND OR HDIUTIL))
       ${TARGET_SERVER}
       ${PROJECT_BINARY_DIR}/bundle/client/Info.plist
       ${PROJECT_BINARY_DIR}/bundle/server/Info.plist
+	  race-data
       data
       other/bundle/client/PkgInfo
       other/bundle/server/PkgInfo
@@ -1231,6 +1281,10 @@ foreach(target ${TARGETS_OWN})
   target_include_directories(${target} PRIVATE src)
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
   target_include_directories(${target} PRIVATE ${ZLIB_INCLUDE_DIRS})
+  
+  if(TEERACE)
+    target_compile_definitions(${target} PRIVATE CONF_TEERACE)
+  endif()
 endforeach()
 
 foreach(target ${TARGETS_DEP})

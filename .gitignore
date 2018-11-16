@@ -23,6 +23,8 @@ tileset_border*
 versionsrv*
 
 # CMake
+race-data
+!/race-data
 data
 !/data
 src
