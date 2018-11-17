@@ -7,6 +7,7 @@ end
 Import("configure.lua")
 Import("other/sdl/sdl.lua")
 Import("other/freetype/freetype.lua")
+Import("other/curl/curl.lua")
 Import("other/mysql/mysql.lua")
 
 --- Setup Config -------
@@ -18,6 +19,7 @@ config:Add(OptTestCompileC("macosxppc", "int main(){return 0;}", "-arch ppc"))
 config:Add(OptLibrary("zlib", "zlib.h", false))
 config:Add(SDL.OptFind("sdl", true))
 config:Add(FreeType.OptFind("freetype", true))
+config:Add(Curl.OptFind("curl", true))
 config:Add(MySQL.OptFind("mysql", false))
 config:Finalize("config.lua")
 
@@ -118,6 +120,7 @@ nethash = CHash("src/game/generated/nethash.cpp", "src/engine/shared/protocol.h"
 
 client_link_other = {}
 client_depends = {}
+shared_depends = {}
 server_link_other = {}
 server_sql_depends = {}
 
@@ -125,10 +128,12 @@ if family == "windows" then
 	if platform == "win32" then
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\windows\\lib32\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\windows\\lib32\\SDL.dll"))
+		table.insert(shared_depends, CopyToDirectory(".", "other\\curl\\windows\\lib32\\libcurl.dll"))
 		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\windows\\lib32\\libmariadb.dll"))
 	else
 		table.insert(client_depends, CopyToDirectory(".", "other\\freetype\\windows\\lib64\\freetype.dll"))
 		table.insert(client_depends, CopyToDirectory(".", "other\\sdl\\windows\\lib64\\SDL.dll"))
+		table.insert(shared_depends, CopyToDirectory(".", "other\\curl\\windows\\lib64\\libcurl.dll"))
 		table.insert(server_sql_depends, CopyToDirectory(".", "other\\mysql\\windows\\lib64\\libmariadb.dll"))
 	end
 
@@ -224,6 +229,9 @@ function build(settings)
 	md5 = Compile(settings, Collect("src/engine/external/md5/*.c"))
 	jsonparser = Compile(settings, Collect("src/engine/external/json-parser/*.c"))
 
+	-- apply curl settings
+	config.curl:Apply(settings)
+
 	-- build game components
 	engine_settings = settings:Copy()
 	server_settings = engine_settings:Copy()
@@ -298,13 +306,14 @@ function build(settings)
 	masterserver_exe = Link(server_settings, "mastersrv", masterserver,
 		engine, md5, zlib)
 
-	-- make targets
-	c = PseudoTarget("client".."_"..settings.config_name, client_exe, client_depends)
+	server_depends = {}
 	if string.find(settings.config_name, "sql") then
-		s = PseudoTarget("server".."_"..settings.config_name, server_exe, serverlaunch, server_sql_depends)
-	else
-		s = PseudoTarget("server".."_"..settings.config_name, server_exe, serverlaunch)
+		server_depends = server_sql_depends
 	end
+	
+	-- make targets
+	c = PseudoTarget("client".."_"..settings.config_name, client_exe, client_depends, shared_depends)
+	s = PseudoTarget("server".."_"..settings.config_name, server_exe, serverlaunch, server_depends, shared_depends)
 	g = PseudoTarget("game".."_"..settings.config_name, client_exe, server_exe)
 
 	v = PseudoTarget("versionserver".."_"..settings.config_name, versionserver_exe)
