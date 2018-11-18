@@ -1023,7 +1023,11 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 				m_TeeraceTokenState = TOKEN_REQUESTED;
 
 				char aData[128];
-				str_format(aData, sizeof(aData), "username=%s&password=%s", g_Config.m_WaUsername, s_aPassword);
+				char aUsername[64];
+				char aPassword[64];
+				IHttp::EscapeUrl(aUsername, sizeof(aUsername), g_Config.m_WaUsername);
+				IHttp::EscapeUrl(aPassword, sizeof(aPassword), s_aPassword);
+				str_format(aData, sizeof(aData), "username=%s&password=%s", aUsername, aPassword);
 				mem_zero(s_aPassword, sizeof(s_aPassword));
 			
 				CBufferRequest *pRequest = ITeerace::CreateApiRequest(IRequest::HTTP_POST, "/anonclient/get_token/");

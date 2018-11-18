@@ -385,7 +385,7 @@ void CServerWebapp::OnDownloadMap(IResponse *pResponse, bool ConnError, void *pU
 		char aName[128];
 		for(int i = 0; i < NUM_CACHED_MAPLISTS; i++)
 		{
-			const CMapInfo *pInfo = pWebapp->m_aCachedMapLists[i].AddMapFile(pRes->GetFilename(), pRes->GetCrc());
+			const CMapInfo *pInfo = pWebapp->m_aCachedMapLists[i].AddMapFile(IHttp::GetFilename(pRes->GetPath()), pRes->GetCrc());
 			if(pInfo)
 			{
 				Added = true;
