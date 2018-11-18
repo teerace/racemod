@@ -3,46 +3,76 @@
 
 #include "http.h"
 
-IRequest::IRequest(int Method, const char *pURI, int State) : m_Method(Method), m_State(State), m_pCur(0), m_pEnd(0)
+#include <curl/curl.h>
+
+IRequest::IRequest(int Method, const char *pURI) : m_pHeaderList(0), m_Method(Method), m_pMime(0)
 {
-	AddField("Connection", "Keep-Alive");
 	str_copy(m_aURI, pURI, sizeof(m_aURI));
 }
 
-IRequest::~IRequest() { }
-
-int IRequest::AddToHeader(char *pCur, const char *pData, int Size)
+IRequest::~IRequest()
 {
-	Size = min((int)(m_aHeader + sizeof(m_aHeader) - pCur), Size);
-	mem_copy(pCur, pData, Size);
-	return Size;
+	if(m_pHeaderList)
+		curl_slist_free_all(m_pHeaderList);
+	if(m_pMime)
+		curl_mime_free(m_pMime);
 }
 
-int IRequest::GenerateHeader()
-{
-	char aBuf[512];
-	char *pCur = m_aHeader;
-	
-	const char *pMethod = "GET"; // default
-	if(m_Method == HTTP_POST)
-		pMethod = "POST";
-	else if(m_Method == HTTP_PUT)
-		pMethod = "PUT";
-	
-	str_format(aBuf, sizeof(aBuf), "%s %s%s HTTP/1.1\r\n", pMethod, m_aURI[0] == '/' ? "" : "/", m_aURI);
-	pCur += AddToHeader(pCur, aBuf, str_length(aBuf));
 
-	for(int i = 0; i < m_FieldNum; i++)
+void IRequest::InitHandle(CURL *pHandle)
+{
+	if(m_pHeaderList)
+		curl_easy_setopt(pHandle, CURLOPT_HTTPHEADER, m_pHeaderList);
+
+	if(m_Method == HTTP_GET)
 	{
-		str_format(aBuf, sizeof(aBuf), "%s: %s\r\n", m_aFields[i].m_aKey, m_aFields[i].m_aValue);
-		pCur += AddToHeader(pCur, aBuf, str_length(aBuf));
+		curl_easy_setopt(pHandle, CURLOPT_WRITEDATA, this);
 	}
+	else if(m_Method == HTTP_POST)
+	{
+		curl_easy_setopt(pHandle, CURLOPT_POST, 1L);
 
-	pCur += AddToHeader(pCur, "\r\n", 2);
-	return pCur - m_aHeader;
+		if(m_pMime)
+		{
+			curl_easy_setopt(pHandle, CURLOPT_MIMEPOST, m_pMime);
+		}
+		else
+		{
+			curl_easy_setopt(pHandle, CURLOPT_READDATA, this);
+			curl_easy_setopt(pHandle, CURLOPT_READFUNCTION, ReadCallback);
+			curl_easy_setopt(pHandle, CURLOPT_POSTFIELDSIZE, GetSize());
+		}
+	}
+	else // HTTP_PUT
+	{
+		curl_easy_setopt(pHandle, CURLOPT_UPLOAD, 1L);
+
+		curl_easy_setopt(pHandle, CURLOPT_READDATA, this);
+		curl_easy_setopt(pHandle, CURLOPT_READFUNCTION, ReadCallback);
+		curl_easy_setopt(pHandle, CURLOPT_INFILESIZE, GetSize());
+	}
 }
 
-CBufferRequest::CBufferRequest(int Method, const char *pURI) : IRequest(Method, pURI, STATE_HEADER), m_pBody(0), m_BodySize(0) { }
+size_t IRequest::ReadCallback(char *pBuf, size_t Size, size_t Number, void *pUser)
+{
+	return ((IRequest*)pUser)->ReadData(pBuf, Size * Number);
+}
+
+void IRequest::AddField(const char *pKey, const char *pValue)
+{
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "%s: %s", pKey, pValue);
+	m_pHeaderList = curl_slist_append(m_pHeaderList, aBuf);
+}
+
+void IRequest::AddField(const char *pKey, int Value)
+{
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "%s: %d", pKey, Value);
+	m_pHeaderList = curl_slist_append(m_pHeaderList, aBuf);
+}
+
+CBufferRequest::CBufferRequest(int Method, const char *pURI) : IRequest(Method, pURI), m_pBody(0), m_BodySize(0), m_pCur(0) { }
 
 CBufferRequest::~CBufferRequest()
 {
@@ -50,151 +80,70 @@ CBufferRequest::~CBufferRequest()
 		mem_free(m_pBody);
 }
 
-bool CBufferRequest::Finalize()
+void CBufferRequest::SetBody(const char *pData, int Size, const char *pContentType)
 {
-	if(IsFinalized())
-		return false;
-	if(m_Method != HTTP_GET)
-	{
-		if(!m_pBody)
-			return false;
-		AddField("Content-Length", m_BodySize);
-	}
-	int HeaderSize = GenerateHeader();
-	m_pCur = m_aHeader;
-	m_pEnd = m_aHeader + HeaderSize;
-	IHttpBase::Finalize();
-	return true;
-}
-
-bool CBufferRequest::SetBody(const char *pData, int Size, const char *pContentType)
-{
-	if(Size <= 0 || m_pBody || IsFinalized() || m_Method == HTTP_GET)
-		return false;
+	if(Size <= 0 || m_pBody || m_Method == HTTP_GET)
+		return;
 
 	AddField("Content-Type", pContentType);
 	m_BodySize = Size;
 	m_pBody = (char *)mem_alloc(m_BodySize, 1);
 	mem_copy(m_pBody, pData, m_BodySize);
-	return true;
+	m_pCur = m_pBody;
 }
 
-int CBufferRequest::GetData(char *pBuf, int MaxSize)
+int CBufferRequest::ReadData(char *pBuf, int MaxSize)
 {
-	if(!IsFinalized())
-		return -1;
-
-	if(m_pCur >= m_pEnd)
-	{
-		if(m_State == STATE_HEADER)
-		{
-			//dbg_msg("http/request", "sent header");
-			if(!m_pBody)
-				return 0;
-			m_pCur = m_pBody;
-			m_pEnd = m_pBody + m_BodySize;
-			m_State = STATE_BODY;
-		}
-		else if(m_State == STATE_BODY)
-		{
-			//dbg_msg("http/request", "sent body");
-			return 0;
-		}
-	}
-
-	int Size = min((int)(m_pEnd-m_pCur), MaxSize);
+	const char *pEnd = m_pBody + m_BodySize;
+	int Size = min((int)(pEnd-m_pCur), MaxSize);
 	mem_copy(pBuf, m_pCur, Size);
 	m_pCur += Size;
 	return Size;
 }
 
-CFileRequest::CFileRequest(const char *pURI) : IRequest(HTTP_POST, pURI, STATE_HEADER), m_File(0) { }
+CFileRequest::CFileRequest(const char *pURI) : IRequest(HTTP_POST, pURI), m_File(0) { }
 
 CFileRequest::~CFileRequest()
 {
-	if(m_File)
-		io_close(m_File);
+	Finalize();
 }
 
-const char *CFileRequest::GetFilename(const char *pFilename) const
+void CFileRequest::InitHandle(CURL *pHandle)
 {
-	const char *pShort = pFilename;
-	for(const char *pCur = pShort; *pCur; pCur++)
-	{
-		if (*pCur == '/' || *pCur == '\\')
-			pShort = pCur + 1;
-	}
-	return pShort;
+	m_pMime = curl_mime_init(pHandle);
+
+	curl_mimepart *pField = curl_mime_addpart(m_pMime);
+	curl_mime_name(pField, m_aMimeName);
+	curl_mime_filename(pField, m_aFilename);
+	curl_mime_data_cb(pField, GetSize(), ReadCallback, 0, 0, this);
+
+	IRequest::InitHandle(pHandle);
 }
 
-bool CFileRequest::Finalize()
+void CFileRequest::SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName)
 {
-	if(IsFinalized() || !m_File)
-		return false;
-	AddField("Content-Length", io_length(m_File) + str_length(m_aUploadHeader) + str_length(m_aUploadFooter));
-	int HeaderSize = GenerateHeader();
-	m_pCur = m_aHeader;
-	m_pEnd = m_aHeader + HeaderSize;
-	IHttpBase::Finalize();
-	return true;
-}
-
-bool CFileRequest::SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName)
-{
-	if(!File || m_File || IsFinalized())
-		return false;
-
 	m_File = File;
-	str_format(m_aUploadHeader, sizeof(m_aUploadHeader),
-		"--frontier\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n",
-		pUploadName, GetFilename(pFilename));
-	str_copy(m_aUploadFooter, "\r\n--frontier--\r\n", sizeof(m_aUploadFooter));
-	AddField("Content-Type", "multipart/form-data; boundary=frontier");
-	return true;
+	str_copy(m_aMimeName, pUploadName, sizeof(m_aMimeName));
+	str_copy(m_aFilename, IHttp::GetFilename(pFilename), sizeof(m_aFilename));
 }
 
-int CFileRequest::GetData(char *pBuf, int MaxSize)
+int CFileRequest::ReadData(char *pBuf, int MaxSize)
 {
-	if(!IsFinalized())
+	if(!m_File)
 		return -1;
+	return io_read(m_File, pBuf, MaxSize);
+}
 
-	if(m_pCur >= m_pEnd)
+int CFileRequest::GetSize()
+{
+	return io_length(m_File);
+}
+
+void CFileRequest::Finalize()
+{
+	if(m_File)
 	{
-		if(m_State == STATE_HEADER)
-		{
-			m_pCur = m_aUploadHeader;
-			m_pEnd = m_pCur + str_length(m_aUploadHeader);
-			m_State = STATE_FILE_HEADER;
-		}
-		else if(m_State == STATE_FILE_HEADER)
-		{
-			m_State = STATE_FILE_BODY;
-		}
-		else if(m_State == STATE_FILE_FOOTER)
-		{
-			return 0;
-		}
-	}
-
-	if(m_State == STATE_FILE_BODY)
-	{
-		int Size = io_read(m_File, pBuf, MaxSize);
-		if (Size > 0)
-			return Size;
-
 		io_close(m_File);
 		m_File = 0;
-		m_pCur = m_aUploadFooter;
-		m_pEnd = m_pCur + str_length(m_aUploadFooter);
-		m_State = STATE_FILE_FOOTER;
 	}
-	
-	if(m_State != STATE_FILE_BODY)
-	{
-		int Size = min((int)(m_pEnd - m_pCur), MaxSize);
-		mem_copy(pBuf, m_pCur, Size);
-		m_pCur += Size;
-		return Size;
-	}
-	return -1;
 }

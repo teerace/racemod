@@ -3,9 +3,14 @@
 
 #include <base/tl/array.h>
 
-#include <engine/external/http-parser/http_parser.h>
-
 #include <engine/engine.h>
+
+#define CURL_NO_OLDIES
+
+typedef struct Curl_easy CURL;
+typedef struct Curl_multi CURLM;
+typedef struct curl_mime_s curl_mime;
+struct curl_slist;
 
 enum
 {
@@ -13,71 +18,36 @@ enum
 	HTTP_PRIORITY_LOW
 };
 
-class IHttpBase
+class IHttp
 {
-	enum
-	{
-		HTTP_MAX_HEADER_FIELDS=16
-	};
-
-	bool m_Finalized;
-
-protected:
-	struct CHttpField
-	{
-		char m_aKey[128];
-		char m_aValue[128];
-	};
-
-	CHttpField m_aFields[HTTP_MAX_HEADER_FIELDS];
-	int m_FieldNum;
-
-	IHttpBase();
-
-	bool IsFinalized() const { return m_Finalized; }
-	virtual bool Finalize() { m_Finalized = true; return true; }
-
 public:
-	virtual ~IHttpBase();
-
-	void AddField(CHttpField Field);
-	void AddField(const char *pKey, const char *pValue);
-	void AddField(const char *pKey, int Value);
-	const char *GetField(const char *pKey) const;
+	static const char *GetFilename(const char *pFilepath);
+	static void EscapeUrl(char *pBuf, int Size, const char *pStr);
 };
 
-class IResponse : public IHttpBase
+class IResponse
 {
-	friend class CHttpConnection;
+	friend class CHttpClient;
 
-	http_parser m_Parser;
+	int m_StatusCode;
 
-	CHttpField m_CurField;
+	static size_t WriteCallback(char *pData, size_t Size, size_t Number, void *pUser);
 
-	bool m_LastWasValue;
-	bool m_Complete;
-	bool m_Close;
+	void InitHandle(CURL *pHandle);
+	virtual int WriteData(const char *pData, int Len) = 0;
 
-	static int OnHeaderField(http_parser *pParser, const char *pData, size_t Len);
-	static int OnHeaderValue(http_parser *pParser, const char *pData, size_t Len);
-	static int OnHeadersComplete(http_parser *pParser);
-	static int OnMessageComplete(http_parser *pParser);
-
-	bool Write(char *pData, int Size);
+	virtual void Finalize() { };
 
 protected:
-	http_parser_settings m_ParserSettings;
-
 	int m_Size;
 
 	IResponse();
-	virtual bool Finalize();
 
 public:
 	virtual ~IResponse();
 
-	int Size() const { return IsFinalized() ? m_Size : -1; }
-	unsigned StatusCode() const { return IsFinalized() ? m_Parser.status_code : -1; }
+	int Size() const { return m_Size; }
+	int StatusCode() const { return m_StatusCode; }
 
 	virtual bool IsFile() const = 0;
 };
@@ -87,17 +57,14 @@ class CBufferResponse : public IResponse
 	char *m_pData;
 	int m_BufferSize;
 
-	static int OnBody(http_parser *pParser, const char *pData, size_t Len);
-	static int OnMessageBegin(http_parser *pParser);
-
 	bool ResizeBuffer(int NeededSize);
-	bool Finalize();
+	int WriteData(const char *pData, int Len);
 
 public:
 	CBufferResponse();
 	virtual ~CBufferResponse();
 
-	const char *GetBody() const { return IsFinalized() ? m_pData : 0; }
+	const char *GetBody() const { return m_pData; }
 
 	bool IsFile() const { return false; }
 };
@@ -109,9 +76,8 @@ class CFileResponse : public IResponse
 	unsigned m_Crc;
 	char m_aFilename[512];
 
-	static int OnBody(http_parser *pParser, const char *pData, size_t Len);
-
-	bool Finalize();
+	int WriteData(const char *pData, int Len);
+	void Finalize();
 
 public:
 	CFileResponse(IOHANDLE File, const char *pFilename);
@@ -119,35 +85,35 @@ public:
 
 	unsigned GetCrc() const { return m_Crc; }
 	const char *GetPath() const { return m_aFilename; }
-	const char *GetFilename() const;
 
 	bool IsFile() const { return true; }
 };
 
 typedef void(*FHttpCallback)(IResponse *pResponse, bool Error, void *pUserData);
 
-class IRequest : public IHttpBase
+class IRequest
 {
-protected:
-	friend class CHttpConnection;
+	friend class CHttpClient;
+
+	curl_slist *m_pHeaderList;
 
 	char m_aURI[256];
+
+
+	virtual int ReadData(char *pBuf, int MaxSize) = 0;
+	virtual int GetSize() = 0;
+
+	virtual void Finalize() { };
+
+protected:
 	int m_Method;
-	int m_State;
+	curl_mime *m_pMime;
 
-	char m_aHeader[1024*8];
+	static size_t ReadCallback(char *pBuf, size_t Size, size_t Number, void *pUser);
 
-	char *m_pCur;
-	char *m_pEnd;
+	IRequest(int Method, const char *pURI);
 
-	IRequest(int Method, const char *pURI, int State);
-
-	int AddToHeader(char *pCur, const char *pData, int Size);
-	int GenerateHeader();
-
-	virtual bool Finalize() = 0;
-
-	virtual int GetData(char *pBuf, int MaxSize) = 0;
+	virtual void InitHandle(CURL *pHandle);
 
 public:
 	enum
@@ -158,62 +124,49 @@ public:
 	};
 
 	virtual ~IRequest();
-	
-	//const char *GetURI() const { return m_aURI; }
+
+	void AddField(const char *pKey, const char *pValue);
+	void AddField(const char *pKey, int Value);
 };
 
 class CBufferRequest : public IRequest
 {
-	enum
-	{
-		STATE_HEADER = 0,
-		STATE_BODY
-	};
-
 	char *m_pBody;
 	int m_BodySize;
 
-	int GetData(char *pBuf, int MaxSize);
-	bool Finalize();
+	char *m_pCur;
+
+	int ReadData(char *pBuf, int MaxSize);
+	int GetSize() { return m_BodySize; }
 
 public:
 	CBufferRequest(int Method, const char *pURI);
 	virtual ~CBufferRequest();
 
-	bool SetBody(const char *pData, int Size, const char *pContentType);
+	void SetBody(const char *pData, int Size, const char *pContentType);
 };
 
 class CFileRequest : public IRequest
 {
-	enum
-	{
-		STATE_HEADER = 0,
-		STATE_FILE_HEADER,
-		STATE_FILE_BODY,
-		STATE_FILE_FOOTER
-	};
-
 	IOHANDLE m_File;
+	char m_aMimeName[128];
+	char m_aFilename[128];
 
-	char m_aUploadHeader[256];
-	char m_aUploadFooter[256];
-
-	const char *GetFilename(const char *pFilename) const;
-
-	int GetData(char *pBuf, int MaxSize);
-	bool Finalize();
+	void InitHandle(CURL *pHandle);
+	int ReadData(char *pBuf, int MaxSize);
+	int GetSize();
+	void Finalize();
 
 public:
 	CFileRequest(const char *pURI);
 	virtual ~CFileRequest();
 
-	bool SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName);
+	void SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName);
 };
 
 class CRequestInfo
 {
 	friend class CHttpClient;
-	friend class CHttpConnection;
 
 	char m_aAddr[256];
 
@@ -226,6 +179,9 @@ class CRequestInfo
 	FHttpCallback m_pfnCallback;
 	void *m_pUserData;
 
+	CURL *m_pHandle;
+	curl_slist *m_pHostResolve;
+
 public:
 	CRequestInfo(const char *pAddr);
 	CRequestInfo(const char *pAddr, IOHANDLE File, const char *pFilename);
@@ -237,80 +193,24 @@ public:
 	void ExecuteCallback(IResponse *pResponse, bool Error) const;
 };
 
-class CHttpConnection
-{
-	enum
-	{
-		HTTP_CHUNK_SIZE=1024*4,
-		HTTP_MAX_SPEED=1024*100
-	};
-
-	int m_ID;
-
-	NETSOCKET m_Socket;
-	NETADDR m_Addr;
-	
-	int m_State;
-	int64 m_LastActionTime;
-	int64 m_LastDataTime;
-
-	CRequestInfo *m_pInfo;
-
-	char m_aBuffer[HTTP_CHUNK_SIZE];
-	int m_BufferBytes;
-	int m_BufferOffset;
-
-	const int64 m_DataInterval;
-
-	void Reset();
-	void Close();
-
-	bool SetState(int State, const char *pMsg = 0);
-
-public:
-	enum
-	{
-		HTTP_TIMEOUT=10,
-		HTTP_KEEPALIVE_TIME=30,
-
-		STATE_OFFLINE = 0,
-		STATE_CONNECTING,
-		STATE_SENDING,
-		STATE_RECEIVING,
-		STATE_WAITING,
-		STATE_ERROR
-	};
-
-	CHttpConnection();
-	virtual ~CHttpConnection();
-
-	void SetID(int ID) { m_ID = ID; }
-	bool Update();
-
-	bool Connect(NETADDR Addr);
-	bool SetRequest(CRequestInfo *pInfo);
-
-	int State() const { return m_State; }
-	bool CompareAddr(NETADDR Addr) const;
-	bool IsActive() const { return m_State == STATE_CONNECTING || m_State == STATE_SENDING || m_State == STATE_RECEIVING;  }
-
-	const CRequestInfo* GetInfo() const { return m_pInfo; }
-};
-
 class CHttpClient
 {
 	enum
 	{
-		HTTP_MAX_CONNECTIONS = 4,
-		HTTP_MAX_LOW_PRIORITY_CONNECTIONS=2
+		HTTP_MAX_ACTIVE_HANDLES = 4,
+		HTTP_MAX_LOW_PRIORITY_HANDLES=2
 	};
 
-	CHttpConnection m_aConnections[HTTP_MAX_CONNECTIONS];
+	CRequestInfo *m_apActiveHandles[HTTP_MAX_ACTIVE_HANDLES];
 	array<CRequestInfo*> m_lPendingRequests;
 
 	IEngine *m_pEngine;
 
-	CHttpConnection *GetConnection(NETADDR Addr);
+	void StartHandle(CRequestInfo *pInfo);
+	void FetchRequest(int Priority, int Max);
+	int GetRequestInfo(CURL *pHandle) const;
+
+	CURLM *m_pMultiHandle;
 
 public:
 	CHttpClient();
@@ -319,7 +219,6 @@ public:
 	void Init(IEngine *pEngine) { m_pEngine = pEngine; }
 
 	void Send(CRequestInfo *pInfo, IRequest *pRequest);
-	void FetchRequest(int Priority, int Max);
 	void Update();
 
 	bool HasActiveConnection() const;

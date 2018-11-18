@@ -503,7 +503,6 @@ set_glob(ENGINE_SHARED GLOB src/engine/shared
   ghost.h
   http.cpp
   http.h
-  http_conn.cpp
   http_request.cpp
   http_response.cpp
   huffman.cpp
