@@ -288,6 +288,8 @@ void CServerWebapp::OnUserAuth(IResponse *pResponse, bool ConnError, void *pUser
 		pWebapp->Server()->SetUserID(ClientID, UserID);
 		pWebapp->Server()->SetUserName(ClientID, (*pJsonData)["username"]);
 
+		pWebapp->GameServer()->UpdateTeeraceSkin(ClientID);
+
 		// auth staff members
 		if((bool)(*pJsonData)["is_staff"])
 			pWebapp->Server()->StaffAuth(ClientID, SendRconCmds);
