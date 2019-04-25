@@ -5,9 +5,12 @@
 
 #include <curl/curl.h>
 
-IRequest::IRequest(int Method, const char *pURL) : m_pHeaderList(0), m_Method(Method), m_pMime(0), m_pFirst(0)
+IRequest::IRequest(int Method, const char *pURL) : m_pHeaderList(0), m_Method(Method), m_pFirst(0)
 {
 	str_copy(m_aURL, pURL, sizeof(m_aURL));
+#if LIBCURL_VERSION_NUM >= 0x073800
+	m_pMime = 0;
+#endif
 }
 
 IRequest::~IRequest()

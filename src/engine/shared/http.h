@@ -5,13 +5,18 @@
 
 #include <engine/engine.h>
 
-#define CURL_NO_OLDIES
+#if defined(CONF_FAMILY_WINDOWS)
+	// TODO: type collision on windows
+	#define CURL_NO_OLDIES
 
-typedef struct Curl_easy CURL;
-typedef struct Curl_multi CURLM;
-typedef struct curl_mime_s curl_mime;
-struct curl_httppost;
-struct curl_slist;
+	typedef struct Curl_easy CURL;
+	typedef struct Curl_multi CURLM;
+	typedef struct curl_mime_s curl_mime;
+	struct curl_httppost;
+	struct curl_slist;
+#else
+	#include <curl/curl.h>
+#endif
 
 enum
 {
@@ -108,7 +113,9 @@ class IRequest
 
 protected:
 	int m_Method;
+#if LIBCURL_VERSION_NUM >= 0x073800 || defined(CONF_FAMILY_WINDOWS)
 	curl_mime *m_pMime;
+#endif
 	struct curl_httppost *m_pFirst;
 
 	static size_t ReadCallback(char *pBuf, size_t Size, size_t Number, void *pUser);
