@@ -35,7 +35,7 @@ class IResponse
 {
 	friend class CHttpClient;
 
-	int m_StatusCode;
+	long m_StatusCode;
 
 	static size_t WriteCallback(char *pData, size_t Size, size_t Number, void *pUser);
 
