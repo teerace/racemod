@@ -544,7 +544,9 @@ void CServerWebapp::LoadMapList()
 	dbg_msg("webapp", "reloading map list");
 
 	char aBuf[256];
-	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", m_pCurrentMapList->GetMapTypes());
+	char aMapTypes[256];
+	IHttp::EscapeUrl(aMapTypes, sizeof(aMapTypes), m_pCurrentMapList->GetMapTypes());
+	str_format(aBuf, sizeof(aBuf), "/maps/list/%s/", aMapTypes);
 
 	CMapListData *pUserData = new CMapListData(this);
 	str_copy(pUserData->m_aMapTypes, m_pCurrentMapList->GetMapTypes(), sizeof(pUserData->m_aMapTypes));
