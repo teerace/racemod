@@ -10,6 +10,7 @@
 typedef struct Curl_easy CURL;
 typedef struct Curl_multi CURLM;
 typedef struct curl_mime_s curl_mime;
+struct curl_httppost;
 struct curl_slist;
 
 enum
@@ -97,7 +98,7 @@ class IRequest
 
 	curl_slist *m_pHeaderList;
 
-	char m_aURI[256];
+	char m_aURL[256];
 
 
 	virtual int ReadData(char *pBuf, int MaxSize) = 0;
@@ -108,10 +109,11 @@ class IRequest
 protected:
 	int m_Method;
 	curl_mime *m_pMime;
+	struct curl_httppost *m_pFirst;
 
 	static size_t ReadCallback(char *pBuf, size_t Size, size_t Number, void *pUser);
 
-	IRequest(int Method, const char *pURI);
+	IRequest(int Method, const char *pURL);
 
 	virtual void InitHandle(CURL *pHandle);
 
@@ -140,7 +142,7 @@ class CBufferRequest : public IRequest
 	int GetSize() { return m_BodySize; }
 
 public:
-	CBufferRequest(int Method, const char *pURI);
+	CBufferRequest(int Method, const char *pURL);
 	virtual ~CBufferRequest();
 
 	void SetBody(const char *pData, int Size, const char *pContentType);
@@ -158,7 +160,7 @@ class CFileRequest : public IRequest
 	void Finalize();
 
 public:
-	CFileRequest(const char *pURI);
+	CFileRequest(const char *pURL);
 	virtual ~CFileRequest();
 
 	void SetFile(IOHANDLE File, const char *pFilename, const char *pUploadName);
@@ -167,8 +169,6 @@ public:
 class CRequestInfo
 {
 	friend class CHttpClient;
-
-	char m_aAddr[256];
 
 	CHostLookup m_Lookup;
 	IRequest *m_pRequest;
@@ -183,8 +183,8 @@ class CRequestInfo
 	curl_slist *m_pHostResolve;
 
 public:
-	CRequestInfo(const char *pAddr);
-	CRequestInfo(const char *pAddr, IOHANDLE File, const char *pFilename);
+	CRequestInfo();
+	CRequestInfo(IOHANDLE File, const char *pFilename);
 
 	virtual ~CRequestInfo();
 
@@ -210,6 +210,7 @@ class CHttpClient
 	void FetchRequest(int Priority, int Max);
 	int GetRequestInfo(CURL *pHandle) const;
 
+	bool m_CurlAsyncDNS;
 	CURLM *m_pMultiHandle;
 
 public:

@@ -100,7 +100,7 @@ void CWebappScore::OnPlayerFinish(int ClientID, int Time, int *pCpTime)
 
 	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/runs/new/");
 	pRequest->SetBody(pJson, str_length(pJson), "application/json");
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	pInfo->SetCallback(OnRunPost, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 	delete[] pJson;
@@ -125,7 +125,7 @@ void CWebappScore::ShowTop5(int ClientID, int Debut)
 		char aURI[128];
 		str_format(aURI, sizeof(aURI), "/maps/rank/%d/%d/", MapID, Debut);
 		CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
-		CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+		CRequestInfo *pInfo = new CRequestInfo();
 		pInfo->SetCallback(OnUserTop, aUserData);
 		Server()->SendHttp(pInfo, pRequest);
 	}
@@ -189,7 +189,7 @@ void CWebappScore::ShowRank(int ClientID, const char *pName, bool Search)
 			aNameData->m_MapID = Webapp()->CurrentMap()->m_ID;
 			CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/get_by_name/");
 			pRequest->SetBody(pJson, str_length(pJson), "application/json");
-			CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+			CRequestInfo *pInfo = new CRequestInfo();
 			pInfo->SetCallback(OnUserFind, aNameData);
 			Server()->SendHttp(pInfo, pRequest);
 			delete[] pJson;
@@ -367,13 +367,13 @@ void CWebappScore::RequestRank(CUserRankData *pUserData)
 	char aURI[128];
 	str_format(aURI, sizeof(aURI), "/users/rank/%d/", pUserData->m_UserID);
 	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	pInfo->SetCallback(OnUserRankGlobal, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 
 	str_format(aURI, sizeof(aURI), "/users/map_rank/%d/%d/", pUserData->m_UserID, pUserData->m_MapID);
 	pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_GET, aURI);
-	pInfo = new CRequestInfo(ITeerace::Host());
+	pInfo = new CRequestInfo();
 	pInfo->SetCallback(OnUserRankMap, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 }

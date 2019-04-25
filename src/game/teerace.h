@@ -6,7 +6,7 @@
 class ITeerace
 {
 public:
-	static const char *Host();
+	static const char *URL();
 	static class CBufferRequest *CreateApiRequest(int Method, const char *pURI);
 	static class CFileRequest *CreateApiUpload(const char *pURI);
 };

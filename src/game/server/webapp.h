@@ -75,7 +75,7 @@ public:
 	void OnAuth(int ClientID, const char *pToken, int SendRconCmds);
 	void Tick();
 
-	void DownloadMap(const char *pFilename, const char *pURI) { Download(pFilename, pURI, OnDownloadMap); }
+	void DownloadMap(const char *pFilename, const char *pURL) { Download(pFilename, pURL, OnDownloadMap); }
 
 	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback, int64 StartTime = -1);
 	void AddUpload(const char *pFilename, const char *pURI, const char *pUploadName, int64 StartTime = -1)
@@ -158,7 +158,7 @@ private:
 
 	static int MaplistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
 
-	void Download(const char *pFilename, const char *pURI, FHttpCallback pfnCallback);
+	void Download(const char *pFilename, const char *pURL, FHttpCallback pfnCallback);
 	void Upload(const char *pFilename, const char *pURI, const char *pUploadName, FHttpCallback pfnCallback);
 };
 

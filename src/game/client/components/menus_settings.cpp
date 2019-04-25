@@ -1032,7 +1032,7 @@ void CMenus::RenderSettingsRace(CUIRect MainView)
 			
 				CBufferRequest *pRequest = ITeerace::CreateApiRequest(IRequest::HTTP_POST, "/anonclient/get_token/");
 				pRequest->SetBody(aData, str_length(aData), "application/x-www-form-urlencoded");
-				CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+				CRequestInfo *pInfo = new CRequestInfo();
 				pInfo->SetCallback(CMenus::OnApiToken, this);
 				Client()->SendHttp(pInfo, pRequest);
 			}

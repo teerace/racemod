@@ -25,16 +25,26 @@ void IHttp::EscapeUrl(char *pBuf, int Size, const char *pStr)
 	curl_free(pEsc);
 }
 
-CRequestInfo::CRequestInfo(const char *pAddr)
-	: m_pRequest(0), m_pResponse(new CBufferResponse()), m_Priority(HTTP_PRIORITY_HIGH), m_pfnCallback(0), m_pUserData(0), m_pHandle(0), m_pHostResolve(0)
+CRequestInfo::CRequestInfo() :
+	m_pRequest(0),
+	m_pResponse(new CBufferResponse()),
+	m_Priority(HTTP_PRIORITY_HIGH),
+	m_pfnCallback(0),
+	m_pUserData(0),
+	m_pHandle(0),
+	m_pHostResolve(0)
 {
-	str_copy(m_aAddr, pAddr, sizeof(m_aAddr));
 }
 
-CRequestInfo::CRequestInfo(const char *pAddr, IOHANDLE File, const char *pFilename)
-	: m_pRequest(0), m_pResponse(new CFileResponse(File, pFilename)), m_Priority(HTTP_PRIORITY_HIGH), m_pfnCallback(0), m_pUserData(0), m_pHandle(0), m_pHostResolve(0)
+CRequestInfo::CRequestInfo(IOHANDLE File, const char *pFilename) :
+	m_pRequest(0),
+	m_pResponse(new CFileResponse(File, pFilename)),
+	m_Priority(HTTP_PRIORITY_HIGH),
+	m_pfnCallback(0),
+	m_pUserData(0),
+	m_pHandle(0),
+	m_pHostResolve(0)
 {
-	str_copy(m_aAddr, pAddr, sizeof(m_aAddr));
 }
 
 CRequestInfo::~CRequestInfo()
@@ -63,6 +73,9 @@ void CRequestInfo::ExecuteCallback(IResponse *pResponse, bool Error) const
 
 CHttpClient::CHttpClient()
 {
+	curl_version_info_data *pInfo = curl_version_info(CURLVERSION_NOW);
+	m_CurlAsyncDNS = pInfo->features&CURL_VERSION_ASYNCHDNS;
+
 	m_pMultiHandle = curl_multi_init();
 
 	for(int i = 0; i < HTTP_MAX_ACTIVE_HANDLES; i++)
@@ -76,75 +89,79 @@ CHttpClient::~CHttpClient()
 
 void CHttpClient::Send(CRequestInfo *pInfo, IRequest *pRequest)
 {
-	pInfo->m_pRequest = pRequest;
-	const char *pHostName = pInfo->m_aAddr;
-	const char *pScheme = str_find(pHostName, "://");
-	if(pScheme)
-		pHostName = pScheme+3;
+	if(g_Config.m_Debug)
+		dbg_msg("http", "curl async dns: %s", m_CurlAsyncDNS ? "yes" : "no");
 
-	m_pEngine->HostLookup(&pInfo->m_Lookup, pHostName, NETTYPE_IPV4);
+	pInfo->m_pRequest = pRequest;
+
+	if(!m_CurlAsyncDNS)
+	{
+		const char *pHostName = pInfo->m_pRequest->m_aURL;
+		const char *pStart = str_find(pHostName, "://");
+		if(pStart)
+			pHostName = pStart+3;
+
+		char aHostName[128];
+		str_copy(aHostName, pHostName, sizeof(aHostName));
+
+		for(char *pStr = aHostName; *pStr; pStr++)
+			if(*pStr == '/')
+			{
+				*pStr = 0;
+				break;
+			}
+
+		m_pEngine->HostLookup(&pInfo->m_Lookup, aHostName, NETTYPE_IPV4);
+	}
 
 	m_lPendingRequests.add(pInfo);
 }
 
 void CHttpClient::StartHandle(CRequestInfo *pInfo)
 {
-	IRequest *pRequest = pInfo->m_pRequest;
-	IResponse *pResponse = pInfo->m_pResponse;
-
-	char aURL[256];
-	str_format(aURL, sizeof(aURL), "%s%s%s", pInfo->m_aAddr, pRequest->m_aURI[0] == '/' ? "" : "/", pRequest->m_aURI);
 	pInfo->m_pHandle = curl_easy_init();
 
-	const char *pHostName = pInfo->m_aAddr;
-	const char *pScheme = str_find(pHostName, "://");
-	if(pScheme)
-		pHostName = pScheme+3;
-
-	char aBuf[128];
-	char aResolve[512] = {0};
-	str_append(aResolve, pHostName, sizeof(aResolve));
-
-	if(!str_find(pHostName, ":"))
+	if(!m_CurlAsyncDNS)
 	{
+		const char *pHostName = pInfo->m_Lookup.m_aHostname;
+
+		char aBuf[128];
+		char aResolve[512];
+		str_copy(aResolve, pHostName, sizeof(aResolve));
+
 		int Port = pInfo->m_Lookup.m_Addr.port;
 		if(Port == 0)
 		{
-			if(str_comp_nocase_num(pInfo->m_aAddr, "https://", 8) == 0)
-				Port = 443;
-			else
-				Port = 80;
+			const char *pURL = pInfo->m_pRequest->m_aURL;
+			Port = (str_comp_nocase_num(pURL, "https://", 8) == 0) ? 443 : 80;
+			str_format(aBuf, sizeof(aBuf), ":%d", Port);
+			str_append(aResolve, aBuf, sizeof(aResolve));
 		}
 
-		str_format(aBuf, sizeof(aBuf), ":%d", Port);
+		str_append(aResolve, ":", sizeof(aResolve));
+
+		net_addr_str(&pInfo->m_Lookup.m_Addr, aBuf, sizeof(aBuf), 0);
 		str_append(aResolve, aBuf, sizeof(aResolve));
+
+		if(g_Config.m_Debug)
+			dbg_msg("http", "resolve: %s", aResolve);
+
+		pInfo->m_pHostResolve = curl_slist_append(NULL, aResolve);
+		curl_easy_setopt(pInfo->m_pHandle, CURLOPT_RESOLVE, pInfo->m_pHostResolve);
 	}
-
-	str_append(aResolve, ":", sizeof(aResolve));
-
-	net_addr_str(&pInfo->m_Lookup.m_Addr, aBuf, sizeof(aBuf), 0);
-	str_append(aResolve, aBuf, sizeof(aResolve));
-
-	dbg_msg("http", "resolve: %s", aResolve);
-
-	pInfo->m_pHostResolve = curl_slist_append(NULL, aResolve);
 
 	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
 	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_FOLLOWLOCATION, 1L);
 	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_MAXREDIRS, 4L);
 	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_FAILONERROR, 1L);
-	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_URL, aURL);
 	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_USERAGENT, "Teeworlds " GAME_VERSION " (" CONF_PLATFORM_STRING ", " CONF_ARCH_STRING ")");
 	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_ACCEPT_ENCODING, "");
-	curl_easy_setopt(pInfo->m_pHandle, CURLOPT_RESOLVE, pInfo->m_pHostResolve);
 
 	if(g_Config.m_DbgCurl)
-	{
 		curl_easy_setopt(pInfo->m_pHandle, CURLOPT_VERBOSE, 1L);
-	}
 
-	pRequest->InitHandle(pInfo->m_pHandle);
-	pResponse->InitHandle(pInfo->m_pHandle);
+	pInfo->m_pRequest->InitHandle(pInfo->m_pHandle);
+	pInfo->m_pResponse->InitHandle(pInfo->m_pHandle);
 
 	curl_multi_add_handle(m_pMultiHandle, pInfo->m_pHandle);
 }
@@ -167,7 +184,8 @@ void CHttpClient::FetchRequest(int Priority, int Max)
 		for(int i = 0; i < m_lPendingRequests.size(); i++)
 		{
 			CRequestInfo *pInfo = m_lPendingRequests[i];
-			if(pInfo->m_Priority == Priority && pInfo->m_Lookup.m_Job.Status() == CJob::STATE_DONE && pInfo->m_Lookup.m_Job.Result() == 0)
+			if(pInfo->m_Priority == Priority && (m_CurlAsyncDNS ||
+				(pInfo->m_Lookup.m_Job.Status() == CJob::STATE_DONE && pInfo->m_Lookup.m_Job.Result() == 0)))
 			{
 				m_lPendingRequests.remove_index(i--);
 				m_apActiveHandles[k] = pInfo;
@@ -240,7 +258,8 @@ void CHttpClient::Update()
 			pInfo->m_pRequest->Finalize();
 			pInfo->m_pResponse->Finalize();
 
-			dbg_msg("http", "result: %s", curl_easy_strerror(pMsg->data.result));
+			if(!Success || g_Config.m_Debug)
+				dbg_msg("http", "result: %s", curl_easy_strerror(pMsg->data.result));
 			pInfo->ExecuteCallback(pInfo->m_pResponse, !Success);
 
 			curl_multi_remove_handle(m_pMultiHandle, pInfo->m_pHandle);

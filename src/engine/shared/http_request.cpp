@@ -5,22 +5,29 @@
 
 #include <curl/curl.h>
 
-IRequest::IRequest(int Method, const char *pURI) : m_pHeaderList(0), m_Method(Method), m_pMime(0)
+IRequest::IRequest(int Method, const char *pURL) : m_pHeaderList(0), m_Method(Method), m_pMime(0), m_pFirst(0)
 {
-	str_copy(m_aURI, pURI, sizeof(m_aURI));
+	str_copy(m_aURL, pURL, sizeof(m_aURL));
 }
 
 IRequest::~IRequest()
 {
 	if(m_pHeaderList)
 		curl_slist_free_all(m_pHeaderList);
+#if LIBCURL_VERSION_NUM >= 0x073800
 	if(m_pMime)
 		curl_mime_free(m_pMime);
+#else
+	if(m_pFirst)
+		curl_formfree(m_pFirst);
+#endif
 }
 
 
 void IRequest::InitHandle(CURL *pHandle)
 {
+	curl_easy_setopt(pHandle, CURLOPT_URL, m_aURL);
+
 	if(m_pHeaderList)
 		curl_easy_setopt(pHandle, CURLOPT_HTTPHEADER, m_pHeaderList);
 
@@ -32,10 +39,18 @@ void IRequest::InitHandle(CURL *pHandle)
 	{
 		curl_easy_setopt(pHandle, CURLOPT_POST, 1L);
 
+#if LIBCURL_VERSION_NUM >= 0x073800
 		if(m_pMime)
 		{
 			curl_easy_setopt(pHandle, CURLOPT_MIMEPOST, m_pMime);
 		}
+#else
+		if(m_pFirst)
+		{
+			curl_easy_setopt(pHandle, CURLOPT_HTTPPOST, m_pFirst);
+			curl_easy_setopt(pHandle, CURLOPT_READFUNCTION, ReadCallback);
+		}
+#endif
 		else
 		{
 			curl_easy_setopt(pHandle, CURLOPT_READDATA, this);
@@ -72,7 +87,7 @@ void IRequest::AddField(const char *pKey, int Value)
 	m_pHeaderList = curl_slist_append(m_pHeaderList, aBuf);
 }
 
-CBufferRequest::CBufferRequest(int Method, const char *pURI) : IRequest(Method, pURI), m_pBody(0), m_BodySize(0), m_pCur(0) { }
+CBufferRequest::CBufferRequest(int Method, const char *pURL) : IRequest(Method, pURL), m_pBody(0), m_BodySize(0), m_pCur(0) { }
 
 CBufferRequest::~CBufferRequest()
 {
@@ -101,7 +116,7 @@ int CBufferRequest::ReadData(char *pBuf, int MaxSize)
 	return Size;
 }
 
-CFileRequest::CFileRequest(const char *pURI) : IRequest(HTTP_POST, pURI), m_File(0) { }
+CFileRequest::CFileRequest(const char *pURL) : IRequest(HTTP_POST, pURL), m_File(0) { }
 
 CFileRequest::~CFileRequest()
 {
@@ -110,12 +125,22 @@ CFileRequest::~CFileRequest()
 
 void CFileRequest::InitHandle(CURL *pHandle)
 {
+#if LIBCURL_VERSION_NUM >= 0x073800
 	m_pMime = curl_mime_init(pHandle);
 
 	curl_mimepart *pField = curl_mime_addpart(m_pMime);
 	curl_mime_name(pField, m_aMimeName);
 	curl_mime_filename(pField, m_aFilename);
 	curl_mime_data_cb(pField, GetSize(), ReadCallback, 0, 0, this);
+#else
+	struct curl_httppost *pLast = 0;
+	curl_formadd(&m_pFirst, &pLast,
+		CURLFORM_COPYNAME, m_aMimeName,
+		CURLFORM_FILENAME, m_aFilename,
+		CURLFORM_STREAM, this,
+		CURLFORM_CONTENTLEN, (curl_off_t)GetSize(),
+		CURLFORM_END);
+#endif
 
 	IRequest::InitHandle(pHandle);
 }

@@ -66,7 +66,8 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 		sscanf(Map["crc"], "%08x", &Info.m_Crc);
 		Info.m_ID = Map["id"].u.integer;
 		Info.m_RunCount = Map["run_count"].u.integer;
-		str_copy(Info.m_aURL, Map["get_download_url"], sizeof(Info.m_aURL));
+		const char *pURL = Map["get_download_url"];
+		str_format(Info.m_aURL, sizeof(Info.m_aURL), "%s%s", (pURL[0] == '/') ? ITeerace::URL() : "", pURL);
 		str_copy(Info.m_aAuthor, Map["author"], sizeof(Info.m_aAuthor));
 
 		char aFilename[256];
@@ -80,7 +81,7 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 			if(g_Config.m_Debug)
 				dbg_msg("webapp", "added map info: '%s' (%d)", Info.m_aName, Info.m_ID);
 
-			pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
+			pWebapp->DownloadMap(aFilename, Info.m_aURL);
 		}
 		else
 		{
@@ -88,7 +89,7 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 			{
 				Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
 				dbg_msg("webapp", "updating map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-				pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
+				pWebapp->DownloadMap(aFilename, Info.m_aURL);
 			}
 			else // we already have this
 			{
@@ -103,7 +104,7 @@ bool CMapList::Update(CServerWebapp *pWebapp, const char *pData, int Size)
 				{
 					Info.m_State = CMapInfo::MAPSTATE_DOWNLOADING;
 					dbg_msg("webapp", "downloading missing map file: '%s' (%08x)", Info.m_aName, Info.m_Crc);
-					pWebapp->DownloadMap(aFilename, Map["get_download_url"]);
+					pWebapp->DownloadMap(aFilename, Info.m_aURL);
 				}
 				else // keep state
 					Info.m_State = r.front().m_State;
@@ -215,11 +216,11 @@ void CServerWebapp::CheckStatusCode(IConsole *pConsole, class IResponse *pRespon
 	}
 }
 
-void CServerWebapp::Download(const char *pFilename, const char *pURI, FHttpCallback pfnCallback)
+void CServerWebapp::Download(const char *pFilename, const char *pURL, FHttpCallback pfnCallback)
 {
 	IOHANDLE File = Storage()->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-	CBufferRequest *pRequest = new CBufferRequest(IRequest::HTTP_GET, pURI);
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host(), File, pFilename);
+	CBufferRequest *pRequest = new CBufferRequest(IRequest::HTTP_GET, pURL);
+	CRequestInfo *pInfo = new CRequestInfo(File, pFilename);
 	pInfo->SetCallback(pfnCallback, this);
 	pInfo->SetPriority(HTTP_PRIORITY_LOW);
 	Server()->SendHttp(pInfo, pRequest);
@@ -233,7 +234,7 @@ void CServerWebapp::Upload(const char *pFilename, const char *pURI, const char *
 	CFileRequest *pRequest = ITeerace::CreateApiUpload(pURI);
 	RegisterFields(pRequest);
 	pRequest->SetFile(File, pFilename, pUploadName);
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	pInfo->SetCallback(pfnCallback, pUserData);
 	pInfo->SetPriority(HTTP_PRIORITY_LOW);
 	Server()->SendHttp(pInfo, pRequest);
@@ -463,7 +464,7 @@ void CServerWebapp::OnAuth(int ClientID, const char *pToken, int SendRconCmds)
 
 	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/users/auth_token/");
 	pRequest->SetBody(pJson, str_length(pJson), "application/json");
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	pInfo->SetCallback(CServerWebapp::OnUserAuth, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 	delete[] pJson;
@@ -549,7 +550,7 @@ void CServerWebapp::LoadMapList()
 	str_copy(pUserData->m_aMapTypes, m_pCurrentMapList->GetMapTypes(), sizeof(pUserData->m_aMapTypes));
 
 	CBufferRequest *pRequest = CreateAuthedApiRequest(IRequest::HTTP_GET, aBuf);
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	pInfo->SetCallback(OnMapList, pUserData);
 	Server()->SendHttp(pInfo, pRequest);
 
@@ -594,7 +595,7 @@ void CServerWebapp::SendPing()
 
 	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_POST, "/ping/");
 	pRequest->SetBody(pJson, str_length(pJson), "application/json");
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	pInfo->SetCallback(CServerWebapp::OnPingPing, this);
 	Server()->SendHttp(pInfo, pRequest);
 	delete[] pJson;

@@ -10,23 +10,23 @@
 
 #include "teerace.h"
 
-const char *ITeerace::Host()
+const char *ITeerace::URL()
 {
-	return g_Config.m_WaWebappIp;
+	return g_Config.m_WaWebappURL;
 }
 
 CBufferRequest *ITeerace::CreateApiRequest(int Method, const char *pURI)
 {
-	char aURI[256];
-	str_format(aURI, sizeof(aURI), "%s%s%s", g_Config.m_WaApiPath, pURI[0] == '/' ? "" : "/", pURI);
-	return new CBufferRequest(Method, aURI);
+	char aURL[256];
+	str_format(aURL, sizeof(aURL), "%s%s%s%s", ITeerace::URL(), g_Config.m_WaApiPath, pURI[0] == '/' ? "" : "/", pURI);
+	return new CBufferRequest(Method, aURL);
 }
 
 CFileRequest *ITeerace::CreateApiUpload(const char *pURI)
 {
-	char aURI[256];
-	str_format(aURI, sizeof(aURI), "%s%s%s", g_Config.m_WaApiPath, pURI[0] == '/' ? "" : "/", pURI);
-	return new CFileRequest(aURI);
+	char aURL[256];
+	str_format(aURL, sizeof(aURL), "%s%s%s%s", ITeerace::URL(), g_Config.m_WaApiPath, pURI[0] == '/' ? "" : "/", pURI);
+	return new CFileRequest(aURL);
 }
 
 int IRace::TimeFromSecondsStr(const char *pStr)

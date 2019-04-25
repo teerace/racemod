@@ -325,7 +325,7 @@ void CGameContext::ChatConInfo(IConsole::IResult *pResult, void *pUser)
 	str_format(aBuf, sizeof(aBuf), "Race mod %s (C)Rajh, Redix and Sushi", RACE_VERSION);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
 #if defined(CONF_TEERACE)
-	str_format(aBuf, sizeof(aBuf), "Please visit 'http://%s/about/' for more information about teerace.", g_Config.m_WaWebappIp);
+	str_format(aBuf, sizeof(aBuf), "Please visit '%s/about/' for more information about teerace.", ITeerace::URL());
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
 #endif
 }
@@ -426,7 +426,7 @@ void CGameContext::ChatConMapInfo(IConsole::IResult *pResult, void *pUser)
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
 	str_format(aBuf, sizeof(aBuf), "Author: %s", pSelf->m_pWebapp->CurrentMap()->m_aAuthor);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
-	str_format(aBuf, sizeof(aBuf), "URL: http://%s%s", g_Config.m_WaWebappIp, pSelf->m_pWebapp->CurrentMap()->m_aURL);
+	str_format(aBuf, sizeof(aBuf), "URL: %s", pSelf->m_pWebapp->CurrentMap()->m_aURL);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
 	str_format(aBuf, sizeof(aBuf), "Finished runs: %d", pSelf->m_pWebapp->CurrentMap()->m_RunCount);
 	pSelf->ChatConsole()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chat", aBuf);
@@ -523,7 +523,7 @@ void CGameContext::UpdateTeeraceSkin(int ClientID)
 	str_format(aURI, sizeof(aURI), "/users/skin/%d/", Server()->GetUserID(ClientID));
 	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_PUT, aURI);
 	pRequest->SetBody(pJson, str_length(pJson), "application/json");
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	//pInfo->SetCallback(CServerWebapp::OnUserUpdateSkin, this);
 	m_pServer->SendHttp(pInfo, pRequest);
 	delete[] pJson;
@@ -547,7 +547,7 @@ void CGameContext::UpdateTeeracePlaytime(int ClientID)
 	str_format(aURI, sizeof(aURI), "/users/playtime/%d/", UserID);
 	CBufferRequest *pRequest = CServerWebapp::CreateAuthedApiRequest(IRequest::HTTP_PUT, aURI);
 	pRequest->SetBody(pJson, str_length(pJson), "application/json");
-	CRequestInfo *pInfo = new CRequestInfo(ITeerace::Host());
+	CRequestInfo *pInfo = new CRequestInfo();
 	//pInfo->SetCallback(CServerWebapp::OnUserPlaytime, this);
 	m_pServer->SendHttp(pInfo, pRequest);
 	delete[] pJson;
